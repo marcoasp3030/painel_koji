@@ -107,25 +107,6 @@ function TenantDetail() {
           </p>
           <GoldRule className="mt-5" />
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild>
-              <Link to="/integracoes" search={{ tenantId }}>
-                Configurar Integrações
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/ifood-debug" search={{ tenantId }}>
-                Ver Debug iFood
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/99food-debug" search={{ tenantId }}>
-                Ver Debug 99Food
-              </Link>
-            </Button>
-          </div>
-
-
           <section className="mt-10">
             <Eyebrow>Integrações</Eyebrow>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

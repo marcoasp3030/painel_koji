@@ -2,6 +2,13 @@
 
 Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma nova instrução.
 
+## Fase — Menu enxuto (2026-10-07 23:26)
+
+- Saíram do menu Integrações, Diagnóstico (Debug iFood e Debug 99Food) e Governança (Auditoria).
+- O super admin fica só com Clientes. O cliente fica só com Equipe.
+- Os atalhos dessas telas na ficha do cliente também saíram.
+- Quem entra como cliente vai para Equipe.
+
 ## Fase — Menu lateral (2026-10-07 23:12)
 
 - O cabeçalho com links em linha foi substituído por um menu lateral fixo.

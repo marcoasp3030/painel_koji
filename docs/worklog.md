@@ -2,6 +2,22 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-07 23:26] — Menu sem Integrações, Diagnóstico e Auditoria
+- **Autor:** Grok 4.7
+- **Objetivo:** Remover do menu Integrações, Debug iFood, Debug 99Food e Auditoria.
+- **Arquivos alterados:**
+  - `src/lib/nav.ts` — modificado — menus reduzidos a Clientes e Equipe
+  - `src/components/luxtia/AppShell.tsx` — modificado — ícones que não entram mais no menu
+  - `src/routes/_authenticated/admin/$tenantId.tsx` — modificado — atalhos para as telas removidas
+  - `src/routes/_authenticated/painel.tsx` — modificado — cliente entra em Equipe
+  - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** O menu do super admin mostra só Clientes. O do cliente mostra só Equipe. Os grupos Diagnóstico e Governança deixaram de aparecer.
+- **Decisões e justificativas:** As rotas continuam no código para não quebrar endereços antigos, mas não há mais entrada no menu nem atalho na ficha do cliente.
+- **Comandos executados:** docker compose build painel && up -d → OK. Menu em /admin conferido no navegador: só Clientes.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** nenhuma
+- **Próximos passos:** se essas telas não forem mais usadas, apagar as rotas correspondentes
+
 ## [2026-10-07 23:12] — Menu lateral organizado
 - **Autor:** Grok 4.7
 - **Objetivo:** Deixar o painel mais organizado, com menu lateral agrupado.

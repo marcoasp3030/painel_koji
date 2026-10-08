@@ -1,28 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Bug,
-  Building2,
-  LogOut,
-  Menu,
-  Plug,
-  ScrollText,
-  Users,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { Building2, LogOut, Menu, Users, X, type LucideIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { agruparMenu, type IconeMenu, type ItemMenu } from "@/lib/nav";
 import { LuxtiaWordmark } from "./Brand";
 
 const ICONES: Record<IconeMenu, LucideIcon> = {
   clientes: Building2,
-  integracoes: Plug,
-  ifood: Bug,
-  food99: Bug,
   equipe: Users,
-  auditoria: ScrollText,
 };
 
 function itemAtivo(caminho: string, destino: string) {
