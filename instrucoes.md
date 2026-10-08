@@ -2,6 +2,12 @@
 
 Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma nova instrução.
 
+## Fase — Acesso marco.santos@ticway.com.br (2026-10-07 23:06)
+
+- Usuário criado no GoTrue com e-mail confirmado e papel `super_admin`.
+- O login foi testado na API de autenticação e retornou sucesso.
+- A senha não foi registrada neste arquivo.
+
 ## Fase — Remoção da marca Lovable (2026-10-07 23:02)
 
 - Favicon e ícone da aba passaram a ser o monograma Luxtia (roxo e dourado).

@@ -2,6 +2,19 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-07 23:06] — Acesso de Marco Santos
+- **Autor:** Grok 4.7
+- **Objetivo:** Criar o usuário marco.santos@ticway.com.br no painel.
+- **Arquivos alterados:**
+  - `instrucoes.md` — modificado — registro da fase
+  - `docs/worklog.md` — modificado — esta entrada
+- **Resumo das mudanças:** Conta criada no GoTrue (e-mail confirmado) e papel `super_admin` em `user_roles`. Sem vínculo com cliente, porque o pedido foi de usuário do sistema.
+- **Decisões e justificativas:** Sem o papel de super admin o login cairia na tela sem cliente. O acesso `admin@luxtia.local` foi mantido.
+- **Comandos executados:** POST no admin do GoTrue → OK. INSERT em user_roles → OK. login em `/auth/v1/token` → 200.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** nenhuma
+- **Próximos passos:** entrar em http://painel.luxbrain.com.br/ com o e-mail informado
+
 ## [2026-10-07 23:02] — Remoção da marca Lovable
 - **Autor:** Grok 4.7
 - **Objetivo:** Tirar do painel publicado tudo que ainda identificava o Lovable, inclusive ícone e favicon.
