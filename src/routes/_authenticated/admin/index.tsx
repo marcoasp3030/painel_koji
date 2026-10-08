@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { AppShell } from "@/components/luxtia/AppShell";
-import { Eyebrow, GoldRule } from "@/components/luxtia/Brand";
+import { CabecalhoPagina, Cartao, EstadoVazio, Iniciais, Metrica } from "@/components/luxtia/Superficie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +48,7 @@ function AdminTenants() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [busca, setBusca] = useState("");
 
   const { data: tenants, isLoading } = useQuery({
     queryKey: ["tenants"],
@@ -81,77 +82,113 @@ function AdminTenants() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const lista = tenants ?? [];
+  const termo = busca.trim().toLowerCase();
+  const filtrados = termo
+    ? lista.filter((t: { name?: string; slug?: string; contact_name?: string; contact_email?: string }) =>
+        [t.name, t.slug, t.contact_name, t.contact_email].some((campo) =>
+          (campo ?? "").toLowerCase().includes(termo),
+        ),
+      )
+    : lista;
+  const ativos = lista.filter((t: { status: string }) => t.status === "active").length;
+
   return (
     <AppShell nav={ADMIN_NAV} context="Super Admin">
-      <Eyebrow>Clientes</Eyebrow>
-      <h1 className="mt-2 font-display text-4xl text-purple-800">Clientes da plataforma</h1>
-      <GoldRule className="mt-5" />
+      <CabecalhoPagina
+        sobretitulo="Operação"
+        titulo="Clientes da plataforma"
+        descricao="Acompanhe quem está ativo e cadastre um novo cliente sem sair desta tela."
+      />
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-lg border border-base-200 bg-card">
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        <Metrica rotulo="Clientes" valor={isLoading ? "—" : lista.length} detalhe="Cadastrados" />
+        <Metrica rotulo="Ativos" valor={isLoading ? "—" : ativos} detalhe="Podem operar" />
+        <Metrica
+          rotulo="Suspensos"
+          valor={isLoading ? "—" : lista.length - ativos}
+          detalhe="Acesso pausado"
+        />
+      </div>
+
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_20rem]">
+        <Cartao>
+          <div className="flex flex-col gap-3 border-b border-base-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-ink-900">Lista</p>
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome ou identificador"
+              aria-label="Buscar cliente"
+              className="bg-base-50 sm:max-w-xs"
+            />
+          </div>
           {isLoading ? (
             <p className="p-6 text-ink-500">Carregando…</p>
-          ) : !tenants || tenants.length === 0 ? (
-            <p className="p-6 text-ink-500">Nenhum cliente cadastrado ainda.</p>
+          ) : lista.length === 0 ? (
+            <EstadoVazio
+              titulo="Nenhum cliente ainda"
+              texto="Use o formulário ao lado para cadastrar o primeiro cliente da plataforma."
+            />
+          ) : filtrados.length === 0 ? (
+            <EstadoVazio
+              titulo="Nada encontrado"
+              texto="Nenhum cliente corresponde à busca. Tente o nome ou o identificador."
+            />
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-base-200 text-xs uppercase tracking-wider text-ink-500">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Cliente</th>
-                  <th className="px-5 py-3 font-medium">Acessos</th>
-                  <th className="px-5 py-3 font-medium">Integrações ativas</th>
-                  <th className="px-5 py-3 font-medium">Situação</th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {tenants.map((t: any) => (
-                  <tr key={t.id} className="border-b border-base-200 last:border-0">
-                    <td className="px-5 py-4">
-                      <Link
-                        to="/admin/$tenantId"
-                        params={{ tenantId: t.id }}
-                        className="font-medium text-purple-600 hover:text-purple-500"
-                      >
-                        {t.name}
-                      </Link>
-                      <p className="text-xs text-ink-500">{t.slug}</p>
-                    </td>
-                    <td className="px-5 py-4 tabular-nums">{t.userCount}</td>
-                    <td className="px-5 py-4 tabular-nums">{t.activeIntegrations} de 4</td>
-                    <td className="px-5 py-4">
-                      <StatusBadge status={t.status} />
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          statusMutation.mutate({
-                            id: t.id,
-                            status: t.status === "active" ? "suspended" : "active",
-                          })
-                        }
-                      >
-                        {t.status === "active" ? "Suspender" : "Reativar"}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul>
+              {filtrados.map((t: any) => (
+                <li
+                  key={t.id}
+                  className="flex flex-col gap-3 border-b border-base-200 px-5 py-4 last:border-0 sm:flex-row sm:items-center"
+                >
+                  <Link
+                    to="/admin/$tenantId"
+                    params={{ tenantId: t.id }}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Iniciais nome={t.name} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-purple-800">{t.name}</span>
+                      <span className="block truncate text-xs text-ink-500">
+                        {t.slug}
+                        {typeof t.userCount === "number"
+                          ? ` · ${t.userCount} ${t.userCount === 1 ? "acesso" : "acessos"}`
+                          : ""}
+                      </span>
+                    </span>
+                  </Link>
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <StatusBadge status={t.status} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        statusMutation.mutate({
+                          id: t.id,
+                          status: t.status === "active" ? "suspended" : "active",
+                        })
+                      }
+                    >
+                      {t.status === "active" ? "Suspender" : "Reativar"}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </Cartao>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createMutation.mutate();
-          }}
-          className="h-fit rounded-lg border border-base-200 bg-card p-6"
-        >
+        <Cartao className="p-6">
           <h2 className="font-display text-xl text-purple-800">Novo cliente</h2>
-          <div className="mt-5 space-y-4">
+          <p className="mt-1 text-sm text-ink-500">O identificador é gerado a partir do nome.</p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createMutation.mutate();
+            }}
+            className="mt-5 space-y-4"
+          >
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <Input
@@ -161,6 +198,7 @@ function AdminTenants() {
                   setName(e.target.value);
                   if (!slugTouched) setSlug(toSlug(e.target.value));
                 }}
+                className="bg-base-50"
                 required
               />
             </div>
@@ -174,11 +212,10 @@ function AdminTenants() {
                   setSlug(e.target.value);
                 }}
                 onBlur={(e) => setSlug(toSlug(e.target.value))}
+                className="bg-base-50"
                 required
               />
-              <p className="text-xs text-ink-500">
-                Apenas letras minúsculas, números e hífen; mínimo de 2 caracteres.
-              </p>
+              <p className="text-xs text-ink-500">Letras minúsculas, números e hífen.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="contactName">Responsável</Label>
@@ -186,6 +223,7 @@ function AdminTenants() {
                 id="contactName"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
+                className="bg-base-50"
               />
             </div>
             <div className="space-y-2">
@@ -195,13 +233,14 @@ function AdminTenants() {
                 type="email"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
+                className="bg-base-50"
               />
             </div>
             <Button type="submit" className="w-full" disabled={createMutation.isPending}>
               {createMutation.isPending ? "Criando…" : "Criar cliente"}
             </Button>
-          </div>
-        </form>
+          </form>
+        </Cartao>
       </div>
     </AppShell>
   );

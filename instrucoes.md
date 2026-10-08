@@ -2,6 +2,13 @@
 
 Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma nova instrução.
 
+## Fase — Painel mais moderno (2026-10-07 23:54)
+
+- Mesmas cores do designer: creme no fundo, roxo na marca, ouro só na faixa e no monograma.
+- Clientes e equipe ganharam resumo numérico, busca, cartões e lista com iniciais.
+- A ficha do cliente mostra conexões em cartões e o formulário de acesso ao lado.
+- O login ficou em um cartão. Conferido no navegador em tela larga e no celular.
+
 ## Fase — Menu enxuto (2026-10-07 23:26)
 
 - Saíram do menu Integrações, Diagnóstico (Debug iFood e Debug 99Food) e Governança (Auditoria).

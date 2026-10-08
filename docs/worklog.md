@@ -2,6 +2,24 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-07 23:54] — Visual do painel mais moderno
+- **Autor:** Grok 4.7
+- **Objetivo:** Melhorar a experiência do painel sem sair das cores do designer.
+- **Arquivos alterados:**
+  - `src/components/luxtia/Superficie.tsx` — criado — cabeçalho, métricas, cartão, vazio e iniciais
+  - `src/components/luxtia/AppShell.tsx` — modificado — monograma, barra superior e fundo creme
+  - `src/routes/_authenticated/admin/index.tsx` — modificado — resumo, busca e lista
+  - `src/routes/_authenticated/admin/$tenantId.tsx` — modificado — cartões de conexão e acessos
+  - `src/routes/_authenticated/equipe.tsx` — modificado — mesmo padrão visual
+  - `src/routes/index.tsx` — modificado — formulário de login em cartão
+  - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** O fundo ficou no creme da marca e os blocos brancos se separam com borda e sombra leve. A lista de clientes mostra totais, busca e a situação de cada um.
+- **Decisões e justificativas:** Ouro continua só no traço e no L do menu, como o teto da paleta. Verde de sucesso, já definido no tema, marca conexão ativa.
+- **Comandos executados:** docker compose build painel && up -d → OK. Busca, lista e ficha do cliente conferidas no navegador, inclusive em 390px.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** nenhuma
+- **Próximos passos:** repetir o mesmo padrão se novas telas entrarem no menu
+
 ## [2026-10-07 23:26] — Menu sem Integrações, Diagnóstico e Auditoria
 - **Autor:** Grok 4.7
 - **Objetivo:** Remover do menu Integrações, Debug iFood, Debug 99Food e Auditoria.

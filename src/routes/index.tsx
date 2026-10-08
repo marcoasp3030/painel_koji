@@ -80,12 +80,12 @@ function Login() {
         </p>
       </section>
 
-      <section className="flex items-center justify-center bg-base-50 px-6 py-16">
-        <div className="w-full max-w-sm">
+      <section className="flex items-center justify-center bg-base-100 px-6 py-16">
+        <div className="w-full max-w-sm rounded-2xl border border-base-200 bg-card px-6 py-8 shadow-[0_1px_2px_rgba(26,21,32,0.04),0_16px_40px_rgba(46,35,64,0.08)] sm:px-8">
           <div className="lg:hidden">
             <LuxtiaWordmark tone="dark" />
           </div>
-          <h2 className="mt-8 font-display text-3xl text-purple-800">Acessar a plataforma</h2>
+          <h2 className="mt-8 font-display text-3xl text-purple-800 lg:mt-0">Acessar a plataforma</h2>
           <p className="mt-2 text-ink-500">Use o acesso fornecido pela administração.</p>
           <GoldRule className="mt-6" />
 
@@ -97,6 +97,7 @@ function Login() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 autoComplete="username"
+                className="bg-base-50"
                 required
               />
             </div>
@@ -108,6 +109,7 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                className="bg-base-50"
                 required
               />
             </div>
