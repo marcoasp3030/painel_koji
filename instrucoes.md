@@ -2,6 +2,13 @@
 
 Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma nova instrução.
 
+## Fase — Menu lateral (2026-10-07 23:12)
+
+- O cabeçalho com links em linha foi substituído por um menu lateral fixo.
+- Os itens ficam em três grupos: Operação, Diagnóstico e Governança.
+- No celular o menu abre por um botão e fecha ao escolher uma página.
+- Conferido no navegador em desktop e em tela estreita, nas rotas Clientes, Integrações e Auditoria.
+
 ## Fase — Acesso marco.santos@ticway.com.br (2026-10-07 23:06)
 
 - Usuário criado no GoTrue com e-mail confirmado e papel `super_admin`.

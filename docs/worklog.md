@@ -2,6 +2,20 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-07 23:12] — Menu lateral organizado
+- **Autor:** Grok 4.7
+- **Objetivo:** Deixar o painel mais organizado, com menu lateral agrupado.
+- **Arquivos alterados:**
+  - `src/components/luxtia/AppShell.tsx` — modificado — barra superior virou menu lateral
+  - `src/lib/nav.ts` — modificado — grupos Operação, Diagnóstico e Governança
+  - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** A marca e o contexto ficam no topo do menu. Cada página tem ícone e o item ativo leva a faixa dourada. No celular o menu entra pela esquerda e some ao navegar.
+- **Decisões e justificativas:** As páginas já passavam a lista de navegação para o AppShell, então o agrupamento ficou só na definição do menu, sem alterar cada rota.
+- **Comandos executados:** docker compose build painel && docker compose up -d painel → OK. Navegação no navegador em /admin, /integracoes e /auditoria, em 1440px e 390px → OK.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** nenhuma
+- **Próximos passos:** se surgirem novas telas, incluí-las no grupo correspondente em `src/lib/nav.ts`
+
 ## [2026-10-07 23:06] — Acesso de Marco Santos
 - **Autor:** Grok 4.7
 - **Objetivo:** Criar o usuário marco.santos@ticway.com.br no painel.
