@@ -1,18 +1,10 @@
-# Welcome to your Lovable project
+# Painel Luxtia
 
 Repositório: https://github.com/marcoasp3030/painel_koji
 
-This project was built with [Lovable](https://lovable.dev).
+Plataforma de integrações de delivery e mensagens (iFood, 99Food, WhatsApp Oficial e Uazapi).
 
-## Build with Lovable
-
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
+## Desenvolvimento
 
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
@@ -29,3 +21,14 @@ npm run dev
 - TypeScript
 - React
 - Tailwind CSS
+
+## Produção (Docker + PostgreSQL)
+
+O painel sobe com Postgres, autenticação e API REST na mesma origem `painel.luxbrain.com.br`.
+
+```sh
+python3 docker/gerar-segredos.py
+docker compose up -d --build
+```
+
+O proxy escuta nas portas 80 e 443. O arquivo `.env` fica só na máquina e não entra no Git.
