@@ -225,6 +225,7 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], { nome: "Outro" }],
       ["PATCH", ["agentes", "ag_1"], { status: "rascunho" }],
       ["PATCH", ["agentes", "ag_1"], null],
+      ["POST", ["agentes", "ag_1", "testar"], { usar_provedor_real: true }],
       ["POST", ["agentes"], { modelo_id: "m", nome: "n" }],
       ["POST", ["canais"], { tipo: "api" }],
       ["PATCH", ["canais", "can_1"], { ativo: true }],

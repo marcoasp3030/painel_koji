@@ -157,3 +157,58 @@ export const obterCircuito = createServerFn({ method: "POST" })
       return dados;
     });
   });
+
+/** Testa a conexão com o Skyone sem mudar o modo do agente (só admin da plataforma). */
+export const testarConexaoSkyone = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, agente: idAgente }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    const { GatewayErro } = await import("./gateway/erros");
+    const { PARAMETRO_TESTE_REAL } = await import("./gateway/recursos");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      if (t.papel !== "plataforma") {
+        throw new GatewayErro({
+          codigo: "FORBIDDEN",
+          status: 403,
+          mensagem: "O teste de conexão é restrito ao admin da plataforma.",
+        });
+      }
+      if (!PARAMETRO_TESTE_REAL) {
+        throw new GatewayErro({
+          codigo: "NOT_IMPLEMENTED",
+          status: 501,
+          mensagem: "O teste de conexão depende de uma atualização do gateway.",
+        });
+      }
+      try {
+        const { dados } = await t.chamar<ResultadoTeste>(
+          "POST",
+          ["agentes", data.agente, "testar"],
+          {
+            corpo: { [PARAMETRO_TESTE_REAL]: true },
+            tempoLimiteMs: 620_000,
+          },
+        );
+        return dados;
+      } catch (erro) {
+        if (erro instanceof GatewayErro && erro.codigo === "CREDENTIAL_REJECTED") {
+          throw new GatewayErro({
+            codigo: erro.codigo,
+            status: erro.status,
+            mensagem: "O Skyone recusou o usuário ou a senha. Confira no fluxo e salve de novo.",
+          });
+        }
+        if (erro instanceof GatewayErro && erro.codigo === "UPSTREAM_ERROR") {
+          throw new GatewayErro({
+            codigo: erro.codigo,
+            status: erro.status,
+            mensagem:
+              "O Skyone não respondeu ou respondeu com erro. Confira a URL do fluxo e tente de novo em instantes.",
+          });
+        }
+        throw erro;
+      }
+    });
+  });

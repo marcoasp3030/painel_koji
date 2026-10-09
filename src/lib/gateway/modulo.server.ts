@@ -63,6 +63,16 @@ function validarPatchAgenteEmpresa(corpo: unknown) {
   }
 }
 
+function semCorpo(corpo: unknown) {
+  if (
+    corpo !== undefined &&
+    corpo !== null &&
+    !(typeof corpo === "object" && Object.keys(corpo).length === 0)
+  ) {
+    throw new AcessoNegado("Esta opção de teste é restrita ao admin da plataforma.");
+  }
+}
+
 type Regra = {
   metodo: MetodoGateway;
   /** Segmentos após /tenants/{tenant}; "*" vale qualquer segmento. */
@@ -80,7 +90,8 @@ const REGRAS: Regra[] = [
   { metodo: "GET", caminho: ["agentes", "*"], papeis: AMBOS },
   { metodo: "GET", caminho: ["agentes", "*", "circuito"], papeis: AMBOS },
   { metodo: "PATCH", caminho: ["agentes", "*"], papeis: ADMIN, corpo: validarPatchAgenteEmpresa },
-  { metodo: "POST", caminho: ["agentes", "*", "testar"], papeis: ADMIN },
+  // Testar como a empresa: sem corpo. Opções de teste (ex.: provedor real) são da plataforma.
+  { metodo: "POST", caminho: ["agentes", "*", "testar"], papeis: ADMIN, corpo: semCorpo },
   { metodo: "POST", caminho: ["agentes", "*", "simular"], papeis: ADMIN },
   // Canais e consumo: só leitura.
   { metodo: "GET", caminho: ["canais"], papeis: AMBOS },
