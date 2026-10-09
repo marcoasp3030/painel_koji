@@ -16,6 +16,16 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
 - Imagem de volta atual: `painel:121051e` (telas `/ia/*`, implantada em 09/10/2026).
 
+## Fase — Experiência das telas dos agentes (2026-10-09)
+
+- Vocabulário único em `src/lib/gateway/vocabulario.ts` (sem nomes técnicos na tela) e ajuda em cada campo; listas vazias com orientação.
+- Agente em `/ia/agentes/<id>` com abas Visão geral (checklist de prontidão), Comportamento, Conexão com IA (só plataforma, em passos) e Canais.
+- “Salvar e testar conexão” fica desativado até o gateway publicar o `/testar` com provedor real: preencher `PARAMETRO_TESTE_REAL` em `src/lib/gateway/recursos.ts`.
+- Piloto ligado com lista vazia é recusado na tela e no servidor.
+- Agentes com nome iniciado por `[teste]` somem para admin da empresa e membro (listas, canais e acesso direto → não encontrado). Renomeado: “[teste] Bench segundo agente” (bykoji). Agentes de `bench_passo5` não precisam de prefixo.
+- Assistente `/ia/empresas/nova` em seis passos, retomável pelo endereço.
+- Chat do Simular (item 4) aguarda o gateway liberar IA real no `/simular`.
+
 ## Fase — Telas dos agentes e permissões por papel (2026-10-09)
 
 - Permissões no servidor (`src/lib/gateway/modulo.server.ts`, tabela `REGRAS`): admin da plataforma pode tudo; admin da empresa altera no agente só `aviso_demora, fallback, modo_piloto, contatos_permitidos, debounce_s, max_wait_s, pause_minutes, slow_notice_s, alerta_telefone, status (ativo/pausado)`, gerencia unidades, testa, simula, vê canais e consumo e atende conversas; membro só lê agentes, canais e consumo e atende conversas. O resto é recusado antes de chamar o gateway, com motivo em `audit_logs`.
