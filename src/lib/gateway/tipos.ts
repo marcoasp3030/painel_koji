@@ -79,3 +79,15 @@ export type CanalGateway = {
   status_conexao?: string | null;
   ultimo_evento_em?: string | null;
 };
+
+export type ChaveGateway = {
+  id: string;
+  nome: string;
+  escopos: string[];
+  agente_id: string | null;
+  expira_em: string | null;
+  ips_permitidos: string[] | null;
+  ultimo_uso_em: string | null;
+  criado_em: string;
+  revogada_em: string | null;
+};
