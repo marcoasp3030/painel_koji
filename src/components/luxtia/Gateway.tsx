@@ -94,6 +94,8 @@ export function PaginaGateway({
   descricao,
   papeis,
   semEmpresa = false,
+  empresaFixa = null,
+  semCabecalho = false,
   children,
 }: {
   sobretitulo?: string;
@@ -102,12 +104,25 @@ export function PaginaGateway({
   papeis: PapelGateway[];
   /** A tela não depende de uma empresa escolhida (ex.: lista de empresas). */
   semEmpresa?: boolean;
+  /** Empresa vinda do endereço (ex.: página de um agente); dispensa o seletor. */
+  empresaFixa?: string | null;
+  /** A própria tela desenha o cabeçalho (ex.: nome do agente). */
+  semCabecalho?: boolean;
   children: (ctx: ContextoGateway) => React.ReactNode;
 }) {
   const acesso = useAcessoGateway();
   const papel = acesso.data?.papel ?? null;
   const plataforma = papel === "plataforma";
-  const escolha = useEmpresaEscolhida(plataforma && !semEmpresa);
+  const escolha = useEmpresaEscolhida(plataforma && !semEmpresa && !empresaFixa);
+
+  useEffect(() => {
+    if (!plataforma || !empresaFixa) return;
+    try {
+      localStorage.setItem(CHAVE_EMPRESA, empresaFixa);
+    } catch {
+      /* Sem armazenamento local, a lista volta para a primeira empresa. */
+    }
+  }, [plataforma, empresaFixa]);
 
   let conteudo: React.ReactNode;
   if (acesso.isLoading) {
@@ -133,6 +148,8 @@ export function PaginaGateway({
         />
       </Cartao>
     );
+  } else if (plataforma && empresaFixa) {
+    conteudo = children({ papel, empresa: empresaFixa });
   } else if (plataforma && !semEmpresa) {
     conteudo = (
       <>
@@ -178,11 +195,13 @@ export function PaginaGateway({
       nav={plataforma ? ADMIN_NAV : TENANT_NAV}
       context={plataforma ? "Super Admin" : "Empresa"}
     >
-      <CabecalhoPagina
-        sobretitulo={sobretitulo}
-        titulo={titulo}
-        {...(descricao ? { descricao } : {})}
-      />
+      {semCabecalho && papel && papeis.includes(papel) ? null : (
+        <CabecalhoPagina
+          sobretitulo={sobretitulo}
+          titulo={titulo}
+          {...(descricao ? { descricao } : {})}
+        />
+      )}
       {conteudo}
     </AppShell>
   );

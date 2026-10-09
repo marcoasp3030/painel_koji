@@ -20,11 +20,12 @@ import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authenticated/admin/$tenantId'
-import { Route as AuthenticatedIaAgentesRouteImport } from './routes/_authenticated/ia/agentes'
 import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
 import { Route as AuthenticatedIaEmpresasRouteImport } from './routes/_authenticated/ia/empresas'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
+import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
+import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
 import { Route as ApiPublicFood99WebhookRouteImport } from './routes/api/public/food99/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -84,11 +85,6 @@ const AuthenticatedAdminTenantIdRoute =
     path: '/$tenantId',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedIaAgentesRoute = AuthenticatedIaAgentesRouteImport.update({
-  id: '/ia/agentes',
-  path: '/ia/agentes',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedIaCanaisRoute = AuthenticatedIaCanaisRouteImport.update({
   id: '/ia/canais',
   path: '/ia/canais',
@@ -109,6 +105,18 @@ const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   path: '/ia/simular',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaAgentesIndexRoute =
+  AuthenticatedIaAgentesIndexRouteImport.update({
+    id: '/ia/agentes/',
+    path: '/ia/agentes/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIaAgentesAgenteIdRoute =
+  AuthenticatedIaAgentesAgenteIdRouteImport.update({
+    id: '/ia/agentes/$agenteId',
+    path: '/ia/agentes/$agenteId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
   id: '/api/public/food99/webhook',
   path: '/api/public/food99/webhook',
@@ -125,13 +133,14 @@ export interface FileRoutesByFullPath {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
-  '/ia/agentes': typeof AuthenticatedIaAgentesRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/empresas': typeof AuthenticatedIaEmpresasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
+  '/ia/agentes/': typeof AuthenticatedIaAgentesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,13 +151,14 @@ export interface FileRoutesByTo {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
-  '/ia/agentes': typeof AuthenticatedIaAgentesRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/empresas': typeof AuthenticatedIaEmpresasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
+  '/ia/agentes': typeof AuthenticatedIaAgentesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -162,13 +172,14 @@ export interface FileRoutesById {
   '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
-  '/_authenticated/ia/agentes': typeof AuthenticatedIaAgentesRoute
   '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/_authenticated/ia/empresas': typeof AuthenticatedIaEmpresasRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
+  '/_authenticated/ia/agentes/': typeof AuthenticatedIaAgentesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -182,13 +193,14 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/painel'
     | '/admin/$tenantId'
-    | '/ia/agentes'
     | '/ia/canais'
     | '/ia/chaves'
     | '/ia/empresas'
     | '/ia/simular'
     | '/admin/'
+    | '/ia/agentes/$agenteId'
     | '/api/public/food99/webhook'
+    | '/ia/agentes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,13 +211,14 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/painel'
     | '/admin/$tenantId'
-    | '/ia/agentes'
     | '/ia/canais'
     | '/ia/chaves'
     | '/ia/empresas'
     | '/ia/simular'
     | '/admin'
+    | '/ia/agentes/$agenteId'
     | '/api/public/food99/webhook'
+    | '/ia/agentes'
   id:
     | '__root__'
     | '/'
@@ -218,13 +231,14 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes'
     | '/_authenticated/painel'
     | '/_authenticated/admin/$tenantId'
-    | '/_authenticated/ia/agentes'
     | '/_authenticated/ia/canais'
     | '/_authenticated/ia/chaves'
     | '/_authenticated/ia/empresas'
     | '/_authenticated/ia/simular'
     | '/_authenticated/admin/'
+    | '/_authenticated/ia/agentes/$agenteId'
     | '/api/public/food99/webhook'
+    | '/_authenticated/ia/agentes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -312,13 +326,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTenantIdRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/ia/agentes': {
-      id: '/_authenticated/ia/agentes'
-      path: '/ia/agentes'
-      fullPath: '/ia/agentes'
-      preLoaderRoute: typeof AuthenticatedIaAgentesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/ia/canais': {
       id: '/_authenticated/ia/canais'
       path: '/ia/canais'
@@ -345,6 +352,20 @@ declare module '@tanstack/react-router' {
       path: '/ia/simular'
       fullPath: '/ia/simular'
       preLoaderRoute: typeof AuthenticatedIaSimularRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/agentes/': {
+      id: '/_authenticated/ia/agentes/'
+      path: '/ia/agentes'
+      fullPath: '/ia/agentes/'
+      preLoaderRoute: typeof AuthenticatedIaAgentesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/agentes/$agenteId': {
+      id: '/_authenticated/ia/agentes/$agenteId'
+      path: '/ia/agentes/$agenteId'
+      fullPath: '/ia/agentes/$agenteId'
+      preLoaderRoute: typeof AuthenticatedIaAgentesAgenteIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/food99/webhook': {
@@ -381,11 +402,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIfoodDebugRoute: typeof AuthenticatedIfoodDebugRoute
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
-  AuthenticatedIaAgentesRoute: typeof AuthenticatedIaAgentesRoute
   AuthenticatedIaCanaisRoute: typeof AuthenticatedIaCanaisRoute
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
   AuthenticatedIaEmpresasRoute: typeof AuthenticatedIaEmpresasRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
+  AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
+  AuthenticatedIaAgentesIndexRoute: typeof AuthenticatedIaAgentesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -396,11 +418,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIfoodDebugRoute: AuthenticatedIfoodDebugRoute,
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
-  AuthenticatedIaAgentesRoute: AuthenticatedIaAgentesRoute,
   AuthenticatedIaCanaisRoute: AuthenticatedIaCanaisRoute,
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
   AuthenticatedIaEmpresasRoute: AuthenticatedIaEmpresasRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
+  AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
+  AuthenticatedIaAgentesIndexRoute: AuthenticatedIaAgentesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

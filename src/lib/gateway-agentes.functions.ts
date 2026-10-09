@@ -6,6 +6,7 @@ import { empresa, idRecurso as idAgente, json } from "./gateway/esquemas";
 import type {
   AgenteDetalhe,
   AgenteGateway,
+  CircuitoAgente,
   ModeloAgente,
   Pagina,
   ResultadoTeste,
@@ -136,6 +137,18 @@ export const testarAgente = createServerFn({ method: "POST" })
       const { dados } = await t.chamar<ResultadoTeste>("POST", ["agentes", data.agente, "testar"], {
         tempoLimiteMs: 620_000,
       });
+      return dados;
+    });
+  });
+
+export const obterCircuito = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, agente: idAgente }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      const { dados } = await t.chamar<CircuitoAgente>("GET", ["agentes", data.agente, "circuito"]);
       return dados;
     });
   });

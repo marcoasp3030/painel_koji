@@ -15,7 +15,5 @@ export function GoldRule({ className = "" }: { className?: string }) {
 }
 
 export function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-medium uppercase tracking-[0.18em] text-ink-500">{children}</p>
-  );
+  return <p className="text-xs font-medium uppercase tracking-[0.18em] text-ink-500">{children}</p>;
 }

@@ -28,6 +28,8 @@ import { historicoConversa, simularMensagem } from "@/lib/gateway-simular.functi
 import { SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/simular")({
+  validateSearch: (s: Record<string, unknown>): { agente?: string } =>
+    typeof s["agente"] === "string" ? { agente: s["agente"] } : {},
   head: () => ({ meta: [{ title: "Simular conversa | Luxtia" }] }),
   component: () => (
     <PaginaGateway
@@ -54,7 +56,7 @@ function Simular({ ctx }: { ctx: ContextoGateway }) {
   const simular = useServerFn(simularMensagem);
   const historico = useServerFn(historicoConversa);
 
-  const [agente, setAgente] = useState("");
+  const [agente, setAgente] = useState(Route.useSearch().agente ?? "");
   const [canal, setCanal] = useState("");
   const [identificador, setIdentificador] = useState("painel-teste");
   const [texto, setTexto] = useState("");

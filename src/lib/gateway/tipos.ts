@@ -106,3 +106,10 @@ export type ResultadoSimulacao = {
   conversation_id: string;
   mensagem_id: number;
 };
+
+export type CircuitoAgente = {
+  estado: "fechado" | "aberto" | "meio_aberto";
+  falhas: number;
+  aberto_ate: string | null;
+  ultimo_alerta: string | null;
+};
