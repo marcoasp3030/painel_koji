@@ -24,6 +24,7 @@ import { Route as AuthenticatedGatewayAgentesRouteImport } from './routes/_authe
 import { Route as AuthenticatedGatewayCanaisRouteImport } from './routes/_authenticated/gateway/canais'
 import { Route as AuthenticatedGatewayChavesRouteImport } from './routes/_authenticated/gateway/chaves'
 import { Route as AuthenticatedGatewayEmpresasRouteImport } from './routes/_authenticated/gateway/empresas'
+import { Route as AuthenticatedGatewaySimularRouteImport } from './routes/_authenticated/gateway/simular'
 import { Route as ApiPublicFood99WebhookRouteImport } from './routes/api/public/food99/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -107,6 +108,12 @@ const AuthenticatedGatewayEmpresasRoute =
     path: '/gateway/empresas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedGatewaySimularRoute =
+  AuthenticatedGatewaySimularRouteImport.update({
+    id: '/gateway/simular',
+    path: '/gateway/simular',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
   id: '/api/public/food99/webhook',
   path: '/api/public/food99/webhook',
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/gateway/canais': typeof AuthenticatedGatewayCanaisRoute
   '/gateway/chaves': typeof AuthenticatedGatewayChavesRoute
   '/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
+  '/gateway/simular': typeof AuthenticatedGatewaySimularRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -143,6 +151,7 @@ export interface FileRoutesByTo {
   '/gateway/canais': typeof AuthenticatedGatewayCanaisRoute
   '/gateway/chaves': typeof AuthenticatedGatewayChavesRoute
   '/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
+  '/gateway/simular': typeof AuthenticatedGatewaySimularRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -162,6 +171,7 @@ export interface FileRoutesById {
   '/_authenticated/gateway/canais': typeof AuthenticatedGatewayCanaisRoute
   '/_authenticated/gateway/chaves': typeof AuthenticatedGatewayChavesRoute
   '/_authenticated/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
+  '/_authenticated/gateway/simular': typeof AuthenticatedGatewaySimularRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/gateway/canais'
     | '/gateway/chaves'
     | '/gateway/empresas'
+    | '/gateway/simular'
     | '/admin/'
     | '/api/public/food99/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/gateway/canais'
     | '/gateway/chaves'
     | '/gateway/empresas'
+    | '/gateway/simular'
     | '/admin'
     | '/api/public/food99/webhook'
   id:
@@ -215,6 +227,7 @@ export interface FileRouteTypes {
     | '/_authenticated/gateway/canais'
     | '/_authenticated/gateway/chaves'
     | '/_authenticated/gateway/empresas'
+    | '/_authenticated/gateway/simular'
     | '/_authenticated/admin/'
     | '/api/public/food99/webhook'
   fileRoutesById: FileRoutesById
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGatewayEmpresasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/gateway/simular': {
+      id: '/_authenticated/gateway/simular'
+      path: '/gateway/simular'
+      fullPath: '/gateway/simular'
+      preLoaderRoute: typeof AuthenticatedGatewaySimularRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/food99/webhook': {
       id: '/api/public/food99/webhook'
       path: '/api/public/food99/webhook'
@@ -370,6 +390,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGatewayCanaisRoute: typeof AuthenticatedGatewayCanaisRoute
   AuthenticatedGatewayChavesRoute: typeof AuthenticatedGatewayChavesRoute
   AuthenticatedGatewayEmpresasRoute: typeof AuthenticatedGatewayEmpresasRoute
+  AuthenticatedGatewaySimularRoute: typeof AuthenticatedGatewaySimularRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -384,6 +405,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGatewayCanaisRoute: AuthenticatedGatewayCanaisRoute,
   AuthenticatedGatewayChavesRoute: AuthenticatedGatewayChavesRoute,
   AuthenticatedGatewayEmpresasRoute: AuthenticatedGatewayEmpresasRoute,
+  AuthenticatedGatewaySimularRoute: AuthenticatedGatewaySimularRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

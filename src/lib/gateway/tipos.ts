@@ -91,3 +91,18 @@ export type ChaveGateway = {
   criado_em: string;
   revogada_em: string | null;
 };
+
+export type MensagemGateway = {
+  id: number;
+  conteudo: string | null;
+  direcao: "entrada" | "saida";
+  origem: string;
+  enviada_em: string | null;
+};
+
+export type ResultadoSimulacao = {
+  ok: boolean;
+  duplicada: boolean;
+  conversation_id: string;
+  mensagem_id: number;
+};
