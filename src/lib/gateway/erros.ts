@@ -106,10 +106,44 @@ export function interpretarErro(
   return new GatewayErro({ codigo: codigoPorStatus(status), status, detalhes, tentarApos });
 }
 
-/** Texto curto para o usuário, incluindo a espera sugerida em 429. */
+/** O que fazer quando o gateway aponta um campo (detalhes.campo) sem explicar. */
+const AJUDA_POR_CAMPO: Record<string, string> = {
+  skyone_webhook_url:
+    "Para usar a IA real, cadastre antes a URL do fluxo no Skyone (https, sem usuário e senha na URL).",
+  skyone_auth: "Para usar a IA real, cadastre antes o usuário e a senha do fluxo no Skyone.",
+  skyone_auth_cabecalho: "O nome do cabeçalho de autenticação do Skyone é inválido.",
+  agente_mode:
+    "A simulação só funciona com o agente em Simulação e envio de teste. Troque as respostas para Simulação e tente de novo.",
+  max_wait_s:
+    "A espera máxima precisa ser maior ou igual ao tempo de esperar o cliente terminar de digitar.",
+  debounce_s: "O tempo de esperar o cliente terminar de digitar vai de 1 a 15 segundos.",
+  contatos_permitidos: "Telefone inválido: use só números, de 8 a 16 dígitos, um por linha.",
+  alerta_telefone: "Telefone inválido: use só números, de 8 a 16 dígitos.",
+  timeout_s: "O tempo limite vai de 1 a 600 segundos.",
+  modelo_id: "Este modelo usa módulos que a empresa não tem habilitados, ou o modelo não existe.",
+  nome: "Informe um nome.",
+  id: "Identificador inválido ou já usado: 3 a 40 letras minúsculas, números ou _.",
+  timezone: "Fuso horário inválido. Exemplo: America/Sao_Paulo.",
+  escopos: "Escolha ao menos um escopo válido.",
+  expira_em: "Data de validade inválida.",
+  agente_id: "Escolha um agente desta empresa.",
+  tipo: "O tipo do canal não pode ser alterado.",
+  texto: "Escreva a mensagem.",
+  identificador: "Informe quem é o cliente simulado.",
+  canal_id: "Escolha um canal API ligado a este agente.",
+};
+
+/** Texto curto para o usuário: motivo real quando o gateway aponta o campo, e a espera em 429. */
 export function mensagemParaUsuario(erro: GatewayErro): string {
   if (erro.codigo === "RATE_LIMITED" && erro.tentarApos) {
     return `${erro.message} Tente em ${erro.tentarApos} s.`;
+  }
+  const campo = typeof erro.detalhes["campo"] === "string" ? erro.detalhes["campo"] : null;
+  // Só substitui a mensagem genérica do gateway; mensagens do próprio painel já explicam.
+  if (campo && erro.message === MENSAGEM_PADRAO[erro.codigo]) {
+    const ajuda = AJUDA_POR_CAMPO[campo];
+    if (ajuda) return ajuda;
+    if (campo !== "corpo") return `${erro.message} Campo: ${campo}.`;
   }
   return erro.message;
 }

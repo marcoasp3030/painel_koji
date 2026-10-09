@@ -93,12 +93,35 @@ export const alterarAgente = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
+    const a = await import("./gateway/agentes");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
-      const { dados } = await t.chamar<AgenteGateway>("PATCH", ["agentes", data.agente], {
-        corpo: data.dados,
-      });
-      return dados;
+      const corpo = a.normalizarPatchAgente(data.dados);
+      // Só o admin da plataforma chega aqui com campos de IA; para os demais o
+      // módulo recusa o PATCH logo abaixo.
+      if (t.papel === "plataforma" && a.tocaIaReal(corpo)) {
+        const [{ dados: atual }, { dados: empresa }] = await Promise.all([
+          t.chamar<AgenteDetalhe>("GET", ["agentes", data.agente]),
+          t.chamar<{ tenant_teste: boolean }>("GET"),
+        ]);
+        const efetivo = atual.configuracao_efetiva?.["agente_mode"];
+        a.conferirIaReal(
+          {
+            ...atual,
+            agente_mode_efetivo: typeof efetivo === "string" ? efetivo : null,
+          },
+          corpo,
+          empresa.tenant_teste,
+        );
+      }
+      try {
+        const { dados } = await t.chamar<AgenteGateway>("PATCH", ["agentes", data.agente], {
+          corpo,
+        });
+        return dados;
+      } catch (erro) {
+        throw a.explicarConflitoAgente(erro);
+      }
     });
   });
 
