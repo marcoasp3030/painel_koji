@@ -65,3 +65,17 @@ export type AgenteDetalhe = AgenteGateway & {
 export type ModeloAgente = { id: string; versao: number; nome: string; tenant_id: string | null };
 
 export type ResultadoTeste = { ok: boolean; latencia_ms: number; resposta: string[] };
+
+export type CanalGateway = {
+  id: string;
+  tenant_id: string;
+  tipo: "uazapi" | "meta" | "site" | "email" | "teams" | "luxbrain" | "api";
+  nome: string;
+  agente_id: string | null;
+  publico: "clientes" | "interno";
+  ativo: boolean;
+  webhook_secret_configurado?: boolean;
+  credenciais_configurado?: boolean;
+  status_conexao?: string | null;
+  ultimo_evento_em?: string | null;
+};
