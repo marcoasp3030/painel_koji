@@ -23,3 +23,45 @@ export type EmpresaPainel = {
   status: string;
   gateway_tenant_id: string | null;
 };
+
+export type CanalResumo = { id: string; tipo: string; ativo: boolean };
+
+export type AgenteGateway = {
+  id: string;
+  tenant_id: string;
+  modelo_id: string;
+  modelo_versao: number;
+  nome: string;
+  status: "rascunho" | "ativo" | "pausado";
+  provedor: "mock" | "skyone";
+  skyone_estrategia: string | null;
+  skyone_webhook_url: string | null;
+  skyone_auth_tipo: "nenhuma" | "cabecalho" | "bearer" | "basic";
+  skyone_auth_configurado?: boolean;
+  skyone_auth_usuario_configurado?: boolean;
+  timeout_s: number | null;
+  instrucoes_agente: string | null;
+  debounce_s: number | null;
+  max_wait_s: number | null;
+  pause_minutes: number | null;
+  slow_notice_s: number | null;
+  aviso_demora: string | null;
+  fallback: string | null;
+  alerta_telefone: string | null;
+  send_mode: "dry" | "live" | null;
+  agente_mode: "mock" | "live" | null;
+  modo_piloto: boolean | null;
+  contatos_permitidos: string[] | null;
+  circuito_estado?: "fechado" | "aberto" | "meio_aberto";
+  canais?: CanalResumo[];
+};
+
+export type Json = string | number | boolean | null | Json[] | { [chave: string]: Json };
+
+export type AgenteDetalhe = AgenteGateway & {
+  configuracao_efetiva?: Record<string, Json>;
+};
+
+export type ModeloAgente = { id: string; versao: number; nome: string; tenant_id: string | null };
+
+export type ResultadoTeste = { ok: boolean; latencia_ms: number; resposta: string[] };
