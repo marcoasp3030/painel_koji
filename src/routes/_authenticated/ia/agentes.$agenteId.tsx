@@ -18,6 +18,7 @@ import {
   obterCircuito,
 } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
+import { ehAgenteDeTeste } from "@/lib/gateway/ocultos";
 import { prontidao, type AcaoProntidao } from "@/lib/gateway/prontidao";
 import { ENVIO, RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
@@ -150,6 +151,9 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
         <Etiqueta tom={situacaoAtual?.tom ?? "neutro"}>
           {situacaoAtual?.rotulo ?? agente.status}
         </Etiqueta>
+        {ehAgenteDeTeste(agente.nome) ? (
+          <Etiqueta tom="alerta">Teste: escondido da empresa</Etiqueta>
+        ) : null}
       </div>
 
       <Tabs value={aba} onValueChange={(v) => irPara(v as Aba)}>

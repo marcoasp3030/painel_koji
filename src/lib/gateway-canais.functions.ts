@@ -15,7 +15,8 @@ export const listarCanais = createServerFn({ method: "POST" })
       const { dados } = await t.chamar<Pagina<CanalGateway>>("GET", ["canais"], {
         query: { limite: 99 },
       });
-      return dados;
+      const o = await import("./gateway/ocultos");
+      return { ...dados, itens: o.filtrarCanais(t.papel, dados.itens, await o.agentesOcultos(t)) };
     });
   });
 

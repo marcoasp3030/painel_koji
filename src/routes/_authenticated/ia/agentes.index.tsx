@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { criarAgente, listarAgentes, listarModelos } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
+import { ehAgenteDeTeste } from "@/lib/gateway/ocultos";
 import { prontidao, resumoProntidao } from "@/lib/gateway/prontidao";
 import type { AgenteGateway, CanalGateway } from "@/lib/gateway/tipos";
 import { RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
@@ -160,6 +161,9 @@ function CartaoAgente({
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <Etiqueta tom={situacao?.tom ?? "neutro"}>{situacao?.rotulo ?? agente.status}</Etiqueta>
+        {ehAgenteDeTeste(agente.nome) ? (
+          <Etiqueta tom="alerta">Teste: escondido da empresa</Etiqueta>
+        ) : null}
         <Etiqueta tom={agente.agente_mode === "live" ? "roxo" : "neutro"}>
           Respostas: {RESPOSTAS[agente.agente_mode ?? "mock"] ?? RESPOSTAS["mock"]}
         </Etiqueta>

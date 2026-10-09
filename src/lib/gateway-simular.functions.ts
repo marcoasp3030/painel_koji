@@ -22,6 +22,7 @@ export const simularMensagem = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
       const { dados } = await t.chamar<ResultadoSimulacao>(
         "POST",
         ["agentes", data.agente, "simular"],
@@ -53,6 +54,7 @@ export const historicoConversa = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
       const { dados } = await t.chamar<{ itens: MensagemGateway[]; tem_mais: boolean }>(
         "GET",
         ["conversas", data.conversa, "mensagens"],

@@ -22,7 +22,8 @@ export const listarAgentes = createServerFn({ method: "POST" })
       const { dados } = await t.chamar<Pagina<AgenteGateway>>("GET", ["agentes"], {
         query: { limite: 99 },
       });
-      return dados;
+      const { filtrarAgentes } = await import("./gateway/ocultos");
+      return { ...dados, itens: filtrarAgentes(t.papel, dados.itens) };
     });
   });
 
@@ -33,6 +34,7 @@ export const obterAgente = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
       const { dados } = await t.chamar<AgenteDetalhe>("GET", ["agentes", data.agente]);
       return dados;
     });
@@ -97,6 +99,7 @@ export const alterarAgente = createServerFn({ method: "POST" })
     const a = await import("./gateway/agentes");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
       const corpo = a.normalizarPatchAgente(data.dados);
       // Só o admin da plataforma chega aqui com campos de IA; para os demais o
       // módulo recusa o PATCH logo abaixo.
@@ -138,6 +141,7 @@ export const testarAgente = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
       // timeout_s do agente vai até 600 s; o gateway responde dentro desse prazo.
       const { dados } = await t.chamar<ResultadoTeste>("POST", ["agentes", data.agente, "testar"], {
         tempoLimiteMs: 620_000,
@@ -153,6 +157,7 @@ export const obterCircuito = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
       const { dados } = await t.chamar<CircuitoAgente>("GET", ["agentes", data.agente, "circuito"]);
       return dados;
     });
