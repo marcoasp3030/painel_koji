@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Pencil, Plus } from "lucide-react";
@@ -44,14 +44,14 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   alterarEmpresaGateway,
-  criarEmpresaGateway,
   listarEmpresasGateway,
   vincularEmpresaGateway,
 } from "@/lib/gateway-empresas.functions";
 import type { EmpresaGateway, EmpresaPainel } from "@/lib/gateway/tipos";
 import { CAMPO_EMPRESA } from "@/lib/gateway/vocabulario";
+import { numeroOuNulo } from "@/lib/gateway/formulario";
 
-export const Route = createFileRoute("/_authenticated/ia/empresas")({
+export const Route = createFileRoute("/_authenticated/ia/empresas/")({
   head: () => ({ meta: [{ title: "Empresas · Agentes | Luxtia" }] }),
   component: () => (
     <PaginaGateway
@@ -67,21 +67,6 @@ export const Route = createFileRoute("/_authenticated/ia/empresas")({
 
 const SEM_VINCULO = "__nenhum__";
 
-function paraId(nome: string) {
-  return nome
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "")
-    .slice(0, 40);
-}
-
-function numeroOuNulo(valor: string) {
-  const texto = valor.trim();
-  return texto === "" ? null : Number(texto);
-}
-
 function Empresas() {
   const queryClient = useQueryClient();
   const listar = useServerFn(listarEmpresasGateway);
@@ -89,7 +74,6 @@ function Empresas() {
   const vincular = useServerFn(vincularEmpresaGateway);
   const [extras, setExtras] = useState<EmpresaGateway[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<EmpresaGateway | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -141,8 +125,10 @@ function Empresas() {
   return (
     <>
       <div className="mt-6 flex justify-end">
-        <Button onClick={() => setCriando(true)}>
-          <Plus className="size-4" aria-hidden /> Nova empresa
+        <Button asChild>
+          <Link to="/ia/empresas/nova">
+            <Plus className="size-4" aria-hidden /> Nova empresa
+          </Link>
         </Button>
       </div>
 
@@ -156,8 +142,10 @@ function Empresas() {
             titulo="Nenhuma empresa ainda"
             texto="Crie a primeira empresa para cadastrar agentes, canais e chaves."
             acao={
-              <Button onClick={() => setCriando(true)}>
-                <Plus className="size-4" aria-hidden /> Nova empresa
+              <Button asChild>
+                <Link to="/ia/empresas/nova">
+                  <Plus className="size-4" aria-hidden /> Nova empresa
+                </Link>
               </Button>
             }
           />
@@ -269,125 +257,10 @@ function Empresas() {
         </div>
       ) : null}
 
-      <NovaEmpresa aberto={criando} onFechar={() => setCriando(false)} onCriada={recarregar} />
       {editando ? (
         <EditarEmpresa empresa={editando} onFechar={() => setEditando(null)} onSalva={recarregar} />
       ) : null}
     </>
-  );
-}
-
-function NovaEmpresa({
-  aberto,
-  onFechar,
-  onCriada,
-}: {
-  aberto: boolean;
-  onFechar: () => void;
-  onCriada: () => Promise<unknown>;
-}) {
-  const criar = useServerFn(criarEmpresaGateway);
-  const [nome, setNome] = useState("");
-  const [id, setId] = useState("");
-  const [idManual, setIdManual] = useState(false);
-  const [plano, setPlano] = useState("");
-  const [limite, setLimite] = useState("");
-  const [fuso, setFuso] = useState("America/Sao_Paulo");
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      criar({
-        data: {
-          id,
-          nome,
-          plano: plano.trim() || null,
-          limite_turnos_mes: numeroOuNulo(limite),
-          timezone: fuso,
-        },
-      }),
-    onSuccess: async () => {
-      toast.success("Empresa criada. Ela começa sem agentes e sem canais.");
-      setNome("");
-      setId("");
-      setIdManual(false);
-      setPlano("");
-      setLimite("");
-      await onCriada();
-      onFechar();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={aberto} onOpenChange={(a) => !a && onFechar()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nova empresa</DialogTitle>
-          <DialogDescription>
-            Crie a empresa; depois ligue-a ao cliente do painel e cadastre agentes e canais.
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutation.mutate();
-          }}
-        >
-          <div className="space-y-2">
-            <RotuloCampo htmlFor="emp-nome" campo={CAMPO_EMPRESA.nome} />
-            <Input
-              id="emp-nome"
-              value={nome}
-              required
-              onChange={(e) => {
-                setNome(e.target.value);
-                if (!idManual) setId(paraId(e.target.value));
-              }}
-            />
-          </div>
-          <div className="space-y-2">
-            <RotuloCampo htmlFor="emp-id" campo={CAMPO_EMPRESA.id} />
-            <Input
-              id="emp-id"
-              value={id}
-              required
-              pattern="[a-z0-9_]{3,40}"
-              title="3 a 40 letras minúsculas, números ou _"
-              className="font-mono"
-              onChange={(e) => {
-                setIdManual(true);
-                setId(e.target.value);
-              }}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <RotuloCampo htmlFor="emp-plano" campo={CAMPO_EMPRESA.plano} />
-              <Input id="emp-plano" value={plano} onChange={(e) => setPlano(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <RotuloCampo htmlFor="emp-limite" campo={CAMPO_EMPRESA.limite_turnos_mes} />
-              <Input
-                id="emp-limite"
-                type="number"
-                min={0}
-                value={limite}
-                placeholder="Sem limite"
-                onChange={(e) => setLimite(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <RotuloCampo htmlFor="emp-fuso" campo={CAMPO_EMPRESA.timezone} />
-            <Input id="emp-fuso" value={fuso} required onChange={(e) => setFuso(e.target.value)} />
-          </div>
-          <Button type="submit" className="w-full" disabled={mutation.isPending}>
-            {mutation.isPending ? "Criando…" : "Criar empresa"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 

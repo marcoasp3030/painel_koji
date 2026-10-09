@@ -47,3 +47,19 @@ export function diferencas(campos: string[], form: Formulario, original: Record<
   }
   return dados;
 }
+
+/** Sugere o identificador do gateway a partir do nome (3 a 40: a-z, 0-9, _). */
+export function paraIdentificador(nome: string) {
+  return nome
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 40);
+}
+
+export function numeroOuNulo(valor: string) {
+  const texto = valor.trim();
+  return texto === "" ? null : Number(texto);
+}
