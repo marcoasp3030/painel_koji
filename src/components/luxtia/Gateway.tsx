@@ -62,7 +62,11 @@ function useEmpresaEscolhida(ativo: boolean) {
       /* Sem armazenamento local, começa pela primeira empresa. */
     }
     setEmpresa((atual) =>
-      atual && ids.includes(atual) ? atual : salva && ids.includes(salva) ? salva : (ids[0] ?? null),
+      atual && ids.includes(atual)
+        ? atual
+        : salva && ids.includes(salva)
+          ? salva
+          : (ids[0] ?? null),
     );
   }, [ativo, lista.data]);
 
@@ -141,7 +145,9 @@ export function PaginaGateway({
               disabled={escolha.carregando || escolha.empresas.length === 0}
             >
               <SelectTrigger id="empresa-gateway" className="bg-card">
-                <SelectValue placeholder={escolha.carregando ? "Carregando…" : "Escolha a empresa"} />
+                <SelectValue
+                  placeholder={escolha.carregando ? "Carregando…" : "Escolha a empresa"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {escolha.empresas.map((e) => (
@@ -168,8 +174,15 @@ export function PaginaGateway({
   }
 
   return (
-    <AppShell nav={plataforma ? ADMIN_NAV : TENANT_NAV} context={plataforma ? "Super Admin" : "Empresa"}>
-      <CabecalhoPagina sobretitulo={sobretitulo} titulo={titulo} {...(descricao ? { descricao } : {})} />
+    <AppShell
+      nav={plataforma ? ADMIN_NAV : TENANT_NAV}
+      context={plataforma ? "Super Admin" : "Empresa"}
+    >
+      <CabecalhoPagina
+        sobretitulo={sobretitulo}
+        titulo={titulo}
+        {...(descricao ? { descricao } : {})}
+      />
       {conteudo}
     </AppShell>
   );
@@ -220,7 +233,11 @@ export function SegredoUmaVez({
         </code>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={copiar}>
-            {copiado ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+            {copiado ? (
+              <Check className="size-4" aria-hidden />
+            ) : (
+              <Copy className="size-4" aria-hidden />
+            )}
             {copiado ? "Copiado" : "Copiar"}
           </Button>
           <Button onClick={onFechar}>Já copiei, fechar</Button>

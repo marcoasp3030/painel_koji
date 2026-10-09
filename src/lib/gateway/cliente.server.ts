@@ -73,7 +73,10 @@ async function lerCorpo(resposta: Response): Promise<unknown> {
 
 /** Remove caracteres que não podem ir em cabeçalho HTTP. */
 function atorSeguro(ator: string) {
-  const limpo = ator.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 200);
+  const limpo = ator
+    .replace(/[^\x20-\x7e]/g, "")
+    .trim()
+    .slice(0, 200);
   if (!limpo) throw new GatewayErro({ codigo: "UNAUTHORIZED", status: 401 });
   return limpo;
 }

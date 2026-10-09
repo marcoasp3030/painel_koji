@@ -255,11 +255,7 @@ function Empresas() {
 
       <NovaEmpresa aberto={criando} onFechar={() => setCriando(false)} onCriada={recarregar} />
       {editando ? (
-        <EditarEmpresa
-          empresa={editando}
-          onFechar={() => setEditando(null)}
-          onSalva={recarregar}
-        />
+        <EditarEmpresa empresa={editando} onFechar={() => setEditando(null)} onSalva={recarregar} />
       ) : null}
     </>
   );
@@ -400,9 +396,11 @@ function EditarEmpresa({
       const dados: Record<string, unknown> = {};
       if (nome !== empresa.nome) dados["nome"] = nome;
       if ((plano.trim() || null) !== empresa.plano) dados["plano"] = plano.trim() || null;
-      if (numeroOuNulo(limite) !== empresa.limite_turnos_mes) dados["limite_turnos_mes"] = numeroOuNulo(limite);
+      if (numeroOuNulo(limite) !== empresa.limite_turnos_mes)
+        dados["limite_turnos_mes"] = numeroOuNulo(limite);
       if (fuso !== empresa.timezone) dados["timezone"] = fuso;
-      if (retencao.trim() && Number(retencao) !== empresa.retencao_dias) dados["retencao_dias"] = Number(retencao);
+      if (retencao.trim() && Number(retencao) !== empresa.retencao_dias)
+        dados["retencao_dias"] = Number(retencao);
       if (teste !== empresa.tenant_teste) dados["tenant_teste"] = teste;
       return alterar({ data: { id: empresa.id, dados } });
     },

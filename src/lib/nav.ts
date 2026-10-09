@@ -1,7 +1,8 @@
 /** Itens do menu lateral, agrupados para o super admin e para o cliente. */
 import type { PapelGateway } from "./gateway/tipos";
 
-export type IconeMenu = "clientes" | "equipe" | "empresas" | "agentes" | "canais" | "chaves" | "simular";
+export type IconeMenu =
+  "clientes" | "equipe" | "empresas" | "agentes" | "canais" | "chaves" | "simular";
 
 export type ItemMenu = {
   to: string;
@@ -13,17 +14,65 @@ export type ItemMenu = {
 };
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
-  { to: "/gateway/empresas", label: "Empresas", grupo: "Agentes", icone: "empresas", papeis: ["plataforma"] },
-  { to: "/gateway/agentes", label: "Agentes", grupo: "Agentes", icone: "agentes", papeis: ["plataforma"] },
-  { to: "/gateway/canais", label: "Canais", grupo: "Agentes", icone: "canais", papeis: ["plataforma"] },
-  { to: "/gateway/chaves", label: "Chaves de API", grupo: "Agentes", icone: "chaves", papeis: ["plataforma"] },
-  { to: "/gateway/simular", label: "Simular conversa", grupo: "Agentes", icone: "simular", papeis: ["plataforma"] },
+  {
+    to: "/gateway/empresas",
+    label: "Empresas",
+    grupo: "Agentes",
+    icone: "empresas",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/gateway/agentes",
+    label: "Agentes",
+    grupo: "Agentes",
+    icone: "agentes",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/gateway/canais",
+    label: "Canais",
+    grupo: "Agentes",
+    icone: "canais",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/gateway/chaves",
+    label: "Chaves de API",
+    grupo: "Agentes",
+    icone: "chaves",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/gateway/simular",
+    label: "Simular conversa",
+    grupo: "Agentes",
+    icone: "simular",
+    papeis: ["plataforma"],
+  },
 ];
 
 const AGENTES_EMPRESA: ItemMenu[] = [
-  { to: "/gateway/agentes", label: "Agentes", grupo: "Agentes", icone: "agentes", papeis: ["admin", "membro"] },
-  { to: "/gateway/canais", label: "Canais", grupo: "Agentes", icone: "canais", papeis: ["admin", "membro"] },
-  { to: "/gateway/simular", label: "Simular conversa", grupo: "Agentes", icone: "simular", papeis: ["admin"] },
+  {
+    to: "/gateway/agentes",
+    label: "Agentes",
+    grupo: "Agentes",
+    icone: "agentes",
+    papeis: ["admin", "membro"],
+  },
+  {
+    to: "/gateway/canais",
+    label: "Canais",
+    grupo: "Agentes",
+    icone: "canais",
+    papeis: ["admin", "membro"],
+  },
+  {
+    to: "/gateway/simular",
+    label: "Simular conversa",
+    grupo: "Agentes",
+    icone: "simular",
+    papeis: ["admin"],
+  },
 ];
 
 export const ADMIN_NAV: ItemMenu[] = [

@@ -4,7 +4,9 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { EmpresaGateway, EmpresaPainel, Pagina } from "./gateway/tipos";
 
-const idTenant = z.string().regex(/^[a-z0-9_]{3,40}$/, "Use 3 a 40 letras minúsculas, números ou _.");
+const idTenant = z
+  .string()
+  .regex(/^[a-z0-9_]{3,40}$/, "Use 3 a 40 letras minúsculas, números ou _.");
 const fuso = z.string().min(3).max(64);
 
 export const listarEmpresasGateway = createServerFn({ method: "POST" })
@@ -38,8 +40,12 @@ export const criarEmpresaGateway = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
-      const corpo = Object.fromEntries(Object.entries(data).filter(([, v]) => v != null && v !== ""));
-      const { dados } = await (await sessao.plataforma()).chamar<EmpresaGateway>("POST", ["tenants"], {
+      const corpo = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v != null && v !== ""),
+      );
+      const { dados } = await (
+        await sessao.plataforma()
+      ).chamar<EmpresaGateway>("POST", ["tenants"], {
         corpo,
       });
       return dados;

@@ -46,11 +46,7 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
   };
 }
 
-async function registrarBloqueio(
-  perfil: PerfilGateway,
-  solicitado: string | null,
-  motivo: string,
-) {
+async function registrarBloqueio(perfil: PerfilGateway, solicitado: string | null, motivo: string) {
   await supabaseAdmin.from("audit_logs").insert({
     actor_user_id: perfil.userId,
     actor_email: perfil.email,

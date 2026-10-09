@@ -25,7 +25,12 @@ const PERFIS: Record<string, PerfilGateway> = {
   adminA: { userId: "u-a", email: "ana@koji.com", superAdmin: false, vinculos: vinculo(true) },
   membroA: { userId: "u-m", email: "beto@koji.com", superAdmin: false, vinculos: vinculo(false) },
   semVinculo: { userId: "u-x", email: "x@luxtia.com", superAdmin: false, vinculos: [] },
-  suspenso: { userId: "u-s", email: "s@koji.com", superAdmin: false, vinculos: vinculo(true, false) },
+  suspenso: {
+    userId: "u-s",
+    email: "s@koji.com",
+    superAdmin: false,
+    vinculos: vinculo(true, false),
+  },
 };
 
 function montar(respostas?: Response[]) {
@@ -49,7 +54,10 @@ function montar(respostas?: Response[]) {
 async function tenantDe(papel: string, solicitado?: string) {
   const ctx = montar();
   const sessao = await ctx.modulo.sessao({ userId: papel, email: null });
-  return { ...ctx, t: await sessao.tenant(solicitado ?? (papel === "plataforma" ? "bykoji" : null)) };
+  return {
+    ...ctx,
+    t: await sessao.tenant(solicitado ?? (papel === "plataforma" ? "bykoji" : null)),
+  };
 }
 
 type Op = [MetodoGateway, string[], unknown?];
@@ -92,10 +100,19 @@ afterEach(() => {
   console.error = consoleErroOriginal;
 });
 
-async function recusada(t: { chamar: Function }, [metodo, partes, corpo]: Op) {
-  const erro = await t
-    .chamar(metodo, partes, corpo === undefined ? {} : { corpo })
-    .then(() => null, (e: unknown) => e);
+type Chamavel = {
+  chamar: (
+    metodo: MetodoGateway,
+    partes: string[],
+    opcoes: { corpo?: unknown },
+  ) => Promise<unknown>;
+};
+
+async function recusada(t: Chamavel, [metodo, partes, corpo]: Op) {
+  const erro = await t.chamar(metodo, partes, corpo === undefined ? {} : { corpo }).then(
+    () => null,
+    (e: unknown) => e,
+  );
   return erro instanceof AcessoNegado ? erro : null;
 }
 
@@ -170,7 +187,11 @@ describe("papéis", () => {
   test("admin da plataforma: tudo, inclusive send_mode e skyone_*", async () => {
     const { t, rede, bloqueios } = await tenantDe("plataforma", "postman_teste");
     for (const op of ROTAS_DO_TENANT) expect(await recusada(t, op)).toBeNull();
-    const corpo = { send_mode: "dry", skyone_webhook_url: "https://x.example/f", provedor: "skyone" };
+    const corpo = {
+      send_mode: "dry",
+      skyone_webhook_url: "https://x.example/f",
+      provedor: "skyone",
+    };
     expect(await recusada(t, ["PATCH", ["agentes", "ag_1"], corpo])).toBeNull();
     expect(rede.chamadas).toHaveLength(ROTAS_DO_TENANT.length + 1);
     expect(rede.chamadas.at(-1)!.init.body).toBe(JSON.stringify(corpo));
@@ -246,7 +267,11 @@ describe("papéis", () => {
       ["GET", ["agentes"]],
       ["GET", ["agentes", "ag_1"]],
       ["POST", ["agentes", "ag_1", "testar"]],
-      ["POST", ["agentes", "ag_1", "simular"], { canal_id: "can_1", identificador: "a", texto: "oi" }],
+      [
+        "POST",
+        ["agentes", "ag_1", "simular"],
+        { canal_id: "can_1", identificador: "a", texto: "oi" },
+      ],
       ["GET", ["canais"]],
       ["GET", ["canais", "can_1"]],
       ["GET", ["consumo"]],
@@ -311,18 +336,24 @@ describe("cliente HTTP", () => {
   test("envia Bearer, X-Actor do usuário logado e codifica segmentos", async () => {
     const { modulo, rede } = montar();
     const sessao = await modulo.sessao({ userId: "plataforma", email: null });
-    await (await sessao.tenant("bykoji")).chamar("GET", ["conversas", "bykoji:can_1:a/b", "mensagens"]);
+    await (
+      await sessao.tenant("bykoji")
+    ).chamar("GET", ["conversas", "bykoji:can_1:a/b", "mensagens"]);
     const { url, init } = rede.chamadas[0]!;
     const cab = init.headers as Record<string, string>;
     expect(cab["Authorization"]).toBe(`Bearer ${CHAVE}`);
     expect(cab["X-Actor"]).toBe("admin@luxtia.local");
-    expect(url.pathname).toBe("/admin/v1/tenants/bykoji/conversas/bykoji%3Acan_1%3Aa%2Fb/mensagens");
+    expect(url.pathname).toBe(
+      "/admin/v1/tenants/bykoji/conversas/bykoji%3Acan_1%3Aa%2Fb/mensagens",
+    );
   });
 
   test("interpreta o envelope {erro}", async () => {
     const { modulo } = montar([
       Response.json(
-        { erro: { codigo: "CONFLICT", mensagem: "A operação conflita.", detalhes: { campo: "id" } } },
+        {
+          erro: { codigo: "CONFLICT", mensagem: "A operação conflita.", detalhes: { campo: "id" } },
+        },
         { status: 409 },
       ),
     ]);
@@ -412,14 +443,19 @@ describe("cliente HTTP", () => {
       criarClienteGateway({
         url: URL_BASE,
         chave: CHAVE,
-        fetch: fetchFalso([new Response("erro", { status: 500 }), new Response("", { status: 401 })]).fn,
+        fetch: fetchFalso([
+          new Response("erro", { status: 500 }),
+          new Response("", { status: 401 }),
+        ]).fn,
       }),
     ];
     const falhas: unknown[] = [];
     for (const cliente of clientes) {
       for (let i = 0; i < 2; i += 1) {
         falhas.push(
-          await cliente.requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a" }).catch((e) => e),
+          await cliente
+            .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a" })
+            .catch((e) => e),
         );
       }
     }
