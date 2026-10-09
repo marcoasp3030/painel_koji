@@ -2,6 +2,19 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-09 15:52] — Publicação do cursor oficial
+- **Autor:** Auto (Cursor)
+- **Objetivo:** Publicar só o painel, com imagem de volta e backup, para validação de `/ia/conversas`.
+- **Arquivos alterados:**
+  - `instrucoes.md` — modificado — volta, backup e conferências
+  - `docs/worklog.md` — modificado — esta entrada
+- **Resumo das mudanças:** A imagem em uso foi marcada `painel:24c8436` antes do build. O painel novo é `painel:ed9de0c`. Banco, gateway e demais containers não foram recriados.
+- **Decisões e justificativas:** A volta é o commit que a imagem anterior contém (`24c8436`), não o código novo. Sem mudança de schema, o dump não deve ser restaurado numa volta.
+- **Comandos executados:** tag conferida → OK; `pg_restore --list` → OK; `docker compose build painel` → OK; verificação da chave no bundle → OK; `up -d --no-deps --no-build painel` → OK; páginas 200 e admin do gateway 404; segredos nos logs → 0.
+- **Erros e resoluções:** `pg_restore` não existe no host; a lista do dump foi conferida com a imagem `postgres:16-alpine`.
+- **Pendências / TODO:** validação visual de `/ia/conversas` pelo Marco
+- **Próximos passos:** nenhuma continuação até essa validação
+
 ## [2026-10-09 15:44] — Cursor oficial no acompanhamento das conversas
 - **Autor:** Auto (Cursor)
 - **Objetivo:** Trocar a varredura provisória pelo `GET /eventos/cursor` do gateway.

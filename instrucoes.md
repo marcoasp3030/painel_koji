@@ -14,7 +14,20 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 
   Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
-- Imagem de volta atual: `painel:15f98ec` (anterior à tela Conversas; ver procedimento abaixo).
+- Imagem de volta atual: `painel:24c8436` (Conversas antes do cursor oficial). A anterior à tela Conversas continua em `painel:15f98ec`.
+
+## Fase — Publicação do cursor oficial nas Conversas (2026-10-09 15:52)
+
+- Código `ed9de0c`. Imagem publicada `painel:ed9de0c` (`sha256:c69c8f3249728e106d736066a436536f62334479d9ecc514043ce520433cd020`), igual à do container em uso.
+- Imagem de volta conferida antes do build: `painel:24c8436` (`sha256:76f4abb772b94bcfd2984fd85c183bb041ab74ec4c86e7907a1388ea71ba5b44`).
+- Backup em `/home/twadmin/backups/painel/pre-cursor-20261009T185130Z` (diretório 700, arquivos 600): dump, `.env`, Compose e IDs dos containers. `pg_restore --list` aprovado (279 entradas). SHA-256 do dump: `84ba6ba0ae7f0cf672cfa864b056258a8f8070ef43505f4d955ee63a9168c16e`.
+- `docker/verificar-chave-no-bundle.sh`: zero ocorrências da chave, zero referências no front; o servidor lê a chave. Recriado somente o painel. Gateway, Postgres, Redis, autenticação, REST e proxy mantiveram os mesmos IDs. Nenhum prune ou migração.
+- `/`, `/ia/conversas`, `/ia/agentes`, `/ia/simular`, `/auth/v1/health` e `/gateway/health` → 200. `/gateway/admin/v1/tenants` → 404. Nos logs do painel novo, chave do gateway, segredo JWT, service role e senha do Postgres → zero ocorrências.
+- A revisão de `/ia/conversas` no navegador fica com Marco.
+
+### Volta desta publicação
+
+Sem alteração de schema: não restaurar o dump. Conferir `docker image inspect painel:24c8436 --format '{{.Id}}'`, executar `docker tag painel:24c8436 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
 
 ## Fase — Conversas e teste real em simulação (2026-10-09)
 
