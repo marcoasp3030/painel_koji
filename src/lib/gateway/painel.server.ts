@@ -21,7 +21,7 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
 
   const { data: vinculos, error: erroVinculos } = await supabaseAdmin
     .from("tenant_users")
-    .select("tenants(gateway_tenant_id, status)")
+    .select("is_tenant_admin, tenants(gateway_tenant_id, status)")
     .eq("user_id", usuario.userId);
   if (erroVinculos) throw new Error("Não foi possível conferir suas permissões.");
 
@@ -32,20 +32,30 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
     vinculos: (vinculos ?? []).flatMap((v) => {
       const t = v.tenants as { gateway_tenant_id: string | null; status: string } | null;
       return t?.gateway_tenant_id
-        ? [{ gatewayTenantId: t.gateway_tenant_id, ativo: t.status === "active" }]
+        ? [
+            {
+              gatewayTenantId: t.gateway_tenant_id,
+              ativo: t.status === "active",
+              admin: Boolean(v.is_tenant_admin),
+            },
+          ]
         : [];
     }),
   };
 }
 
-async function registrarBloqueio(perfil: PerfilGateway, solicitado: string | null) {
+async function registrarBloqueio(
+  perfil: PerfilGateway,
+  solicitado: string | null,
+  motivo: string,
+) {
   await supabaseAdmin.from("audit_logs").insert({
     actor_user_id: perfil.userId,
     actor_email: perfil.email,
     action: "Bloqueio de segurança",
     target: "Gateway de agentes",
     status: "error",
-    detail: solicitado ? `Empresa solicitada no gateway: ${solicitado}` : "Sem vínculo com o gateway",
+    detail: solicitado ? `${motivo} (empresa no gateway: ${solicitado})` : motivo,
   });
 }
 
