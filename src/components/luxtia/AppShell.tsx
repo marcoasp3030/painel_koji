@@ -31,6 +31,7 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   canais: RadioTower,
   chaves: KeyRound,
   simular: MessagesSquare,
+  conversas: MessagesSquare,
 };
 
 function itemAtivo(caminho: string, destino: string) {

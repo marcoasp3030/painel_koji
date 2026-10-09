@@ -22,6 +22,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authenticated/admin/$tenantId'
 import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
+import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenticated/ia/conversas'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
@@ -96,6 +97,12 @@ const AuthenticatedIaChavesRoute = AuthenticatedIaChavesRouteImport.update({
   path: '/ia/chaves',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaConversasRoute =
+  AuthenticatedIaConversasRouteImport.update({
+    id: '/ia/conversas',
+    path: '/ia/conversas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   id: '/ia/simular',
   path: '/ia/simular',
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
@@ -162,6 +170,7 @@ export interface FileRoutesByTo {
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
@@ -184,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/_authenticated/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/admin/$tenantId'
     | '/ia/canais'
     | '/ia/chaves'
+    | '/ia/conversas'
     | '/ia/simular'
     | '/admin/'
     | '/ia/agentes/$agenteId'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/admin/$tenantId'
     | '/ia/canais'
     | '/ia/chaves'
+    | '/ia/conversas'
     | '/ia/simular'
     | '/admin'
     | '/ia/agentes/$agenteId'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/$tenantId'
     | '/_authenticated/ia/canais'
     | '/_authenticated/ia/chaves'
+    | '/_authenticated/ia/conversas'
     | '/_authenticated/ia/simular'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaChavesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/conversas': {
+      id: '/_authenticated/ia/conversas'
+      path: '/ia/conversas'
+      fullPath: '/ia/conversas'
+      preLoaderRoute: typeof AuthenticatedIaConversasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/simular': {
       id: '/_authenticated/ia/simular'
       path: '/ia/simular'
@@ -425,6 +445,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedIaCanaisRoute: typeof AuthenticatedIaCanaisRoute
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
+  AuthenticatedIaConversasRoute: typeof AuthenticatedIaConversasRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
   AuthenticatedIaEmpresasNovaRoute: typeof AuthenticatedIaEmpresasNovaRoute
@@ -442,6 +463,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedIaCanaisRoute: AuthenticatedIaCanaisRoute,
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
+  AuthenticatedIaConversasRoute: AuthenticatedIaConversasRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
   AuthenticatedIaEmpresasNovaRoute: AuthenticatedIaEmpresasNovaRoute,

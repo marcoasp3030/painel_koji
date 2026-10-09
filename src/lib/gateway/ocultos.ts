@@ -15,7 +15,11 @@ export function ehAgenteDeTeste(nome: string | null | undefined) {
 
 type Escopo = {
   papel: PapelGateway;
-  chamar<T = unknown>(metodo: MetodoGateway, partes?: string[], opcoes?: object): Promise<{ dados: T }>;
+  chamar<T = unknown>(
+    metodo: MetodoGateway,
+    partes?: string[],
+    opcoes?: object,
+  ): Promise<{ dados: T }>;
 };
 
 const naoEncontrado = () => new GatewayErro({ codigo: "NOT_FOUND", status: 404 });
@@ -37,10 +41,21 @@ export function filtrarCanais<T extends { agente_id: string | null }>(
 /** IDs dos agentes de teste da empresa (vazio para a plataforma). */
 export async function agentesOcultos(t: Escopo): Promise<Set<string>> {
   if (t.papel === "plataforma") return new Set();
-  const { dados } = await t.chamar<{ itens: { id: string; nome: string }[] }>("GET", ["agentes"], {
-    query: { limite: 99 },
-  });
-  return new Set(dados.itens.filter((a) => ehAgenteDeTeste(a.nome)).map((a) => a.id));
+  const ocultos = new Set<string>();
+  let cursor: string | null = null;
+  for (let pagina = 0; pagina < 100; pagina++) {
+    const {
+      dados,
+    }: { dados: { itens: { id: string; nome: string }[]; proximo_cursor?: string | null } } =
+      await t.chamar("GET", ["agentes"], {
+        query: { limite: 99, cursor },
+      });
+    for (const a of dados.itens) if (ehAgenteDeTeste(a.nome)) ocultos.add(a.id);
+    if (!dados.proximo_cursor) return ocultos;
+    if (dados.proximo_cursor === cursor) throw naoEncontrado();
+    cursor = dados.proximo_cursor;
+  }
+  throw naoEncontrado();
 }
 
 /** Para quem é da empresa, agente de teste "não existe". */
@@ -55,8 +70,6 @@ export async function exigirConversaVisivel(t: Escopo, conversa: string) {
   if (t.papel === "plataforma") return;
   const canal = conversa.split(":")[1];
   if (!canal) return;
-  const { dados } = await t.chamar<{ agente_id: string | null }>("GET", ["canais", canal]).catch(
-    () => ({ dados: { agente_id: null } }),
-  );
+  const { dados } = await t.chamar<{ agente_id: string | null }>("GET", ["canais", canal]);
   if (dados.agente_id && (await agentesOcultos(t)).has(dados.agente_id)) throw naoEncontrado();
 }

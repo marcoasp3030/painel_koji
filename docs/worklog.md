@@ -2,6 +2,13 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-09] — Conversas e conexão Skyone em simulação
+
+- Implementadas lista/filtros, histórico paginado, atendimento humano, polling limitado no servidor e novidades locais por usuário/empresa. Destaque de transferência preparado para a Fase 3.
+- Teste real pelo painel: HTTP 200 em 6.762 ms; Bench segundo agente permanece mock/dry.
+- 51 testes aprovados, TypeScript/lint/build verdes. Somente painel recriado com imagem de volta e backup; funções HTTP autenticadas e proteções verificadas após publicação.
+- Procedimento, backup, limitações e resultados completos em `instrucoes.md`. Aguardando validação do Marco; nenhuma continuação da Fase 0.6.
+
 ## [2026-10-07 23:54] — Visual do painel mais moderno
 - **Autor:** Grok 4.7
 - **Objetivo:** Melhorar a experiência do painel sem sair das cores do designer.

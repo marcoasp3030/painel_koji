@@ -14,7 +14,25 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 
   Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
-- Imagem de volta atual: `painel:121051e` (telas `/ia/*`, implantada em 09/10/2026).
+- Imagem de volta atual: `painel:15f98ec` (anterior à tela Conversas; ver procedimento abaixo).
+
+## Fase — Conversas e teste real em simulação (2026-10-09)
+
+- Tela `/ia/conversas` e menu para plataforma, admin da empresa e membro: filtros por agente/canal/situação/nome ou telefone/data, paginação de conversas, histórico paginado, assumir por prazo, devolver e mensagem humana (pausa automática). Nenhuma configuração de envio foi alterada.
+- Lista preparada para priorizar e destacar **Aguardando atendente** quando o gateway passar a enviar `aguardando_humano` (Fase 3); hoje não inventa esse estado.
+- Ponto de partida de `/eventos`: servidor percorre páginas de 100, no máximo 20 por chamada; se houver mais, retoma do cursor confirmado na próxima chamada. Não salta eventos nem manda a auditoria bruta ao navegador. Trocar esse adaptador quando Marco informar a rota/parâmetro do último cursor. Polling a cada 2,5 s; lista/histórico também se atualizam, sem polling em segundo plano.
+- Novidades em `localStorage`, chave por usuário autenticado e tenant efetivo; guarda somente datas de leitura por conversa, sem conteúdo. Abrir histórico e lê-lo marca a conversa; sem armazenamento, funciona em memória. Agentes `[teste]` ocultos para usuários da empresa, inclusive em páginas posteriores; falha ao conferir canal recusa histórico/ação.
+- Chamada real autorizada, pelas funções HTTP autenticadas do próprio painel: `alterarAgente` colocou `[teste] Bench segundo agente` em `agente_mode=mock`; `testarConexaoSkyone` enviou `usar_provedor_real=true` → **HTTP 200, ok=true, 6.762 ms**, resposta recebida. Leitura posterior confirmou **mock/dry**. Nenhuma senha lida/exibida e nenhum outro agente alterado.
+- Testes: **51 aprovados**, seis cenários de integração REST antigos ignorados por ausência das variáveis próprias; testes de acesso/permissões do módulo executados. TypeScript (`tsc --noEmit`), lint dos arquivos novos/alterados e build aprovados. Testes novos cobrem limite/continuação do cursor, cursor sem avanço, marcadores por usuário/empresa, combinação do histórico, prioridade humana e ocultação paginada.
+- Implantação: imagem anterior preservada e conferida como `painel:15f98ec` (`sha256:575132fdd09184df60fcbf18cdcf611ff9ad5114b8ec706e64299d2e0193461a`). Backup do banco/ambiente/Compose em `/home/twadmin/backups/painel/pre-conversas-20261009T181251Z`, diretório 700 e arquivos 600; `pg_restore --list` aprovado. SHA-256 do dump: `62e9e0f1774b688b78658cdcd745c15daef0887dcf4e6bdb737a817b6c05298b`.
+- `docker/verificar-chave-no-bundle.sh`: zero ocorrências da chave, zero referências internas no front; servidor lê a chave. Recriado **somente painel**. IDs de gateway, banco, Redis, autenticação, REST e proxy preservados; o container temporário da suíte foi encerrado normalmente. Nenhum prune ou migração.
+- Pós-publicação: `/`, `/ia/conversas`, `/ia/agentes`, `/ia/simular`, `/auth/v1/health` e `/gateway/health` → 200; `/gateway/admin/v1/tenants` → 404. Busca das credenciais locais nos logs do painel novo → zero ocorrências.
+- Validação autenticada das funções do painel: conversa sintética `bykoji:can_6128998aa8cbfd1b9dc59812:validacao-conversas-1791569656`, agente `bykoji_atendimento` mock/dry. Resposta mock, filtros, pausa, mensagem `origem=humano` em dry, `antes`/`tem_mais`, retomada e cursor por usuário conferidos. Conversa sintética preservada. Estado final do Bench segundo agente confirmado mock/dry novamente. Nenhuma mensagem enviada a cliente.
+- Os testes acima validam HTTP e funções do painel; a revisão visual e de uso no navegador fica com Marco. Não iniciada a Fase 0.6 do gateway.
+
+### Volta da tela Conversas
+
+Sem alteração de schema: manter banco e ambiente atuais. Se precisar voltar, conferir `docker image inspect painel:15f98ec --format '{{.Id}}'`, executar `docker tag painel:15f98ec painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`; conferir as rotas de saúde. Não restaurar o dump sobre a base em uso. O agente de teste deve continuar mock/dry, conforme pedido. Nenhuma volta foi necessária.
 
 ## Fase — Experiência das telas dos agentes (2026-10-09)
 
