@@ -222,6 +222,7 @@ export type Database = {
           contact_email: string | null
           contact_name: string | null
           created_at: string
+          gateway_tenant_id: string | null
           id: string
           name: string
           slug: string
@@ -232,6 +233,7 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           created_at?: string
+          gateway_tenant_id?: string | null
           id?: string
           name: string
           slug: string
@@ -242,6 +244,7 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           created_at?: string
+          gateway_tenant_id?: string | null
           id?: string
           name?: string
           slug?: string
