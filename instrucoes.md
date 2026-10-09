@@ -2,6 +2,15 @@
 
 Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma nova instrução.
 
+## Fase — Gateway no domínio existente (2026-10-08)
+
+- Publicado `https://painel.luxbrain.com.br/gateway/health` pelo Caddy; `/gateway/` redireciona para o health.
+- HTTPS corrigido com emissão Let's Encrypt após a mudança de DNS para `177.67.71.211`.
+- Caddy conectado à rede dedicada `luxbrain_gateway_proxy`, declarada no Compose do serviço `proxy`. Somente webhooks, API de integração e health do gateway são encaminhados; gestão retorna 404.
+- Adicionados filtros para ocultar query strings e chaves dos logs do proxy. Configuração validada antes de reload; serviços do painel não foram recriados.
+- Verificados `/`, `/auth/v1/health` e `/gateway/health` por HTTPS: 200. Banco e autenticação do painel preservados.
+- Gateway ainda simulado (`mock/dry`), sem interface de gestão. Detalhes em `/home/twadmin/gateway/docs/PUBLICACAO.md`; evolução do Skyone em `/home/twadmin/gateway/docs/SKYONE.md`.
+
 ## Fase — Painel mais moderno (2026-10-07 23:54)
 
 - Mesmas cores do designer: creme no fundo, roxo na marca, ouro só na faixa e no monograma.
