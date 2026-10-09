@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   avancarCursor,
   chaveNovidades,
+  desdeDoCursor,
   juntarMensagens,
   ordenarConversas,
   temNovidade,
@@ -9,6 +10,20 @@ import {
 } from "./conversas";
 import { agentesOcultos, exigirConversaVisivel } from "./ocultos";
 
+test("polling parte do ultimo_id e não varre o histórico desde zero", async () => {
+  expect(desdeDoCursor(0)).toBe(0);
+  expect(desdeDoCursor(216)).toBe(216);
+  expect(() => desdeDoCursor(-1)).toThrow();
+  expect(() => desdeDoCursor(1.5)).toThrow();
+  const chamadas: number[] = [];
+  const desde = desdeDoCursor(216);
+  const resultado = await avancarCursor(async (cursor) => {
+    chamadas.push(cursor);
+    return { proximo_cursor: cursor + 2, tem_mais: false };
+  }, desde);
+  expect(chamadas).toEqual([216]);
+  expect(resultado).toEqual({ cursor: 218, completo: true });
+});
 test("cursor percorre páginas de 100 no servidor, continua sem saltar após limite", async () => {
   const chamadas: number[] = [];
   const pagina = async (desde: number, limite: number) => {

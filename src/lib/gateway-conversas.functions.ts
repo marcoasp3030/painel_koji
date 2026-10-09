@@ -3,7 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { empresa, idRecurso } from "./gateway/esquemas";
 import type { Pagina } from "./gateway/tipos";
-import { avancarCursor, chaveNovidades, type Conversa, type Eventos } from "./gateway/conversas";
+import {
+  avancarCursor,
+  chaveNovidades,
+  desdeDoCursor,
+  type Conversa,
+  type Eventos,
+} from "./gateway/conversas";
 
 const conversa = z.string().min(3).max(300);
 export const listarConversas = createServerFn({ method: "POST" })
@@ -33,6 +39,21 @@ export const listarConversas = createServerFn({ method: "POST" })
         query: { ...query, limite: 100 },
       });
       return { ...dados, itens: dados.itens.filter((c) => !ocultos.has(c.agente_id)) };
+    });
+  });
+export const obterCursorEventos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      // Uma leitura, antes da lista: não cria evento e não devolve histórico.
+      const { dados } = await t.chamar<{ ultimo_id: number }>("GET", ["eventos", "cursor"]);
+      return {
+        ultimo_id: desdeDoCursor(dados.ultimo_id),
+        chaveLocal: chaveNovidades(sessao.perfil.userId, t.id),
+      };
     });
   });
 export const acompanharConversas = createServerFn({ method: "POST" })

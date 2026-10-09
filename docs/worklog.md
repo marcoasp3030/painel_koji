@@ -2,6 +2,23 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-09 15:44] — Cursor oficial no acompanhamento das conversas
+- **Autor:** Auto (Cursor)
+- **Objetivo:** Trocar a varredura provisória pelo `GET /eventos/cursor` do gateway.
+- **Arquivos alterados:**
+  - `src/lib/gateway-conversas.functions.ts` — modificado — lê `ultimo_id` antes da lista
+  - `src/lib/gateway/conversas.ts` — modificado — `desde` parte desse id
+  - `src/lib/gateway/modulo.server.ts` — modificado — admin da empresa e membro podem ler o cursor
+  - `src/components/luxtia/Conversas.tsx` — modificado — lista e polling só depois do cursor
+  - `src/lib/gateway/conversas.test.ts`, `src/lib/gateway/modulo.test.ts` — modificados
+  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Ao abrir Conversas, o painel pede `{"ultimo_id": N}` e só então carrega a lista. O polling usa esse N como `desde` e não pede o cursor de novo. Páginas de eventos só alcançam o que chegou depois.
+- **Decisões e justificativas:** O contrato pede o cursor antes da carga para não perder o que for confirmado enquanto a lista carrega. A varredura desde zero deixou de ser o ponto de partida.
+- **Comandos executados:** `bun test` → 52 pass, 6 skip; `tsc --noEmit` e eslint dos arquivos alterados → OK. Sem build nem publicação.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** validação do Marco antes de publicar o painel
+- **Próximos passos:** depois da validação, imagem de volta, backup e recriar só o painel
+
 ## [2026-10-09] — Conversas e conexão Skyone em simulação
 
 - Implementadas lista/filtros, histórico paginado, atendimento humano, polling limitado no servidor e novidades locais por usuário/empresa. Destaque de transferência preparado para a Fase 3.

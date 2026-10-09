@@ -14,8 +14,10 @@ import {
   acompanharConversas,
   atenderConversa,
   listarConversas,
+  obterCursorEventos,
 } from "@/lib/gateway-conversas.functions";
 import {
+  desdeDoCursor,
   juntarMensagens,
   ordenarConversas,
   temNovidade,
@@ -26,7 +28,8 @@ import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
 
 export function Conversas({ ctx }: { ctx: ContextoGateway }) {
   const buscar = useServerFn(listarConversas),
-    eventos = useServerFn(acompanharConversas);
+    eventos = useServerFn(acompanharConversas),
+    cursorEventos = useServerFn(obterCursorEventos);
   const buscarAgentes = useServerFn(listarAgentes),
     buscarCanais = useServerFn(listarCanais);
   const cache = useQueryClient();
@@ -46,6 +49,16 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
     cursor = useRef(0),
     inicializado = useRef(false);
   const montar = useRef(new Date().toISOString());
+  const cursorInicial = useQuery({
+    queryKey: ["conversas-cursor", ctx.empresa],
+    queryFn: () => cursorEventos({ data: { empresa: ctx.empresa } }),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
   const agentes = useQuery({
     queryKey: ["gateway", "agentes", ctx.empresa],
     queryFn: () => buscarAgentes({ data: { empresa: ctx.empresa } }),
@@ -56,6 +69,7 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
   });
   const lista = useInfiniteQuery({
     queryKey: ["conversas", ctx.empresa, agente, canal, status, filtroBusca, desde],
+    enabled: cursorInicial.isSuccess,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       buscar({
@@ -75,20 +89,21 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
   });
   const acompanhamento = useQuery({
     queryKey: ["conversas-eventos", ctx.empresa],
+    enabled: cursorInicial.isSuccess,
     queryFn: async () => {
-      const r = await eventos({ data: { empresa: ctx.empresa, desde: cursor.current } });
-      const mudou = r.cursor !== cursor.current;
+      const desde = inicializado.current
+        ? cursor.current
+        : desdeDoCursor(cursorInicial.data!.ultimo_id);
+      const r = await eventos({ data: { empresa: ctx.empresa, desde } });
+      const mudou = r.cursor !== desde;
       cursor.current = r.cursor;
-      if (inicializado.current && mudou) {
-        void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
-        void cache.invalidateQueries({ queryKey: ["conversa-mensagens", ctx.empresa] });
-      }
-      if (r.completo && !inicializado.current) {
+      if (!inicializado.current) {
         inicializado.current = true;
-        chave.current = r.chaveLocal;
+        const chaveLocal = cursorInicial.data!.chaveLocal;
+        chave.current = chaveLocal;
         let l: Leitura = { inicio: montar.current, vistas: {} };
         try {
-          const salva = JSON.parse(localStorage.getItem(r.chaveLocal) ?? "null");
+          const salva = JSON.parse(localStorage.getItem(chaveLocal) ?? "null");
           if (
             salva &&
             typeof salva.inicio === "string" &&
@@ -105,11 +120,15 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
               ) as Record<string, string>,
             };
           }
-          localStorage.setItem(r.chaveLocal, JSON.stringify(l));
+          localStorage.setItem(chaveLocal, JSON.stringify(l));
         } catch {
           /* Mantém o marcador em memória se o armazenamento estiver indisponível. */
         }
         setLeitura(l);
+      }
+      if (mudou) {
+        void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+        void cache.invalidateQueries({ queryKey: ["conversa-mensagens", ctx.empresa] });
       }
       return r;
     },
@@ -203,7 +222,14 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
           <Input type="datetime-local" value={desde} onChange={(e) => setDesde(e.target.value)} />
         </label>
       </Cartao>
-      {acompanhamento.isError ? (
+      {cursorInicial.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível acompanhar as novidades.{" "}
+          <button className="underline" onClick={() => void cursorInicial.refetch()}>
+            Tentar novamente
+          </button>
+        </p>
+      ) : acompanhamento.isError ? (
         <p role="alert" className="text-sm text-destructive">
           Não foi possível acompanhar as novidades. A lista continua sendo atualizada.{" "}
           <button className="underline" onClick={() => void acompanhamento.refetch()}>
@@ -227,8 +253,10 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
               </button>
             </p>
           ) : null}
-          {lista.isLoading ? (
-            <p className="p-6">Carregando conversas…</p>
+          {!cursorInicial.isSuccess || lista.isLoading ? (
+            cursorInicial.isError ? null : (
+              <p className="p-6">Carregando conversas…</p>
+            )
           ) : !itens.length ? (
             <p className="p-6 text-ink-500">
               Nenhuma conversa nesta página com os filtros escolhidos.

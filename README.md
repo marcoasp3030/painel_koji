@@ -32,3 +32,7 @@ docker compose up -d --build
 ```
 
 O proxy escuta nas portas 80 e 443. O arquivo `.env` fica só na máquina e não entra no Git.
+
+## Conversas
+
+A tela de conversas pede o último evento confirmado (`GET /admin/v1/tenants/{tenant}/eventos/cursor`) antes de carregar a lista e usa esse `ultimo_id` como `desde` do polling.

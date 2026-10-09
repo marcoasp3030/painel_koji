@@ -110,6 +110,7 @@ const REGRAS: Regra[] = [
   { metodo: "POST", caminho: ["conversas", "*", "assumir"], papeis: AMBOS },
   { metodo: "POST", caminho: ["conversas", "*", "devolver"], papeis: AMBOS },
   { metodo: "GET", caminho: ["eventos"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["eventos", "cursor"], papeis: AMBOS },
 ];
 
 function casa(regra: Regra, metodo: MetodoGateway, partes: string[]) {

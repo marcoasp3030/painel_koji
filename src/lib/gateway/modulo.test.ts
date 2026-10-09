@@ -287,6 +287,7 @@ describe("papéis", () => {
       ["POST", ["conversas", "c", "devolver"]],
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
       ["GET", ["eventos"]],
+      ["GET", ["eventos", "cursor"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
@@ -325,6 +326,8 @@ describe("papéis", () => {
       ["POST", ["conversas", "c", "assumir"], { minutos: 30 }],
       ["POST", ["conversas", "c", "devolver"]],
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
+      ["GET", ["eventos"]],
+      ["GET", ["eventos", "cursor"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });

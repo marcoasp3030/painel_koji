@@ -13,7 +13,13 @@ export type Conversa = {
   aguardando_humano?: boolean;
 };
 export type Eventos = { proximo_cursor: number; tem_mais: boolean };
-/** Adaptador provisório: no máximo 20 páginas de 100 por requisição ao painel. */
+/** Último evento já confirmado, lido antes da carga. É o `desde` do primeiro polling. */
+export function desdeDoCursor(ultimoId: number) {
+  if (!Number.isSafeInteger(ultimoId) || ultimoId < 0)
+    throw new Error("Não foi possível acompanhar as novidades.");
+  return ultimoId;
+}
+/** Consome páginas novas a partir de um cursor conhecido. No máximo 20 páginas de 100. */
 export async function avancarCursor(
   pagina: (desde: number, limite: number) => Promise<Eventos>,
   desde = 0,
