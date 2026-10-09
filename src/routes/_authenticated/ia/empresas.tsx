@@ -43,7 +43,7 @@ import {
 } from "@/lib/gateway-empresas.functions";
 import type { EmpresaGateway, EmpresaPainel } from "@/lib/gateway/tipos";
 
-export const Route = createFileRoute("/_authenticated/gateway/empresas")({
+export const Route = createFileRoute("/_authenticated/ia/empresas")({
   head: () => ({ meta: [{ title: "Empresas · Agentes | Luxtia" }] }),
   component: () => (
     <PaginaGateway

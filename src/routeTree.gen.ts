@@ -20,11 +20,11 @@ import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authenticated/admin/$tenantId'
-import { Route as AuthenticatedGatewayAgentesRouteImport } from './routes/_authenticated/gateway/agentes'
-import { Route as AuthenticatedGatewayCanaisRouteImport } from './routes/_authenticated/gateway/canais'
-import { Route as AuthenticatedGatewayChavesRouteImport } from './routes/_authenticated/gateway/chaves'
-import { Route as AuthenticatedGatewayEmpresasRouteImport } from './routes/_authenticated/gateway/empresas'
-import { Route as AuthenticatedGatewaySimularRouteImport } from './routes/_authenticated/gateway/simular'
+import { Route as AuthenticatedIaAgentesRouteImport } from './routes/_authenticated/ia/agentes'
+import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
+import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
+import { Route as AuthenticatedIaEmpresasRouteImport } from './routes/_authenticated/ia/empresas'
+import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as ApiPublicFood99WebhookRouteImport } from './routes/api/public/food99/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -84,36 +84,31 @@ const AuthenticatedAdminTenantIdRoute =
     path: '/$tenantId',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedGatewayAgentesRoute =
-  AuthenticatedGatewayAgentesRouteImport.update({
-    id: '/gateway/agentes',
-    path: '/gateway/agentes',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedGatewayCanaisRoute =
-  AuthenticatedGatewayCanaisRouteImport.update({
-    id: '/gateway/canais',
-    path: '/gateway/canais',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedGatewayChavesRoute =
-  AuthenticatedGatewayChavesRouteImport.update({
-    id: '/gateway/chaves',
-    path: '/gateway/chaves',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedGatewayEmpresasRoute =
-  AuthenticatedGatewayEmpresasRouteImport.update({
-    id: '/gateway/empresas',
-    path: '/gateway/empresas',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedGatewaySimularRoute =
-  AuthenticatedGatewaySimularRouteImport.update({
-    id: '/gateway/simular',
-    path: '/gateway/simular',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
+const AuthenticatedIaAgentesRoute = AuthenticatedIaAgentesRouteImport.update({
+  id: '/ia/agentes',
+  path: '/ia/agentes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaCanaisRoute = AuthenticatedIaCanaisRouteImport.update({
+  id: '/ia/canais',
+  path: '/ia/canais',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaChavesRoute = AuthenticatedIaChavesRouteImport.update({
+  id: '/ia/chaves',
+  path: '/ia/chaves',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaEmpresasRoute = AuthenticatedIaEmpresasRouteImport.update({
+  id: '/ia/empresas',
+  path: '/ia/empresas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
+  id: '/ia/simular',
+  path: '/ia/simular',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
   id: '/api/public/food99/webhook',
   path: '/api/public/food99/webhook',
@@ -130,11 +125,11 @@ export interface FileRoutesByFullPath {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
-  '/gateway/agentes': typeof AuthenticatedGatewayAgentesRoute
-  '/gateway/canais': typeof AuthenticatedGatewayCanaisRoute
-  '/gateway/chaves': typeof AuthenticatedGatewayChavesRoute
-  '/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
-  '/gateway/simular': typeof AuthenticatedGatewaySimularRoute
+  '/ia/agentes': typeof AuthenticatedIaAgentesRoute
+  '/ia/canais': typeof AuthenticatedIaCanaisRoute
+  '/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/ia/empresas': typeof AuthenticatedIaEmpresasRoute
+  '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -147,11 +142,11 @@ export interface FileRoutesByTo {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
-  '/gateway/agentes': typeof AuthenticatedGatewayAgentesRoute
-  '/gateway/canais': typeof AuthenticatedGatewayCanaisRoute
-  '/gateway/chaves': typeof AuthenticatedGatewayChavesRoute
-  '/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
-  '/gateway/simular': typeof AuthenticatedGatewaySimularRoute
+  '/ia/agentes': typeof AuthenticatedIaAgentesRoute
+  '/ia/canais': typeof AuthenticatedIaCanaisRoute
+  '/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/ia/empresas': typeof AuthenticatedIaEmpresasRoute
+  '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -167,11 +162,11 @@ export interface FileRoutesById {
   '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
-  '/_authenticated/gateway/agentes': typeof AuthenticatedGatewayAgentesRoute
-  '/_authenticated/gateway/canais': typeof AuthenticatedGatewayCanaisRoute
-  '/_authenticated/gateway/chaves': typeof AuthenticatedGatewayChavesRoute
-  '/_authenticated/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
-  '/_authenticated/gateway/simular': typeof AuthenticatedGatewaySimularRoute
+  '/_authenticated/ia/agentes': typeof AuthenticatedIaAgentesRoute
+  '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
+  '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/_authenticated/ia/empresas': typeof AuthenticatedIaEmpresasRoute
+  '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -187,11 +182,11 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/painel'
     | '/admin/$tenantId'
-    | '/gateway/agentes'
-    | '/gateway/canais'
-    | '/gateway/chaves'
-    | '/gateway/empresas'
-    | '/gateway/simular'
+    | '/ia/agentes'
+    | '/ia/canais'
+    | '/ia/chaves'
+    | '/ia/empresas'
+    | '/ia/simular'
     | '/admin/'
     | '/api/public/food99/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -204,11 +199,11 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/painel'
     | '/admin/$tenantId'
-    | '/gateway/agentes'
-    | '/gateway/canais'
-    | '/gateway/chaves'
-    | '/gateway/empresas'
-    | '/gateway/simular'
+    | '/ia/agentes'
+    | '/ia/canais'
+    | '/ia/chaves'
+    | '/ia/empresas'
+    | '/ia/simular'
     | '/admin'
     | '/api/public/food99/webhook'
   id:
@@ -223,11 +218,11 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes'
     | '/_authenticated/painel'
     | '/_authenticated/admin/$tenantId'
-    | '/_authenticated/gateway/agentes'
-    | '/_authenticated/gateway/canais'
-    | '/_authenticated/gateway/chaves'
-    | '/_authenticated/gateway/empresas'
-    | '/_authenticated/gateway/simular'
+    | '/_authenticated/ia/agentes'
+    | '/_authenticated/ia/canais'
+    | '/_authenticated/ia/chaves'
+    | '/_authenticated/ia/empresas'
+    | '/_authenticated/ia/simular'
     | '/_authenticated/admin/'
     | '/api/public/food99/webhook'
   fileRoutesById: FileRoutesById
@@ -317,39 +312,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTenantIdRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/gateway/agentes': {
-      id: '/_authenticated/gateway/agentes'
-      path: '/gateway/agentes'
-      fullPath: '/gateway/agentes'
-      preLoaderRoute: typeof AuthenticatedGatewayAgentesRouteImport
+    '/_authenticated/ia/agentes': {
+      id: '/_authenticated/ia/agentes'
+      path: '/ia/agentes'
+      fullPath: '/ia/agentes'
+      preLoaderRoute: typeof AuthenticatedIaAgentesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/gateway/canais': {
-      id: '/_authenticated/gateway/canais'
-      path: '/gateway/canais'
-      fullPath: '/gateway/canais'
-      preLoaderRoute: typeof AuthenticatedGatewayCanaisRouteImport
+    '/_authenticated/ia/canais': {
+      id: '/_authenticated/ia/canais'
+      path: '/ia/canais'
+      fullPath: '/ia/canais'
+      preLoaderRoute: typeof AuthenticatedIaCanaisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/gateway/chaves': {
-      id: '/_authenticated/gateway/chaves'
-      path: '/gateway/chaves'
-      fullPath: '/gateway/chaves'
-      preLoaderRoute: typeof AuthenticatedGatewayChavesRouteImport
+    '/_authenticated/ia/chaves': {
+      id: '/_authenticated/ia/chaves'
+      path: '/ia/chaves'
+      fullPath: '/ia/chaves'
+      preLoaderRoute: typeof AuthenticatedIaChavesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/gateway/empresas': {
-      id: '/_authenticated/gateway/empresas'
-      path: '/gateway/empresas'
-      fullPath: '/gateway/empresas'
-      preLoaderRoute: typeof AuthenticatedGatewayEmpresasRouteImport
+    '/_authenticated/ia/empresas': {
+      id: '/_authenticated/ia/empresas'
+      path: '/ia/empresas'
+      fullPath: '/ia/empresas'
+      preLoaderRoute: typeof AuthenticatedIaEmpresasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/gateway/simular': {
-      id: '/_authenticated/gateway/simular'
-      path: '/gateway/simular'
-      fullPath: '/gateway/simular'
-      preLoaderRoute: typeof AuthenticatedGatewaySimularRouteImport
+    '/_authenticated/ia/simular': {
+      id: '/_authenticated/ia/simular'
+      path: '/ia/simular'
+      fullPath: '/ia/simular'
+      preLoaderRoute: typeof AuthenticatedIaSimularRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/food99/webhook': {
@@ -386,11 +381,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIfoodDebugRoute: typeof AuthenticatedIfoodDebugRoute
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
-  AuthenticatedGatewayAgentesRoute: typeof AuthenticatedGatewayAgentesRoute
-  AuthenticatedGatewayCanaisRoute: typeof AuthenticatedGatewayCanaisRoute
-  AuthenticatedGatewayChavesRoute: typeof AuthenticatedGatewayChavesRoute
-  AuthenticatedGatewayEmpresasRoute: typeof AuthenticatedGatewayEmpresasRoute
-  AuthenticatedGatewaySimularRoute: typeof AuthenticatedGatewaySimularRoute
+  AuthenticatedIaAgentesRoute: typeof AuthenticatedIaAgentesRoute
+  AuthenticatedIaCanaisRoute: typeof AuthenticatedIaCanaisRoute
+  AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
+  AuthenticatedIaEmpresasRoute: typeof AuthenticatedIaEmpresasRoute
+  AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -401,11 +396,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIfoodDebugRoute: AuthenticatedIfoodDebugRoute,
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
-  AuthenticatedGatewayAgentesRoute: AuthenticatedGatewayAgentesRoute,
-  AuthenticatedGatewayCanaisRoute: AuthenticatedGatewayCanaisRoute,
-  AuthenticatedGatewayChavesRoute: AuthenticatedGatewayChavesRoute,
-  AuthenticatedGatewayEmpresasRoute: AuthenticatedGatewayEmpresasRoute,
-  AuthenticatedGatewaySimularRoute: AuthenticatedGatewaySimularRoute,
+  AuthenticatedIaAgentesRoute: AuthenticatedIaAgentesRoute,
+  AuthenticatedIaCanaisRoute: AuthenticatedIaCanaisRoute,
+  AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
+  AuthenticatedIaEmpresasRoute: AuthenticatedIaEmpresasRoute,
+  AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

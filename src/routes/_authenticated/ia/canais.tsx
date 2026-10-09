@@ -50,7 +50,7 @@ import {
 } from "@/lib/gateway-canais.functions";
 import type { CanalGateway } from "@/lib/gateway/tipos";
 
-export const Route = createFileRoute("/_authenticated/gateway/canais")({
+export const Route = createFileRoute("/_authenticated/ia/canais")({
   head: () => ({ meta: [{ title: "Canais | Luxtia" }] }),
   component: () => (
     <PaginaGateway

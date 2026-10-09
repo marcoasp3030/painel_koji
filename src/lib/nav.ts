@@ -15,35 +15,35 @@ export type ItemMenu = {
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
   {
-    to: "/gateway/empresas",
+    to: "/ia/empresas",
     label: "Empresas",
     grupo: "Agentes",
     icone: "empresas",
     papeis: ["plataforma"],
   },
   {
-    to: "/gateway/agentes",
+    to: "/ia/agentes",
     label: "Agentes",
     grupo: "Agentes",
     icone: "agentes",
     papeis: ["plataforma"],
   },
   {
-    to: "/gateway/canais",
+    to: "/ia/canais",
     label: "Canais",
     grupo: "Agentes",
     icone: "canais",
     papeis: ["plataforma"],
   },
   {
-    to: "/gateway/chaves",
+    to: "/ia/chaves",
     label: "Chaves de API",
     grupo: "Agentes",
     icone: "chaves",
     papeis: ["plataforma"],
   },
   {
-    to: "/gateway/simular",
+    to: "/ia/simular",
     label: "Simular conversa",
     grupo: "Agentes",
     icone: "simular",
@@ -53,21 +53,21 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
 
 const AGENTES_EMPRESA: ItemMenu[] = [
   {
-    to: "/gateway/agentes",
+    to: "/ia/agentes",
     label: "Agentes",
     grupo: "Agentes",
     icone: "agentes",
     papeis: ["admin", "membro"],
   },
   {
-    to: "/gateway/canais",
+    to: "/ia/canais",
     label: "Canais",
     grupo: "Agentes",
     icone: "canais",
     papeis: ["admin", "membro"],
   },
   {
-    to: "/gateway/simular",
+    to: "/ia/simular",
     label: "Simular conversa",
     grupo: "Agentes",
     icone: "simular",

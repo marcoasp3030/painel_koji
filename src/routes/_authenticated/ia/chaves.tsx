@@ -46,7 +46,7 @@ import { listarAgentes } from "@/lib/gateway-agentes.functions";
 import { ESCOPOS, criarChave, listarChaves, revogarChave } from "@/lib/gateway-chaves.functions";
 import type { ChaveGateway } from "@/lib/gateway/tipos";
 
-export const Route = createFileRoute("/_authenticated/gateway/chaves")({
+export const Route = createFileRoute("/_authenticated/ia/chaves")({
   head: () => ({ meta: [{ title: "Chaves de API | Luxtia" }] }),
   component: () => (
     <PaginaGateway

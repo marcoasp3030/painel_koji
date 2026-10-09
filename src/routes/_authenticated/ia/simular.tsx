@@ -26,7 +26,7 @@ import { listarAgentes } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
 import { historicoConversa, simularMensagem } from "@/lib/gateway-simular.functions";
 
-export const Route = createFileRoute("/_authenticated/gateway/simular")({
+export const Route = createFileRoute("/_authenticated/ia/simular")({
   head: () => ({ meta: [{ title: "Simular conversa | Luxtia" }] }),
   component: () => (
     <PaginaGateway

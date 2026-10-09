@@ -34,7 +34,7 @@ import {
 } from "@/lib/gateway-agentes.functions";
 import type { AgenteDetalhe, AgenteGateway, ResultadoTeste } from "@/lib/gateway/tipos";
 
-export const Route = createFileRoute("/_authenticated/gateway/agentes")({
+export const Route = createFileRoute("/_authenticated/ia/agentes")({
   head: () => ({ meta: [{ title: "Agentes | Luxtia" }] }),
   component: () => (
     <PaginaGateway
