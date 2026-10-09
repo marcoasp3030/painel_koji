@@ -20,6 +20,7 @@ import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authenticated/admin/$tenantId'
+import { Route as AuthenticatedGatewayEmpresasRouteImport } from './routes/_authenticated/gateway/empresas'
 import { Route as ApiPublicFood99WebhookRouteImport } from './routes/api/public/food99/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -79,6 +80,12 @@ const AuthenticatedAdminTenantIdRoute =
     path: '/$tenantId',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedGatewayEmpresasRoute =
+  AuthenticatedGatewayEmpresasRouteImport.update({
+    id: '/gateway/empresas',
+    path: '/gateway/empresas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
   id: '/api/public/food99/webhook',
   path: '/api/public/food99/webhook',
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
+  '/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
+  '/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
+  '/_authenticated/gateway/empresas': typeof AuthenticatedGatewayEmpresasRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
 }
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/painel'
     | '/admin/$tenantId'
+    | '/gateway/empresas'
     | '/admin/'
     | '/api/public/food99/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/painel'
     | '/admin/$tenantId'
+    | '/gateway/empresas'
     | '/admin'
     | '/api/public/food99/webhook'
   id:
@@ -163,6 +175,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes'
     | '/_authenticated/painel'
     | '/_authenticated/admin/$tenantId'
+    | '/_authenticated/gateway/empresas'
     | '/_authenticated/admin/'
     | '/api/public/food99/webhook'
   fileRoutesById: FileRoutesById
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTenantIdRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/gateway/empresas': {
+      id: '/_authenticated/gateway/empresas'
+      path: '/gateway/empresas'
+      fullPath: '/gateway/empresas'
+      preLoaderRoute: typeof AuthenticatedGatewayEmpresasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/food99/webhook': {
       id: '/api/public/food99/webhook'
       path: '/api/public/food99/webhook'
@@ -286,6 +306,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIfoodDebugRoute: typeof AuthenticatedIfoodDebugRoute
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedGatewayEmpresasRoute: typeof AuthenticatedGatewayEmpresasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -296,6 +317,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIfoodDebugRoute: AuthenticatedIfoodDebugRoute,
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedGatewayEmpresasRoute: AuthenticatedGatewayEmpresasRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -6,16 +6,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** O que o usuário logado pode ver no gateway. */
+/**
+ * Papel do usuário logado no gateway. Para usuários de empresa o tenant
+ * vinculado não é devolvido: o servidor decide em cada chamada.
+ */
 export const obterAcessoGateway = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const g = await import("./gateway/painel.server");
-    return g.comGateway(async () => {
-      const sessao = await g.sessaoGateway(context);
-      return {
-        superAdmin: sessao.perfil.superAdmin,
-        tenants: sessao.perfil.vinculos.filter((v) => v.ativo).map((v) => v.gatewayTenantId),
-      };
-    });
+    return g.executar(context, async (sessao) => g.papelDaSessao(sessao));
   });

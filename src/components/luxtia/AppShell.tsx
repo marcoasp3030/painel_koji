@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
+  Bot,
   Building2,
+  Factory,
+  KeyRound,
   LogOut,
+  MessagesSquare,
+  RadioTower,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -12,13 +18,19 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { agruparMenu, type IconeMenu, type ItemMenu } from "@/lib/nav";
+import { obterAcessoGateway } from "@/lib/gateway.functions";
+import { agruparMenu, filtrarMenu, type IconeMenu, type ItemMenu } from "@/lib/nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LuxtiaWordmark } from "./Brand";
 
 const ICONES: Record<IconeMenu, LucideIcon> = {
   clientes: Building2,
   equipe: Users,
+  empresas: Factory,
+  agentes: Bot,
+  canais: RadioTower,
+  chaves: KeyRound,
+  simular: MessagesSquare,
 };
 
 function itemAtivo(caminho: string, destino: string) {
@@ -68,8 +80,16 @@ export function AppShell({
     return () => window.removeEventListener("keydown", fecharComEscape);
   }, [menuAberto]);
 
-  const grupos = agruparMenu(nav);
-  const atual = nav.find((item) => itemAtivo(pathname, item.to));
+  const buscarAcesso = useServerFn(obterAcessoGateway);
+  const acesso = useQuery({
+    queryKey: ["gateway", "acesso"],
+    queryFn: () => buscarAcesso(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const itens = filtrarMenu(nav, acesso.data?.papel);
+  const grupos = agruparMenu(itens);
+  const atual = itens.find((item) => itemAtivo(pathname, item.to));
 
   useEffect(() => {
     setMenuAberto(false);

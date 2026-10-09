@@ -6,7 +6,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { clienteGatewayPadrao } from "./cliente.server";
 import { GatewayErro, mensagemParaUsuario } from "./erros";
 import {
+  AcessoNegado,
   criarModuloGateway,
+  resolverTenant,
   type ModuloGateway,
   type PerfilGateway,
   type UsuarioSessao,
@@ -89,4 +91,98 @@ export async function comGateway<T>(acao: () => Promise<T>): Promise<T> {
     console.error("[gateway] erro inesperado:", erro instanceof Error ? erro.name : typeof erro);
     throw new Error("Não foi possível falar com o gateway de agentes.");
   }
+}
+
+type Sessao = Awaited<ReturnType<typeof sessaoGateway>>;
+
+/** Abre a sessão do usuário logado e executa a ação com erros seguros para o navegador. */
+export function executar<T>(context: unknown, acao: (sessao: Sessao) => Promise<T>): Promise<T> {
+  return comGateway(async () => acao(await sessaoGateway(context)));
+}
+
+/** Papel do usuário no gateway, sem expor o tenant vinculado a quem não é da plataforma. */
+export function papelDaSessao(sessao: Sessao) {
+  if (sessao.perfil.superAdmin) return { papel: "plataforma" as const, motivo: null };
+  try {
+    return { papel: resolverTenant(sessao.perfil, null).papel, motivo: null };
+  } catch (erro) {
+    return { papel: null, motivo: erro instanceof Error ? erro.message : "Sem acesso." };
+  }
+}
+
+async function auditarPainel(
+  sessao: Sessao,
+  entrada: { tenantId?: string | null; action: string; target: string; detail?: string },
+) {
+  try {
+    await supabaseAdmin.from("audit_logs").insert({
+      tenant_id: entrada.tenantId ?? null,
+      actor_user_id: sessao.perfil.userId,
+      actor_email: sessao.perfil.email,
+      action: entrada.action,
+      target: entrada.target,
+      status: "success",
+      detail: entrada.detail ?? null,
+    });
+  } catch {
+    console.error("[gateway] não foi possível registrar a auditoria do painel");
+  }
+}
+
+/** Empresas do painel com o vínculo atual (só para o admin da plataforma). */
+export async function empresasDoPainel(sessao: Sessao) {
+  if (!sessao.perfil.superAdmin) throw new AcessoNegado("Acesso restrito ao admin da plataforma.");
+  const { data, error } = await supabaseAdmin
+    .from("tenants")
+    .select("id, name, slug, status, gateway_tenant_id")
+    .order("name");
+  if (error) throw new Error("Não foi possível listar as empresas do painel.");
+  return data ?? [];
+}
+
+/**
+ * Liga um tenant do gateway a uma empresa do painel (ou desliga, com null).
+ * Só o admin da plataforma; o gatilho do banco aceita a escrita do servidor.
+ */
+export async function definirVinculo(
+  sessao: Sessao,
+  gatewayTenantId: string,
+  painelTenantId: string | null,
+) {
+  if (!sessao.perfil.superAdmin) throw new AcessoNegado("Acesso restrito ao admin da plataforma.");
+  // Confere que o tenant existe no gateway antes de gravar o vínculo.
+  await (await sessao.tenant(gatewayTenantId)).chamar("GET");
+
+  const { error: erroLimpar } = await supabaseAdmin
+    .from("tenants")
+    .update({ gateway_tenant_id: null })
+    .eq("gateway_tenant_id", gatewayTenantId);
+  if (erroLimpar) throw new Error("Não foi possível atualizar o vínculo.");
+
+  let nome: string | null = null;
+  if (painelTenantId) {
+    const { data, error } = await supabaseAdmin
+      .from("tenants")
+      .update({ gateway_tenant_id: gatewayTenantId })
+      .eq("id", painelTenantId)
+      .select("name")
+      .maybeSingle();
+    if (error) {
+      throw new Error(
+        error.code === "23505"
+          ? "Esta empresa já está vinculada a outro tenant do gateway."
+          : "Não foi possível atualizar o vínculo.",
+      );
+    }
+    if (!data) throw new Error("Empresa do painel não encontrada.");
+    nome = data.name;
+  }
+
+  await auditarPainel(sessao, {
+    tenantId: painelTenantId,
+    action: painelTenantId ? "Vínculo com o gateway" : "Vínculo com o gateway removido",
+    target: gatewayTenantId,
+    detail: nome ? `${nome} → ${gatewayTenantId}` : "Sem empresa do painel",
+  });
+  return { ok: true };
 }
