@@ -63,10 +63,10 @@ export const ORIGEM_VALOR: Record<string, string> = {
   agente: "deste agente",
 };
 
+/** Quem escreveu cada mensagem (origem do histórico do gateway). */
 export const ORIGEM_MENSAGEM: Record<string, string> = {
   cliente: "Cliente",
-  bot: "Agente",
-  agente: "Agente",
+  bot: "IA",
   humano: "Atendente",
   sistema: "Sistema",
 };

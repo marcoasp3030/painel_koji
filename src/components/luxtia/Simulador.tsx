@@ -1,11 +1,16 @@
-/** Conversa de teste com um agente (canal API, mock/dry). Usada no Simular e no assistente. */
+/**
+ * Conversa de teste com um agente, em formato de chat (canal API, envio em
+ * teste). Funciona em Simulação e com a IA real do Skyone; só bloqueia se o
+ * envio aos clientes do agente for real. Usada no Simular e no assistente.
+ */
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Send } from "lucide-react";
+import { Info, Loader2, RotateCcw, Send, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
-import { Etiqueta, dataHora, type ContextoGateway } from "@/components/luxtia/Gateway";
-import { Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
+import { dataHora, type ContextoGateway } from "@/components/luxtia/Gateway";
+import { Cartao } from "@/components/luxtia/Superficie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,18 +22,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { listarAgentes } from "@/lib/gateway-agentes.functions";
+import { listarAgentes, obterAgente } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
 import { historicoConversa, simularMensagem } from "@/lib/gateway-simular.functions";
-import { SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
+import { temposDeResposta } from "@/lib/gateway/conversa";
+import { ORIGEM_MENSAGEM, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
-const ORIGEM: Record<string, string> = {
-  cliente: "Cliente",
-  agente: "Agente",
-  bot: "Agente",
-  humano: "Atendente",
-  sistema: "Sistema",
-};
+const BANNER_IA_REAL =
+  "Conversa de teste: as respostas vêm do Skyone, mas nada é enviado aos clientes.";
+const BANNER_SIMULACAO =
+  "Conversa de teste em simulação: o agente responde sem chamar a IA. Nada é enviado aos clientes.";
+
+function novoCliente() {
+  return `teste-${new Date().toISOString().slice(11, 19).replace(/:/g, "")}`;
+}
 
 export function Simulador({
   ctx,
@@ -41,15 +48,17 @@ export function Simulador({
   agenteFixo?: boolean;
 }) {
   const listarAg = useServerFn(listarAgentes);
+  const obterAg = useServerFn(obterAgente);
   const listarCn = useServerFn(listarCanais);
   const simular = useServerFn(simularMensagem);
   const historico = useServerFn(historicoConversa);
 
   const [agente, setAgente] = useState(agenteInicial ?? "");
   const [canal, setCanal] = useState("");
-  const [identificador, setIdentificador] = useState("painel-teste");
+  const [cliente, setCliente] = useState(novoCliente);
   const [texto, setTexto] = useState("");
   const [conversa, setConversa] = useState<string | null>(null);
+  const [agora, setAgora] = useState(() => Date.now());
   const fim = useRef<HTMLDivElement>(null);
 
   const agentes = useQuery({
@@ -60,13 +69,17 @@ export function Simulador({
     queryKey: ["gateway", "canais", ctx.empresa],
     queryFn: () => listarCn({ data: { empresa: ctx.empresa } }),
   });
+  // Modo efetivo (com herança) vem do detalhe do agente.
+  const detalhe = useQuery({
+    queryKey: ["gateway", "agente", ctx.empresa, agente],
+    queryFn: () => obterAg({ data: { empresa: ctx.empresa, agente } }),
+    enabled: Boolean(agente),
+  });
 
-  const agenteAtual = agentes.data?.itens.find((a) => a.id === agente);
   const canaisApi = (canais.data?.itens ?? []).filter(
     (c) => c.tipo === "api" && c.agente_id === agente,
   );
 
-  // Ao trocar de agente, sugere o primeiro canal API ativo dele.
   useEffect(() => {
     const primeiro = canaisApi.find((c) => c.ativo) ?? canaisApi[0];
     setCanal(primeiro?.id ?? "");
@@ -78,189 +91,273 @@ export function Simulador({
     queryKey: ["gateway", "historico", ctx.empresa, conversa],
     queryFn: () => historico({ data: { empresa: ctx.empresa, conversa: conversa! } }),
     enabled: Boolean(conversa),
-    // A resposta do agente chega depois da espera de agrupamento (debounce).
     refetchInterval: 2500,
   });
+  const itens = mensagens.data?.itens ?? [];
+  const ultima = itens.at(-1);
+  const esperando = Boolean(conversa) && (ultima ? ultima.direcao === "entrada" : true);
+
+  // Relógio só enquanto espera, para o aviso de demora.
+  useEffect(() => {
+    if (!esperando) return;
+    const id = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [esperando]);
 
   useEffect(() => {
     fim.current?.scrollIntoView({ block: "nearest" });
-  }, [mensagens.data?.itens.length]);
+  }, [itens.length, esperando]);
 
   const envio = useMutation({
-    mutationFn: () =>
+    mutationFn: (mensagem: string) =>
       simular({
-        data: { empresa: ctx.empresa, agente, canal_id: canal, identificador, texto },
+        data: {
+          empresa: ctx.empresa,
+          agente,
+          canal_id: canal,
+          identificador: cliente,
+          texto: mensagem,
+        },
       }),
     onSuccess: (r) => {
       setTexto("");
       setConversa(r.conversation_id);
+      setAgora(Date.now());
       if (r.duplicada) toast.info("Mensagem repetida: o gateway já tinha recebido.");
       void mensagens.refetch();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const efetiva = detalhe.data?.configuracao_efetiva ?? {};
+  const iaReal = String(efetiva["agente_mode"] ?? "mock") === "live";
+  const envioReal = String(efetiva["send_mode"] ?? "dry") === "live";
+  const timeout = Number(efetiva["timeout_s"] ?? detalhe.data?.timeout_s ?? 90);
+  const limiteEspera = iaReal ? Math.max(60, timeout + 10) : 60;
   const canalAtual = canaisApi.find((c) => c.id === canal);
-  const avisos: string[] = [];
-  if (agenteAtual && agenteAtual.status !== "ativo")
-    avisos.push(
-      "O agente está pausado ou em rascunho: a mensagem será ignorada. Ative-o na tela Agentes.",
-    );
-  if (agenteAtual && (agenteAtual.agente_mode ?? "mock") !== "mock")
-    avisos.push(
-      "Por enquanto a simulação só funciona com respostas em Simulação. A conversa de teste com a IA real depende de uma atualização do gateway.",
-    );
-  if (agenteAtual && (agenteAtual.send_mode ?? "dry") !== "dry")
-    avisos.push("A simulação fica bloqueada porque o envio aos clientes deste agente está real.");
-  if (agente && canaisApi.length === 0)
-    avisos.push("Este agente não tem canal API (para testes). Crie um na tela Canais.");
-  if (canalAtual && !canalAtual.ativo)
-    avisos.push("O canal está desativado: a mensagem será ignorada. Ative-o na tela Canais.");
+  const status = detalhe.data?.status;
+
+  const avisos: { texto: string; agente?: boolean }[] = [];
+  if (status && status !== "ativo") {
+    avisos.push({
+      texto: `O agente está ${SITUACAO_AGENTE[status]?.rotulo.toLowerCase() ?? status}: as mensagens serão ignoradas.`,
+      agente: true,
+    });
+  }
+  if (agente && canais.data && canaisApi.length === 0) {
+    avisos.push({
+      texto: "Este agente não tem canal API (para testes). Crie um na aba Canais do agente.",
+      agente: true,
+    });
+  } else if (canalAtual && !canalAtual.ativo) {
+    avisos.push({
+      texto: "O canal API está desativado: as mensagens serão ignoradas.",
+      agente: true,
+    });
+  }
+  const bloqueado = envioReal || !agente || !canal;
+
+  const ultimaDoCliente = [...itens].reverse().find((m) => m.direcao === "entrada");
+  const desde = ultimaDoCliente?.enviada_em ? Date.parse(ultimaDoCliente.enviada_em) : agora;
+  const demorou = esperando && (agora - desde) / 1000 > limiteEspera;
+  const tempos = temposDeResposta(itens);
+
+  function enviar() {
+    const mensagem = texto.trim();
+    if (!mensagem || bloqueado || envio.isPending) return;
+    envio.mutate(mensagem);
+  }
+
+  const linkAgente = agente ? (
+    <Link
+      to="/ia/agentes/$agenteId"
+      params={{ agenteId: agente }}
+      search={ctx.empresa ? { empresa: ctx.empresa } : {}}
+      className="font-medium underline underline-offset-2"
+    >
+      Abrir o agente
+    </Link>
+  ) : null;
 
   return (
-    <div className="mt-6 grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
-      <Cartao className="p-6">
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!agente || !canal) {
-              toast.error("Escolha o agente e o canal API.");
-              return;
-            }
-            envio.mutate();
-          }}
-        >
-          <div className="space-y-2">
-            <Label htmlFor="si-agente">Agente</Label>
-            <Select value={agente} onValueChange={setAgente} disabled={agenteFixo}>
-              <SelectTrigger id="si-agente">
-                <SelectValue placeholder={agentes.isLoading ? "Carregando…" : "Escolha o agente"} />
-              </SelectTrigger>
-              <SelectContent>
-                {(agentes.data?.itens ?? []).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.nome} · {SITUACAO_AGENTE[a.status]?.rotulo ?? a.status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
+    <div className="mt-6 space-y-4">
+      <Cartao className="flex flex-wrap items-end gap-4 p-4">
+        <div className="w-full space-y-1.5 sm:w-64">
+          <Label htmlFor="si-agente">Agente</Label>
+          <Select value={agente} onValueChange={setAgente} disabled={agenteFixo}>
+            <SelectTrigger id="si-agente">
+              <SelectValue placeholder={agentes.isLoading ? "Carregando…" : "Escolha o agente"} />
+            </SelectTrigger>
+            <SelectContent>
+              {(agentes.data?.itens ?? []).map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {canaisApi.length > 1 ? (
+          <div className="w-full space-y-1.5 sm:w-56">
             <Label htmlFor="si-canal">Canal API</Label>
-            <Select value={canal} onValueChange={setCanal} disabled={canaisApi.length === 0}>
+            <Select value={canal} onValueChange={setCanal}>
               <SelectTrigger id="si-canal">
                 <SelectValue placeholder="Escolha o canal" />
               </SelectTrigger>
               <SelectContent>
                 {canaisApi.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.nome} {c.ativo ? "" : "(inativo)"}
+                    {c.nome} {c.ativo ? "" : "(desativado)"}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="si-ident">Cliente simulado</Label>
-            <Input
-              id="si-ident"
-              value={identificador}
-              required
-              maxLength={100}
-              onChange={(e) => {
-                setIdentificador(e.target.value);
-                setConversa(null);
-              }}
-            />
-            <p className="text-xs text-ink-500">Cada identificador é uma conversa diferente.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="si-texto">Mensagem</Label>
-            <Textarea
-              id="si-texto"
-              rows={3}
-              value={texto}
-              required
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  e.currentTarget.form?.requestSubmit();
-                }
-              }}
-            />
-          </div>
-          {avisos.length > 0 ? (
-            <ul className="space-y-1 rounded-lg bg-gold-300/20 px-3 py-2 text-xs text-gold-700">
-              {avisos.map((a) => (
-                <li key={a}>{a}</li>
-              ))}
-            </ul>
+        ) : null}
+        <div className="w-full space-y-1.5 sm:w-48">
+          <Label htmlFor="si-cliente">Cliente (teste)</Label>
+          <Input
+            id="si-cliente"
+            value={cliente}
+            maxLength={100}
+            onChange={(e) => {
+              setCliente(e.target.value);
+              setConversa(null);
+            }}
+          />
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setCliente(novoCliente());
+            setConversa(null);
+          }}
+        >
+          <RotateCcw className="size-4" aria-hidden /> Nova conversa
+        </Button>
+      </Cartao>
+
+      {agente && detalhe.data ? (
+        envioReal ? (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />A conversa de teste fica
+            bloqueada porque o envio aos clientes deste agente está real.
+          </p>
+        ) : (
+          <p className="flex items-start gap-2 rounded-lg bg-purple-50 px-4 py-3 text-sm text-purple-800">
+            <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+            {iaReal ? BANNER_IA_REAL : BANNER_SIMULACAO}
+          </p>
+        )
+      ) : null}
+      {avisos.map((a) => (
+        <p
+          key={a.texto}
+          className="flex flex-wrap items-center gap-2 rounded-lg bg-gold-300/20 px-4 py-2 text-sm text-gold-700"
+        >
+          <TriangleAlert className="size-4 shrink-0" aria-hidden />
+          {a.texto} {a.agente ? linkAgente : null}
+        </p>
+      ))}
+
+      <Cartao className="flex h-[min(70vh,40rem)] flex-col">
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6" aria-live="polite">
+          {!conversa ? (
+            <p className="mx-auto mt-16 max-w-sm text-center text-sm text-ink-500">
+              {agente
+                ? "Escreva abaixo como se fosse um cliente. As respostas aparecem aqui."
+                : "Escolha um agente para começar."}
+            </p>
           ) : null}
-          <Button type="submit" className="w-full" disabled={envio.isPending}>
+          {mensagens.data?.tem_mais ? (
+            <p className="text-center text-xs text-ink-500">Mostrando as últimas 50 mensagens.</p>
+          ) : null}
+          {itens.map((m) => {
+            const doCliente = m.direcao === "entrada";
+            const tempo = tempos.get(m.id);
+            return (
+              <div key={m.id} className={`flex ${doCliente ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-[0_1px_2px_rgba(26,21,32,0.06)] ${
+                    doCliente
+                      ? "rounded-br-md bg-purple-700 text-base-50"
+                      : "rounded-bl-md border border-base-200 bg-card text-ink-900"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{m.conteudo ?? "—"}</p>
+                  <p
+                    className={`mt-1 text-[11px] ${doCliente ? "text-purple-200" : "text-ink-500"}`}
+                  >
+                    {ORIGEM_MENSAGEM[m.origem] ?? m.origem} · {dataHora(m.enviada_em)}
+                    {tempo !== undefined
+                      ? ` · respondeu em ${tempo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          {esperando && !demorou ? (
+            <div className="flex justify-start" aria-label="O agente está digitando">
+              <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-base-200 bg-card px-4 py-3">
+                {[0, 150, 300].map((atraso) => (
+                  <span
+                    key={atraso}
+                    className="size-1.5 animate-bounce rounded-full bg-ink-300"
+                    style={{ animationDelay: `${atraso}ms` }}
+                  />
+                ))}
+                <span className="ml-2 text-xs text-ink-500">digitando…</span>
+              </div>
+            </div>
+          ) : null}
+          {demorou ? (
+            <p className="text-center text-xs text-gold-700">
+              O agente não respondeu em {limiteEspera} s. Veja a Visão geral do agente. {linkAgente}
+            </p>
+          ) : null}
+          <div ref={fim} />
+        </div>
+
+        <form
+          className="flex items-end gap-2 border-t border-base-200 p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar();
+          }}
+        >
+          <Label htmlFor="si-texto" className="sr-only">
+            Mensagem
+          </Label>
+          <Textarea
+            id="si-texto"
+            rows={1}
+            value={texto}
+            disabled={bloqueado}
+            placeholder={
+              bloqueado ? "" : "Escreva como cliente… (Enter envia, Shift+Enter quebra linha)"
+            }
+            className="max-h-40 min-h-10 resize-none bg-base-50"
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                enviar();
+              }
+            }}
+          />
+          <Button type="submit" disabled={bloqueado || envio.isPending || !texto.trim()}>
             {envio.isPending ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : (
               <Send className="size-4" aria-hidden />
             )}
-            Enviar como cliente
+            <span className="sr-only sm:not-sr-only">Enviar</span>
           </Button>
         </form>
-      </Cartao>
-
-      <Cartao className="flex min-h-[24rem] flex-col">
-        <div className="flex items-center justify-between gap-3 border-b border-base-200 px-5 py-3">
-          <p className="truncate font-mono text-xs text-ink-500">
-            {conversa ?? "Nenhuma conversa"}
-          </p>
-          {mensagens.isFetching ? (
-            <Loader2 className="size-4 animate-spin text-ink-300" aria-label="Atualizando" />
-          ) : null}
-        </div>
-        {!conversa ? (
-          <EstadoVazio
-            titulo="Envie a primeira mensagem"
-            texto="O histórico aparece aqui e se atualiza sozinho enquanto o agente responde."
-          />
-        ) : mensagens.error ? (
-          <EstadoVazio
-            titulo="Não foi possível carregar"
-            texto={(mensagens.error as Error).message}
-          />
-        ) : (
-          <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4" aria-live="polite">
-            {mensagens.data?.tem_mais ? (
-              <p className="text-center text-xs text-ink-500">Mostrando as últimas 50 mensagens.</p>
-            ) : null}
-            {(mensagens.data?.itens ?? []).map((m) => {
-              const cliente = m.direcao === "entrada";
-              return (
-                <div key={m.id} className={`flex ${cliente ? "justify-start" : "justify-end"}`}>
-                  <div
-                    className={`max-w-[80%] rounded-xl px-4 py-2 text-sm ${cliente ? "bg-base-100 text-ink-900" : "bg-purple-700 text-base-50"}`}
-                  >
-                    <p className="whitespace-pre-wrap">{m.conteudo ?? "—"}</p>
-                    <p
-                      className={`mt-1 text-[11px] ${cliente ? "text-ink-500" : "text-purple-200"}`}
-                    >
-                      {ORIGEM[m.origem] ?? m.origem} · {dataHora(m.enviada_em)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-            {mensagens.data &&
-            mensagens.data.itens.length > 0 &&
-            mensagens.data.itens.at(-1)?.direcao === "entrada" ? (
-              <p className="flex items-center gap-2 text-xs text-ink-500">
-                <Loader2 className="size-3 animate-spin" aria-hidden /> Aguardando o agente…
-                <Etiqueta>Simulação</Etiqueta>
-              </p>
-            ) : null}
-            <div ref={fim} />
-          </div>
-        )}
       </Cartao>
     </div>
   );
