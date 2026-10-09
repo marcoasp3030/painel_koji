@@ -2,6 +2,20 @@
 
 Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma nova instrução.
 
+## Regras permanentes
+
+- **Imagem de volta antes de todo build que substitua a imagem em uso.** Marcar a imagem do container atual com o commit do código que ela contém e conferir que a tag existe e aponta para a mesma imagem:
+
+  ```sh
+  IMG=$(docker inspect painel_koji-painel-1 --format '{{.Image}}')
+  docker tag "$IMG" painel:<commit>
+  docker image inspect painel:<commit> --format '{{.Id}}'   # deve ser igual a $IMG
+  ```
+
+  Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
+- **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
+- Imagem de volta atual: `painel:121051e` (telas `/ia/*`, implantada em 09/10/2026).
+
 ## Fase — Telas dos agentes e permissões por papel (2026-10-09)
 
 - Permissões no servidor (`src/lib/gateway/modulo.server.ts`, tabela `REGRAS`): admin da plataforma pode tudo; admin da empresa altera no agente só `aviso_demora, fallback, modo_piloto, contatos_permitidos, debounce_s, max_wait_s, pause_minutes, slow_notice_s, alerta_telefone, status (ativo/pausado)`, gerencia unidades, testa, simula, vê canais e consumo e atende conversas; membro só lê agentes, canais e consumo e atende conversas. O resto é recusado antes de chamar o gateway, com motivo em `audit_logs`.
