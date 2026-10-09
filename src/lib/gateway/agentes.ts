@@ -134,3 +134,39 @@ export function explicarConflitoAgente(erro: unknown): unknown {
   }
   return erro;
 }
+
+export const AVISO_PILOTO_VAZIO = "Com a lista vazia, o agente não responde ninguém.";
+
+/**
+ * Piloto ligado com a lista de contatos vazia deixa o agente mudo. Calcula o
+ * resultado da alteração (com herança) e devolve o aviso, ou null se estiver ok.
+ */
+export function problemaPiloto(
+  efetiva: Record<string, unknown>,
+  dados: Record<string, unknown>,
+): string | null {
+  const origem = (efetiva["origem_config"] ?? {}) as Record<string, string>;
+  // Valor herdado: só é conhecido quando o próprio agente não define o campo.
+  const herdado = (campo: string) => (origem[campo] === "agente" ? null : efetiva[campo]);
+  const resultado = (campo: string) =>
+    campo in dados ? (dados[campo] ?? herdado(campo)) : efetiva[campo];
+
+  const piloto = resultado("modo_piloto") === true;
+  const contatos = resultado("contatos_permitidos");
+  const vazia = !Array.isArray(contatos) || contatos.length === 0;
+  return piloto && vazia ? AVISO_PILOTO_VAZIO : null;
+}
+
+export function conferirPiloto(efetiva: Record<string, unknown>, dados: Record<string, unknown>) {
+  const aviso = problemaPiloto(efetiva, dados);
+  if (aviso) {
+    invalido(
+      `${aviso} Inclua pelo menos um número ou desligue “Responder só a alguns contatos”.`,
+      "contatos_permitidos",
+    );
+  }
+}
+
+export function tocaPiloto(dados: Record<string, unknown>) {
+  return "modo_piloto" in dados || "contatos_permitidos" in dados;
+}

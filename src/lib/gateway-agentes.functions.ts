@@ -100,6 +100,11 @@ export const alterarAgente = createServerFn({ method: "POST" })
       const corpo = a.normalizarPatchAgente(data.dados);
       // Só o admin da plataforma chega aqui com campos de IA; para os demais o
       // módulo recusa o PATCH logo abaixo.
+      // Piloto ligado sem contatos deixaria o agente mudo: vale para todos os papéis.
+      if (a.tocaPiloto(corpo)) {
+        const { dados: atual } = await t.chamar<AgenteDetalhe>("GET", ["agentes", data.agente]);
+        a.conferirPiloto(atual.configuracao_efetiva ?? {}, corpo);
+      }
       if (t.papel === "plataforma" && a.tocaIaReal(corpo)) {
         const [{ dados: atual }, { dados: empresa }] = await Promise.all([
           t.chamar<AgenteDetalhe>("GET", ["agentes", data.agente]),

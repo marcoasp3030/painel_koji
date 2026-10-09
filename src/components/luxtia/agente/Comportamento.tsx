@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { alterarAgente } from "@/lib/gateway-agentes.functions";
+import { problemaPiloto } from "@/lib/gateway/agentes";
 import { diferencas, paraTexto, valoresIniciais, type Formulario } from "@/lib/gateway/formulario";
 import type { AgenteDetalhe } from "@/lib/gateway/tipos";
 import { CAMPO_AGENTE, ORIGEM_VALOR } from "@/lib/gateway/vocabulario";
@@ -143,6 +144,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
     );
   }
 
+  const avisoPiloto = problemaPiloto(efetiva, alterados);
   const pilotoLigado =
     form["modo_piloto"] !== "" ? form["modo_piloto"] === "true" : efetiva["modo_piloto"] === true;
 
@@ -151,7 +153,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
       className="space-y-6 pb-24"
       onSubmit={(e) => {
         e.preventDefault();
-        if (sujo) salvar.mutate();
+        if (sujo && !avisoPiloto) salvar.mutate();
       }}
     >
       {!podeEditar ? (
@@ -191,13 +193,23 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
           {padrao("modo_piloto")}
         </div>
         {pilotoLigado ? campoTexto({ campo: "contatos_permitidos", tipo: "longo" }) : null}
+        {avisoPiloto ? (
+          <p
+            role="alert"
+            className="rounded-lg bg-gold-300/25 px-4 py-3 text-sm text-gold-700 lg:col-span-2"
+          >
+            {avisoPiloto} Inclua pelo menos um número ou desligue o interruptor.
+          </p>
+        ) : null}
       </Secao>
 
       <Secao titulo="Alertas">{campoTexto({ campo: "alerta_telefone", tipo: "telefone" })}</Secao>
 
       {podeEditar && sujo ? (
         <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-200 bg-card px-5 py-3 shadow-[0_10px_28px_rgba(46,35,64,0.12)]">
-          <p className="text-sm text-ink-700">Há alterações não salvas.</p>
+          <p className="text-sm text-ink-700">
+            {avisoPiloto ? "Corrija o piloto para salvar." : "Há alterações não salvas."}
+          </p>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -207,7 +219,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             >
               Descartar
             </Button>
-            <Button type="submit" disabled={salvar.isPending}>
+            <Button type="submit" disabled={salvar.isPending || Boolean(avisoPiloto)}>
               {salvar.isPending ? "Salvando…" : "Salvar alterações"}
             </Button>
           </div>

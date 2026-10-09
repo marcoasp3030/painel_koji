@@ -1,7 +1,10 @@
 // Executar: bun test src/lib/gateway
 import { describe, expect, test } from "bun:test";
 import {
+  AVISO_PILOTO_VAZIO,
   conferirIaReal,
+  conferirPiloto,
+  problemaPiloto,
   explicarConflitoAgente,
   normalizarPatchAgente,
   type EstadoAgente,
@@ -154,5 +157,47 @@ describe("mensagens do gateway", () => {
       detalhes: { campo: "timeout_s" },
     });
     expect(mensagemParaUsuario(erro)).toBe("O campo “Tempo limite” não pode ficar vazio.");
+  });
+});
+
+describe("piloto com a lista vazia", () => {
+  const efetiva = (extra: Record<string, unknown> = {}) => ({
+    modo_piloto: false,
+    contatos_permitidos: [],
+    origem_config: { modo_piloto: "plataforma", contatos_permitidos: "plataforma" },
+    ...extra,
+  });
+
+  test("ligar o piloto sem números é recusado", () => {
+    expect(problemaPiloto(efetiva(), { modo_piloto: true })).toBe(AVISO_PILOTO_VAZIO);
+    expect(mensagem(() => conferirPiloto(efetiva(), { modo_piloto: true }))).toContain(
+      "Inclua pelo menos um número",
+    );
+  });
+
+  test("ligar com um número passa; desligar passa", () => {
+    expect(
+      problemaPiloto(efetiva(), { modo_piloto: true, contatos_permitidos: ["5511999999999"] }),
+    ).toBeNull();
+    const ligado = efetiva({ modo_piloto: true, contatos_permitidos: ["5511999999999"] });
+    expect(problemaPiloto(ligado, { modo_piloto: false, contatos_permitidos: null })).toBeNull();
+  });
+
+  test("apagar a lista com o piloto já ligado é recusado", () => {
+    const ligado = efetiva({
+      modo_piloto: true,
+      contatos_permitidos: ["5511999999999"],
+      origem_config: { modo_piloto: "agente", contatos_permitidos: "agente" },
+    });
+    expect(problemaPiloto(ligado, { contatos_permitidos: [] })).toBe(AVISO_PILOTO_VAZIO);
+    expect(problemaPiloto(ligado, { contatos_permitidos: null })).toBe(AVISO_PILOTO_VAZIO);
+  });
+
+  test("lista herdada da empresa conta", () => {
+    const daEmpresa = efetiva({
+      contatos_permitidos: ["5511988887777"],
+      origem_config: { modo_piloto: "plataforma", contatos_permitidos: "tenant" },
+    });
+    expect(problemaPiloto(daEmpresa, { modo_piloto: true })).toBeNull();
   });
 });
