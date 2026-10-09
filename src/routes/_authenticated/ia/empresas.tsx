@@ -4,7 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Etiqueta, PaginaGateway, dataHora } from "@/components/luxtia/Gateway";
+import {
+  Ajuda,
+  Etiqueta,
+  PaginaGateway,
+  RotuloCampo,
+  Vazio,
+  dataHora,
+} from "@/components/luxtia/Gateway";
 import { Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
 import {
   AlertDialog,
@@ -42,6 +49,7 @@ import {
   vincularEmpresaGateway,
 } from "@/lib/gateway-empresas.functions";
 import type { EmpresaGateway, EmpresaPainel } from "@/lib/gateway/tipos";
+import { CAMPO_EMPRESA } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/empresas")({
   head: () => ({ meta: [{ title: "Empresas · Agentes | Luxtia" }] }),
@@ -144,7 +152,15 @@ function Empresas() {
         ) : error ? (
           <EstadoVazio titulo="Não foi possível carregar" texto={(error as Error).message} />
         ) : empresas.length === 0 ? (
-          <EstadoVazio titulo="Nenhuma empresa" texto="Cadastre a primeira empresa do gateway." />
+          <Vazio
+            titulo="Nenhuma empresa ainda"
+            texto="Crie a primeira empresa para cadastrar agentes, canais e chaves."
+            acao={
+              <Button onClick={() => setCriando(true)}>
+                <Plus className="size-4" aria-hidden /> Nova empresa
+              </Button>
+            }
+          />
         ) : (
           <ul>
             {empresas.map((e) => {
@@ -160,18 +176,18 @@ function Empresas() {
                       <Etiqueta tom={e.status === "ativo" ? "sucesso" : "perigo"}>
                         {e.status === "ativo" ? "Ativa" : "Suspensa"}
                       </Etiqueta>
-                      {e.tenant_teste ? <Etiqueta tom="alerta">Teste</Etiqueta> : null}
+                      {e.tenant_teste ? <Etiqueta tom="alerta">Empresa de teste</Etiqueta> : null}
                       {e.plano ? <Etiqueta tom="roxo">{e.plano}</Etiqueta> : null}
                     </div>
                     <p className="mt-1 text-xs text-ink-500">
                       <span className="font-mono">{e.id}</span> · {e.timezone} · limite{" "}
-                      {e.limite_turnos_mes ?? "sem limite"} turnos/mês · retenção{" "}
-                      {e.retencao_dias ?? "—"} dias · criada {dataHora(e.criado_em)}
+                      {e.limite_turnos_mes ?? "sem limite"} atendimentos/mês · conversas guardadas
+                      por {e.retencao_dias ?? "—"} dias · criada {dataHora(e.criado_em)}
                     </p>
                   </div>
 
                   <div className="w-full space-y-1 xl:w-64">
-                    <Label className="text-xs text-ink-500">Cliente do painel</Label>
+                    <Label className="text-xs text-ink-500">{CAMPO_EMPRESA.vinculo.rotulo}</Label>
                     <Select
                       value={ligada?.id ?? SEM_VINCULO}
                       disabled={vinculo.isPending}
@@ -307,7 +323,9 @@ function NovaEmpresa({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nova empresa</DialogTitle>
-          <DialogDescription>O identificador não pode ser alterado depois.</DialogDescription>
+          <DialogDescription>
+            Crie a empresa; depois ligue-a ao cliente do painel e cadastre agentes e canais.
+          </DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -317,7 +335,7 @@ function NovaEmpresa({
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="emp-nome">Nome</Label>
+            <RotuloCampo htmlFor="emp-nome" campo={CAMPO_EMPRESA.nome} />
             <Input
               id="emp-nome"
               value={nome}
@@ -329,7 +347,7 @@ function NovaEmpresa({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="emp-id">Identificador</Label>
+            <RotuloCampo htmlFor="emp-id" campo={CAMPO_EMPRESA.id} />
             <Input
               id="emp-id"
               value={id}
@@ -345,11 +363,11 @@ function NovaEmpresa({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="emp-plano">Plano</Label>
+              <RotuloCampo htmlFor="emp-plano" campo={CAMPO_EMPRESA.plano} />
               <Input id="emp-plano" value={plano} onChange={(e) => setPlano(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="emp-limite">Limite de turnos/mês</Label>
+              <RotuloCampo htmlFor="emp-limite" campo={CAMPO_EMPRESA.limite_turnos_mes} />
               <Input
                 id="emp-limite"
                 type="number"
@@ -361,7 +379,7 @@ function NovaEmpresa({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="emp-fuso">Fuso horário</Label>
+            <RotuloCampo htmlFor="emp-fuso" campo={CAMPO_EMPRESA.timezone} />
             <Input id="emp-fuso" value={fuso} required onChange={(e) => setFuso(e.target.value)} />
           </div>
           <Button type="submit" className="w-full" disabled={mutation.isPending}>
@@ -429,16 +447,16 @@ function EditarEmpresa({
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="ed-nome">Nome</Label>
+            <RotuloCampo htmlFor="ed-nome" campo={CAMPO_EMPRESA.nome} />
             <Input id="ed-nome" value={nome} required onChange={(e) => setNome(e.target.value)} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="ed-plano">Plano</Label>
+              <RotuloCampo htmlFor="ed-plano" campo={CAMPO_EMPRESA.plano} />
               <Input id="ed-plano" value={plano} onChange={(e) => setPlano(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ed-limite">Limite de turnos/mês</Label>
+              <RotuloCampo htmlFor="ed-limite" campo={CAMPO_EMPRESA.limite_turnos_mes} />
               <Input
                 id="ed-limite"
                 type="number"
@@ -449,11 +467,11 @@ function EditarEmpresa({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ed-fuso">Fuso horário</Label>
+              <RotuloCampo htmlFor="ed-fuso" campo={CAMPO_EMPRESA.timezone} />
               <Input id="ed-fuso" value={fuso} required onChange={(e) => setFuso(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ed-ret">Retenção (dias)</Label>
+              <RotuloCampo htmlFor="ed-ret" campo={CAMPO_EMPRESA.retencao_dias} />
               <Input
                 id="ed-ret"
                 type="number"
@@ -466,9 +484,9 @@ function EditarEmpresa({
           <div className="flex items-center justify-between rounded-lg border border-base-200 bg-base-50 px-4 py-3">
             <div>
               <Label htmlFor="ed-teste" className="text-sm">
-                Empresa de teste
+                {CAMPO_EMPRESA.tenant_teste.rotulo}
               </Label>
-              <p className="text-xs text-ink-500">Permite modo live sem credencial (SEG13).</p>
+              <Ajuda>{CAMPO_EMPRESA.tenant_teste.ajuda}</Ajuda>
             </div>
             <Switch id="ed-teste" checked={teste} onCheckedChange={setTeste} />
           </div>

@@ -5,9 +5,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Plus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import {
+  Ajuda,
   Etiqueta,
   PaginaGateway,
+  RotuloCampo,
   SegredoUmaVez,
+  Vazio,
   dataHora,
   type ContextoGateway,
 } from "@/components/luxtia/Gateway";
@@ -49,6 +52,7 @@ import {
   rotacionarSegredoCanal,
 } from "@/lib/gateway-canais.functions";
 import type { CanalGateway } from "@/lib/gateway/tipos";
+import { CAMPO_CANAL, PUBLICO_CANAL, TIPO_CANAL } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/canais")({
   head: () => ({ meta: [{ title: "Canais | Luxtia" }] }),
@@ -125,7 +129,23 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
         ) : canais.error ? (
           <EstadoVazio titulo="Não foi possível carregar" texto={(canais.error as Error).message} />
         ) : itens.length === 0 ? (
-          <EstadoVazio titulo="Nenhum canal" texto="Esta empresa ainda não tem canais." />
+          <Vazio
+            titulo="Nenhum canal ainda"
+            texto={
+              plataforma
+                ? "Crie um canal para conectar o WhatsApp ou testar pelo Simular."
+                : "Peça à administração da plataforma para conectar o WhatsApp ou um canal de testes."
+            }
+            {...(plataforma
+              ? {
+                  acao: (
+                    <Button onClick={() => setCriando(true)}>
+                      <Plus className="size-4" aria-hidden /> Criar canal
+                    </Button>
+                  ),
+                }
+              : {})}
+          />
         ) : (
           <ul>
             {itens.map((c) => (
@@ -136,15 +156,17 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-ink-900">{c.nome}</p>
-                    <Etiqueta tom="roxo">{c.tipo}</Etiqueta>
+                    <Etiqueta tom="roxo">{TIPO_CANAL[c.tipo] ?? c.tipo}</Etiqueta>
                     <Etiqueta tom={c.ativo ? "sucesso" : "neutro"}>
                       {c.ativo ? "Ativo" : "Inativo"}
                     </Etiqueta>
-                    {c.publico === "interno" ? <Etiqueta>interno</Etiqueta> : null}
+                    {c.publico === "interno" ? (
+                      <Etiqueta>{PUBLICO_CANAL["interno"]}</Etiqueta>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-xs text-ink-500">
-                    <span className="font-mono">{c.id}</span> · agente {nomeAgente(c.agente_id)}
-                    {c.ultimo_evento_em ? ` · último evento ${dataHora(c.ultimo_evento_em)}` : ""}
+                    Responde: {nomeAgente(c.agente_id)} · <span className="font-mono">{c.id}</span>
+                    {c.ultimo_evento_em ? ` · última mensagem ${dataHora(c.ultimo_evento_em)}` : ""}
                   </p>
                   <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-ink-500">
                     <span>
@@ -318,19 +340,19 @@ function NovoCanal({
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="cn-tipo">Tipo</Label>
+              <RotuloCampo htmlFor="cn-tipo" campo={CAMPO_CANAL.tipo} />
               <Select value={tipo} onValueChange={(v) => setTipo(v as "api" | "uazapi")}>
                 <SelectTrigger id="cn-tipo">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="api">API</SelectItem>
-                  <SelectItem value="uazapi">Uazapi (WhatsApp)</SelectItem>
+                  <SelectItem value="api">{TIPO_CANAL["api"]}</SelectItem>
+                  <SelectItem value="uazapi">{TIPO_CANAL["uazapi"]}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cn-publico">Público</Label>
+              <RotuloCampo htmlFor="cn-publico" campo={CAMPO_CANAL.publico} />
               <Select
                 value={publico}
                 onValueChange={(v) => setPublico(v as "clientes" | "interno")}
@@ -339,18 +361,18 @@ function NovoCanal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="clientes">Clientes</SelectItem>
-                  <SelectItem value="interno">Interno</SelectItem>
+                  <SelectItem value="clientes">{PUBLICO_CANAL["clientes"]}</SelectItem>
+                  <SelectItem value="interno">{PUBLICO_CANAL["interno"]}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cn-nome">Nome</Label>
+            <RotuloCampo htmlFor="cn-nome" campo={CAMPO_CANAL.nome} />
             <Input id="cn-nome" value={nome} required onChange={(e) => setNome(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cn-agente">Agente</Label>
+            <RotuloCampo htmlFor="cn-agente" campo={CAMPO_CANAL.agente} />
             <Select value={agente} onValueChange={setAgente}>
               <SelectTrigger id="cn-agente">
                 <SelectValue placeholder="Escolha o agente" />
@@ -367,7 +389,7 @@ function NovoCanal({
           {tipo === "uazapi" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="cn-base">URL da instância</Label>
+                <RotuloCampo htmlFor="cn-base" campo={CAMPO_CANAL.base_url} />
                 <Input
                   id="cn-base"
                   type="url"
@@ -377,7 +399,7 @@ function NovoCanal({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cn-token">Token</Label>
+                <RotuloCampo htmlFor="cn-token" campo={CAMPO_CANAL.token} />
                 <Input
                   id="cn-token"
                   type="password"
@@ -396,9 +418,9 @@ function NovoCanal({
           <div className="flex items-center justify-between rounded-lg border border-base-200 bg-base-50 px-4 py-3">
             <div>
               <Label htmlFor="cn-ativo" className="text-sm">
-                Ativar agora
+                {CAMPO_CANAL.ativo.rotulo}
               </Label>
-              <p className="text-xs text-ink-500">Canal inativo ignora as mensagens recebidas.</p>
+              <Ajuda>{CAMPO_CANAL.ativo.ajuda}</Ajuda>
             </div>
             <Switch id="cn-ativo" checked={ativo} onCheckedChange={setAtivo} />
           </div>

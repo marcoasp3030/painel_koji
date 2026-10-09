@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
 import { historicoConversa, simularMensagem } from "@/lib/gateway-simular.functions";
+import { SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/simular")({
   head: () => ({ meta: [{ title: "Simular conversa | Luxtia" }] }),
@@ -111,15 +112,19 @@ function Simular({ ctx }: { ctx: ContextoGateway }) {
   const canalAtual = canaisApi.find((c) => c.id === canal);
   const avisos: string[] = [];
   if (agenteAtual && agenteAtual.status !== "ativo")
-    avisos.push("O agente não está ativo: a mensagem será ignorada.");
+    avisos.push(
+      "O agente está pausado ou em rascunho: a mensagem será ignorada. Ative-o na tela Agentes.",
+    );
   if (agenteAtual && (agenteAtual.agente_mode ?? "mock") !== "mock")
-    avisos.push("A simulação exige o agente em modo mock.");
+    avisos.push(
+      "Por enquanto a simulação só funciona com respostas em Simulação. A conversa de teste com a IA real depende de uma atualização do gateway.",
+    );
   if (agenteAtual && (agenteAtual.send_mode ?? "dry") !== "dry")
-    avisos.push("A simulação exige send_mode dry.");
+    avisos.push("A simulação fica bloqueada porque o envio aos clientes deste agente está real.");
   if (agente && canaisApi.length === 0)
-    avisos.push("Este agente não tem canal API. Crie um na tela Canais.");
+    avisos.push("Este agente não tem canal API (para testes). Crie um na tela Canais.");
   if (canalAtual && !canalAtual.ativo)
-    avisos.push("O canal está inativo: a mensagem será ignorada.");
+    avisos.push("O canal está desativado: a mensagem será ignorada. Ative-o na tela Canais.");
 
   return (
     <div className="mt-6 grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
@@ -144,7 +149,7 @@ function Simular({ ctx }: { ctx: ContextoGateway }) {
               <SelectContent>
                 {(agentes.data?.itens ?? []).map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.nome} · {a.status}
+                    {a.nome} · {SITUACAO_AGENTE[a.status]?.rotulo ?? a.status}
                   </SelectItem>
                 ))}
               </SelectContent>

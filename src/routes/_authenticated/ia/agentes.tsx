@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2, Play, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Etiqueta, PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
+import {
+  Etiqueta,
+  PaginaGateway,
+  RotuloCampo,
+  Vazio,
+  type ContextoGateway,
+} from "@/components/luxtia/Gateway";
 import { Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +39,7 @@ import {
   testarAgente,
 } from "@/lib/gateway-agentes.functions";
 import type { AgenteDetalhe, AgenteGateway, ResultadoTeste } from "@/lib/gateway/tipos";
+import { CAMPO_AGENTE, ENVIO, RESPOSTAS } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/agentes")({
   head: () => ({ meta: [{ title: "Agentes | Luxtia" }] }),
@@ -93,7 +100,23 @@ function Agentes({ ctx }: { ctx: ContextoGateway }) {
               texto={(lista.error as Error).message}
             />
           ) : agentes.length === 0 ? (
-            <EstadoVazio titulo="Nenhum agente" texto="Esta empresa ainda não tem agentes." />
+            <Vazio
+              titulo="Nenhum agente ainda"
+              texto={
+                plataforma
+                  ? "Crie o primeiro a partir de um modelo pronto."
+                  : "Fale com a administração da plataforma."
+              }
+              {...(plataforma
+                ? {
+                    acao: (
+                      <Button onClick={() => setCriando(true)}>
+                        <Plus className="size-4" aria-hidden /> Criar agente
+                      </Button>
+                    ),
+                  }
+                : {})}
+            />
           ) : (
             <ul>
               {agentes.map((a) => (
@@ -108,13 +131,11 @@ function Agentes({ ctx }: { ctx: ContextoGateway }) {
                     <p className="truncate font-mono text-xs text-ink-500">{a.id}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Etiqueta tom={STATUS[a.status].tom}>{STATUS[a.status].rotulo}</Etiqueta>
-                      <Etiqueta tom={a.provedor === "skyone" ? "roxo" : "neutro"}>
-                        {a.provedor}
+                      <Etiqueta tom={a.agente_mode === "live" ? "roxo" : "neutro"}>
+                        Respostas: {RESPOSTAS[a.agente_mode ?? "mock"] ?? "Simulação"}
                       </Etiqueta>
                       {a.circuito_estado && a.circuito_estado !== "fechado" ? (
-                        <Etiqueta tom="perigo">
-                          circuito {a.circuito_estado.replace("_", " ")}
-                        </Etiqueta>
+                        <Etiqueta tom="perigo">Skyone com falhas</Etiqueta>
                       ) : null}
                     </div>
                   </button>
@@ -344,6 +365,8 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
     const valor = efetiva[campo];
     if (valor === undefined || valor === null || (Array.isArray(valor) && valor.length === 0))
       return "vazio";
+    if (typeof valor === "boolean")
+      return `${valor ? "Sim" : "Não"} (${ORIGEM[origem[campo] ?? ""] ?? "padrão"})`;
     return `${paraTexto(valor).replace(/\n/g, ", ")} (${ORIGEM[origem[campo] ?? ""] ?? "herdado"})`;
   };
   const campo = (nome: string) => ({
@@ -367,8 +390,10 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
           <div className="flex flex-wrap gap-1.5">
             <Etiqueta tom={STATUS[agente.status].tom}>{STATUS[agente.status].rotulo}</Etiqueta>
             <Etiqueta tom="roxo">
-              {String(efetiva["agente_mode"] ?? agente.agente_mode ?? "mock")} /{" "}
-              {String(efetiva["send_mode"] ?? agente.send_mode ?? "dry")}
+              Respostas: {RESPOSTAS[String(efetiva["agente_mode"] ?? agente.agente_mode ?? "mock")]}
+            </Etiqueta>
+            <Etiqueta>
+              Envio aos clientes: {ENVIO[String(efetiva["send_mode"] ?? agente.send_mode ?? "dry")]}
             </Etiqueta>
           </div>
         </div>
@@ -400,7 +425,7 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label htmlFor="ag-status">Situação</Label>
+              <RotuloCampo htmlFor="ag-status" campo={CAMPO_AGENTE.status} />
               <Select
                 value={form["status"] ?? ""}
                 disabled={!podeEditar}
@@ -421,7 +446,7 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ag-modo_piloto">Modo piloto</Label>
+              <RotuloCampo htmlFor="ag-modo_piloto" campo={CAMPO_AGENTE.modo_piloto} />
               <Select
                 value={form["modo_piloto"] || "herdar"}
                 disabled={!podeEditar}
@@ -433,22 +458,22 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="herdar">Herdar ({herdado("modo_piloto")})</SelectItem>
-                  <SelectItem value="true">Ligado: só contatos permitidos</SelectItem>
-                  <SelectItem value="false">Desligado</SelectItem>
+                  <SelectItem value="herdar">Usar padrão ({herdado("modo_piloto")})</SelectItem>
+                  <SelectItem value="true">Sim, só os contatos abaixo</SelectItem>
+                  <SelectItem value="false">Não, responder a todos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {(
               [
-                ["debounce_s", "Espera para juntar mensagens (s)", 1, 15],
-                ["max_wait_s", "Espera máxima (s)", 1, 30],
-                ["pause_minutes", "Pausa após atendimento humano (min)", 0, undefined],
-                ["slow_notice_s", "Aviso de demora após (s)", 0, undefined],
+                ["debounce_s", 1, 15],
+                ["max_wait_s", 1, 30],
+                ["pause_minutes", 0, undefined],
+                ["slow_notice_s", 0, undefined],
               ] as const
-            ).map(([nome, rotulo, min, max]) => (
+            ).map(([nome, min, max]) => (
               <div key={nome} className="space-y-2">
-                <Label htmlFor={`ag-${nome}`}>{rotulo}</Label>
+                <RotuloCampo htmlFor={`ag-${nome}`} campo={CAMPO_AGENTE[nome]} />
                 <Input
                   {...campo(nome)}
                   type="number"
@@ -459,15 +484,18 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
               </div>
             ))}
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="ag-aviso_demora">Mensagem de demora</Label>
+              <RotuloCampo htmlFor="ag-aviso_demora" campo={CAMPO_AGENTE.aviso_demora} />
               <Textarea {...campo("aviso_demora")} rows={2} placeholder={herdado("aviso_demora")} />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="ag-fallback">Mensagem de falha (fallback)</Label>
+              <RotuloCampo htmlFor="ag-fallback" campo={CAMPO_AGENTE.fallback} />
               <Textarea {...campo("fallback")} rows={2} placeholder={herdado("fallback")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ag-contatos_permitidos">Contatos permitidos no piloto</Label>
+              <RotuloCampo
+                htmlFor="ag-contatos_permitidos"
+                campo={CAMPO_AGENTE.contatos_permitidos}
+              />
               <Textarea
                 {...campo("contatos_permitidos")}
                 rows={3}
@@ -475,7 +503,7 @@ function DetalheAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: stri
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ag-alerta_telefone">Telefone para alertas</Label>
+              <RotuloCampo htmlFor="ag-alerta_telefone" campo={CAMPO_AGENTE.alerta_telefone} />
               <Input
                 {...campo("alerta_telefone")}
                 inputMode="numeric"
@@ -571,19 +599,19 @@ function Skyone({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="sk-provedor">Provedor</Label>
+            <Label htmlFor="sk-provedor">Serviço de IA</Label>
             <Select value={form["provedor"] ?? ""} onValueChange={set("provedor")}>
               <SelectTrigger id="sk-provedor">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mock">mock (simulado)</SelectItem>
-                <SelectItem value="skyone">skyone</SelectItem>
+                <SelectItem value="mock">Nenhum (simulação)</SelectItem>
+                <SelectItem value="skyone">Skyone</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sk-modo">Modo do agente</Label>
+            <RotuloCampo htmlFor="sk-modo" campo={CAMPO_AGENTE.agente_mode} />
             <Select
               value={form["agente_mode"] || "herdar"}
               onValueChange={(v) =>
@@ -595,15 +623,16 @@ function Skyone({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="herdar">
-                  Herdar ({String(agente.configuracao_efetiva?.["agente_mode"] ?? "mock")})
+                  Usar padrão (
+                  {RESPOSTAS[String(agente.configuracao_efetiva?.["agente_mode"] ?? "mock")]})
                 </SelectItem>
-                <SelectItem value="mock">mock: responde sem chamar o Skyone</SelectItem>
-                <SelectItem value="live">live: chama o Skyone</SelectItem>
+                <SelectItem value="mock">{RESPOSTAS["mock"]}</SelectItem>
+                <SelectItem value="live">{RESPOSTAS["live"]}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="sk-url">URL do webhook do fluxo</Label>
+            <RotuloCampo htmlFor="sk-url" campo={CAMPO_AGENTE.skyone_webhook_url} />
             <Input
               id="sk-url"
               type="url"
@@ -613,14 +642,14 @@ function Skyone({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sk-auth">Autenticação</Label>
+            <Label htmlFor="sk-auth">Acesso ao fluxo</Label>
             <Select value={form["skyone_auth_tipo"] ?? ""} onValueChange={set("skyone_auth_tipo")}>
               <SelectTrigger id="sk-auth">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nenhuma">Nenhuma</SelectItem>
-                <SelectItem value="basic">Basic (usuário e senha)</SelectItem>
+                <SelectItem value="nenhuma">Sem senha</SelectItem>
+                <SelectItem value="basic">Usuário e senha</SelectItem>
                 {tiposOutros ? (
                   <SelectItem value={agente.skyone_auth_tipo}>
                     {agente.skyone_auth_tipo} (atual)
@@ -630,7 +659,7 @@ function Skyone({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sk-timeout">Tempo limite (s)</Label>
+            <RotuloCampo htmlFor="sk-timeout" campo={CAMPO_AGENTE.timeout_s} />
             <Input
               id="sk-timeout"
               type="number"
@@ -681,7 +710,7 @@ function Skyone({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }
             </>
           ) : null}
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="sk-instrucoes">Instruções complementares ao agente</Label>
+            <RotuloCampo htmlFor="sk-instrucoes" campo={CAMPO_AGENTE.instrucoes_agente} />
             <Textarea
               id="sk-instrucoes"
               rows={3}

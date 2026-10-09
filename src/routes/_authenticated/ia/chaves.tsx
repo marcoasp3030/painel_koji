@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import {
   Etiqueta,
   PaginaGateway,
+  RotuloCampo,
   SegredoUmaVez,
+  Vazio,
   dataHora,
   type ContextoGateway,
 } from "@/components/luxtia/Gateway";
@@ -45,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
 import { ESCOPOS, criarChave, listarChaves, revogarChave } from "@/lib/gateway-chaves.functions";
 import type { ChaveGateway } from "@/lib/gateway/tipos";
+import { CAMPO_CHAVE, ESCOPO } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/chaves")({
   head: () => ({ meta: [{ title: "Chaves de API | Luxtia" }] }),
@@ -58,14 +61,6 @@ export const Route = createFileRoute("/_authenticated/ia/chaves")({
     </PaginaGateway>
   ),
 });
-
-const DESCRICAO_ESCOPO: Record<(typeof ESCOPOS)[number], string> = {
-  conversar: "Enviar mensagens de clientes",
-  "eventos:ler": "Ler o histórico das conversas",
-  notificar: "Pedir ao agente que avise o cliente",
-  "ferramentas:catalogo": "Busca no catálogo (módulo habilitado)",
-  callback: "Resposta assíncrona (rota ainda planejada)",
-};
 
 const SEM_AGENTE = "__todos__";
 
@@ -124,7 +119,15 @@ function Chaves({ ctx }: { ctx: ContextoGateway }) {
         ) : chaves.error ? (
           <EstadoVazio titulo="Não foi possível carregar" texto={(chaves.error as Error).message} />
         ) : itens.length === 0 ? (
-          <EstadoVazio titulo="Nenhuma chave" texto="Esta empresa ainda não tem chaves de API." />
+          <Vazio
+            titulo="Nenhuma chave ainda"
+            texto="Crie uma chave quando um sistema da empresa precisar conversar com os agentes."
+            acao={
+              <Button onClick={() => setCriando(true)}>
+                <Plus className="size-4" aria-hidden /> Criar chave
+              </Button>
+            }
+          />
         ) : (
           <ul>
             {itens.map((c) => {
@@ -140,7 +143,7 @@ function Chaves({ ctx }: { ctx: ContextoGateway }) {
                       <Etiqueta tom={s.tom}>{s.rotulo}</Etiqueta>
                       {c.escopos.map((e) => (
                         <Etiqueta key={e} tom="roxo">
-                          {e}
+                          {ESCOPO[e]?.rotulo ?? e}
                         </Etiqueta>
                       ))}
                     </div>
@@ -263,14 +266,14 @@ function NovaChave({
           onSubmit={(e) => {
             e.preventDefault();
             if (escopos.length === 0) {
-              toast.error("Escolha ao menos um escopo.");
+              toast.error("Escolha ao menos uma permissão.");
               return;
             }
             mutation.mutate();
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="ch-nome">Nome</Label>
+            <RotuloCampo htmlFor="ch-nome" campo={CAMPO_CHAVE.nome} />
             <Input
               id="ch-nome"
               value={nome}
@@ -280,7 +283,7 @@ function NovaChave({
             />
           </div>
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Escopos</legend>
+            <legend className="text-sm font-medium">O que a chave pode fazer</legend>
             {ESCOPOS.map((e) => (
               <label key={e} className="flex items-start gap-3 text-sm">
                 <Checkbox
@@ -290,14 +293,14 @@ function NovaChave({
                   }
                 />
                 <span>
-                  <span className="font-mono text-xs">{e}</span>
-                  <span className="block text-xs text-ink-500">{DESCRICAO_ESCOPO[e]}</span>
+                  <span>{ESCOPO[e]?.rotulo ?? e}</span>
+                  <span className="block text-xs text-ink-500">{ESCOPO[e]?.ajuda}</span>
                 </span>
               </label>
             ))}
           </fieldset>
           <div className="space-y-2">
-            <Label htmlFor="ch-agente">Restringir a um agente</Label>
+            <RotuloCampo htmlFor="ch-agente" campo={CAMPO_CHAVE.agente} />
             <Select value={agente} onValueChange={setAgente}>
               <SelectTrigger id="ch-agente">
                 <SelectValue />
@@ -314,17 +317,16 @@ function NovaChave({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="ch-expira">Validade</Label>
+              <RotuloCampo htmlFor="ch-expira" campo={CAMPO_CHAVE.validade} />
               <Input
                 id="ch-expira"
                 type="date"
                 value={expira}
                 onChange={(e) => setExpira(e.target.value)}
               />
-              <p className="text-xs text-ink-500">Vazio: sem validade.</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ch-ips">IPs permitidos</Label>
+              <RotuloCampo htmlFor="ch-ips" campo={CAMPO_CHAVE.ips} />
               <Textarea
                 id="ch-ips"
                 rows={2}
@@ -332,7 +334,6 @@ function NovaChave({
                 placeholder="200.10.20.0/24"
                 onChange={(e) => setIps(e.target.value)}
               />
-              <p className="text-xs text-ink-500">Vazio: qualquer IP.</p>
             </div>
           </div>
           <Button type="submit" className="w-full" disabled={mutation.isPending}>

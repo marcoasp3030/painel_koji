@@ -278,3 +278,47 @@ export function dataHora(valor: string | null | undefined) {
     ? "—"
     : data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
+
+/** Tela vazia que diz o que fazer, com a ação quando o papel permite. */
+export function Vazio({
+  titulo,
+  texto,
+  acao,
+}: {
+  titulo: string;
+  texto: string;
+  acao?: React.ReactNode;
+}) {
+  return (
+    <div className="px-6 py-14 text-center">
+      <p className="font-display text-xl text-purple-800">{titulo}</p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-ink-500">{texto}</p>
+      {acao ? <div className="mt-5 flex justify-center">{acao}</div> : null}
+    </div>
+  );
+}
+
+/** Frase curta de ajuda logo abaixo de um campo. */
+export function Ajuda({ id, children }: { id?: string; children: React.ReactNode }) {
+  return (
+    <p id={id} className="text-xs leading-relaxed text-ink-500">
+      {children}
+    </p>
+  );
+}
+
+/** Rótulo do campo com a frase de ajuda do vocabulário. */
+export function RotuloCampo({
+  htmlFor,
+  campo,
+}: {
+  htmlFor: string;
+  campo: { rotulo: string; ajuda: string };
+}) {
+  return (
+    <>
+      <Label htmlFor={htmlFor}>{campo.rotulo}</Label>
+      <Ajuda>{campo.ajuda}</Ajuda>
+    </>
+  );
+}
