@@ -111,6 +111,11 @@ const AJUDA_POR_CAMPO: Record<string, string> = {
   skyone_webhook_url:
     "Para usar a IA real, cadastre antes a URL do fluxo no Skyone (https, sem usuário e senha na URL).",
   skyone_auth: "Para usar a IA real, cadastre antes o usuário e a senha do fluxo no Skyone.",
+  provedor:
+    "Para usar a IA real, configure antes a conexão com o Skyone neste agente (URL do fluxo, usuário e senha).",
+  skyone_auth_usuario: "Para usar a IA real, cadastre antes o usuário do fluxo no Skyone.",
+  send_mode:
+    "A conversa de teste fica bloqueada porque o envio aos clientes deste agente está real.",
   skyone_auth_cabecalho: "O nome do cabeçalho de autenticação do Skyone é inválido.",
   agente_mode:
     "A simulação só funciona com o agente em Simulação e envio de teste. Troque as respostas para Simulação e tente de novo.",

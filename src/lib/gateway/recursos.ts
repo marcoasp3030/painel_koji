@@ -1,8 +1,8 @@
 /**
- * Recursos do gateway que dependem de versão. Quando o gateway publicar o
- * /testar que chama o Skyone sem mudar o modo do agente, preencher aqui o
- * nome do parâmetro (ex.: "usar_provedor_real") e o teste de conexão é liberado.
+ * Recursos do gateway que dependem de versão. Parâmetro do /testar que chama o
+ * Skyone sem mudar o modo do agente, publicado na imagem gateway:8f387be.
+ * Com null, o teste de conexão fica desativado na tela e recusado no servidor.
  */
-export const PARAMETRO_TESTE_REAL: string | null = null;
+export const PARAMETRO_TESTE_REAL: string | null = "usar_provedor_real";
 
 export const TESTE_CONEXAO_DISPONIVEL = PARAMETRO_TESTE_REAL !== null;

@@ -201,3 +201,22 @@ describe("piloto com a lista vazia", () => {
     expect(problemaPiloto(daEmpresa, { modo_piloto: true })).toBeNull();
   });
 });
+
+describe("campos do gateway novo", () => {
+  test("provedor, usuário do fluxo e envio real viram orientação", () => {
+    for (const [campo, trecho] of [
+      ["provedor", "configure antes a conexão com o Skyone"],
+      ["skyone_auth_usuario", "usuário do fluxo"],
+      ["send_mode", "envio aos clientes deste agente está real"],
+    ] as const) {
+      const erro = interpretarErro(400, {
+        erro: {
+          codigo: "VALIDATION_ERROR",
+          mensagem: "Confira os campos informados.",
+          detalhes: { campo },
+        },
+      });
+      expect(mensagemParaUsuario(erro)).toContain(trecho);
+    }
+  });
+});
