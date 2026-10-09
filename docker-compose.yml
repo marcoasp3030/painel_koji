@@ -102,11 +102,15 @@ services:
       SUPABASE_URL: http://proxy
       SUPABASE_PUBLISHABLE_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      # API administrativa do gateway: somente o servidor do painel usa.
+      GATEWAY_ADMIN_URL: ${GATEWAY_ADMIN_URL}
+      GATEWAY_PANEL_KEY: ${GATEWAY_PANEL_KEY}
       PORT: "3000"
       HOST: 0.0.0.0
       TZ: America/Sao_Paulo
     networks:
       - interno
+      - gateway
 
   proxy:
     image: caddy:2-alpine
