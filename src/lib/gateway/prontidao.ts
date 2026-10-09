@@ -38,9 +38,12 @@ function hora(valor: string | null) {
     : data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
+/** Basta saber de quem é o canal e se está ativo (vale para a lista do gateway). */
+type CanalDaProntidao = Pick<CanalGateway, "agente_id" | "ativo">;
+
 export function prontidao(
   agente: AgenteDetalhe,
-  canais: CanalGateway[],
+  canais: CanalDaProntidao[],
   circuito?: CircuitoAgente | null,
   nomeModelo?: string | null,
 ): ItemProntidao[] {

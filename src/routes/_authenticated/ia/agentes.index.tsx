@@ -29,10 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { criarAgente, listarAgentes, listarModelos } from "@/lib/gateway-agentes.functions";
-import { listarCanais } from "@/lib/gateway-canais.functions";
 import { ehAgenteDeTeste } from "@/lib/gateway/ocultos";
 import { prontidao, resumoProntidao } from "@/lib/gateway/prontidao";
-import type { AgenteGateway, CanalGateway } from "@/lib/gateway/tipos";
+import type { AgenteGateway } from "@/lib/gateway/tipos";
 import { RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/agentes/")({
@@ -60,17 +59,12 @@ const CAMPO_NOME = {
 function Agentes({ ctx }: { ctx: ContextoGateway }) {
   const navigate = useNavigate();
   const listar = useServerFn(listarAgentes);
-  const listarCn = useServerFn(listarCanais);
   const [criando, setCriando] = useState(false);
   const plataforma = ctx.papel === "plataforma";
 
   const lista = useQuery({
     queryKey: ["gateway", "agentes", ctx.empresa],
     queryFn: () => listar({ data: { empresa: ctx.empresa } }),
-  });
-  const canais = useQuery({
-    queryKey: ["gateway", "canais", ctx.empresa],
-    queryFn: () => listarCn({ data: { empresa: ctx.empresa } }),
   });
   const agentes = lista.data?.itens ?? [];
   const busca = ctx.empresa ? { empresa: ctx.empresa } : {};
@@ -109,7 +103,7 @@ function Agentes({ ctx }: { ctx: ContextoGateway }) {
         <ul className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {agentes.map((a) => (
             <li key={a.id}>
-              <CartaoAgente agente={a} canais={canais.data?.itens ?? []} busca={busca} />
+              <CartaoAgente agente={a} busca={busca} />
             </li>
           ))}
         </ul>
@@ -129,20 +123,13 @@ function Agentes({ ctx }: { ctx: ContextoGateway }) {
   );
 }
 
-function CartaoAgente({
-  agente,
-  canais,
-  busca,
-}: {
-  agente: AgenteGateway;
-  canais: CanalGateway[];
-  busca: { empresa?: string };
-}) {
+function CartaoAgente({ agente, busca }: { agente: AgenteGateway; busca: { empresa?: string } }) {
+  // A lista do gateway já traz canais e circuito de cada agente.
+  const ligados = (agente.canais ?? []).map((c) => ({ ...c, agente_id: agente.id }));
   const circuito = agente.circuito_estado
     ? { estado: agente.circuito_estado, falhas: 0, aberto_ate: null, ultimo_alerta: null }
     : null;
-  const { prontos, total } = resumoProntidao(prontidao(agente, canais, circuito));
-  const ligados = canais.filter((c) => c.agente_id === agente.id);
+  const { prontos, total } = resumoProntidao(prontidao(agente, ligados, circuito));
   const situacao = SITUACAO_AGENTE[agente.status];
 
   return (

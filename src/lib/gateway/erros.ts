@@ -66,8 +66,8 @@ export function codigoPorStatus(status: number): CodigoGateway {
 }
 
 /**
- * Converte a resposta de erro do gateway nos dois formatos conhecidos:
- * envelope {"erro":{codigo,mensagem,detalhes}} e o padrão {"detail":...}.
+ * Converte a resposta de erro do gateway: envelope {"erro":{codigo,mensagem,detalhes}}
+ * (atual) e, por compatibilidade barata, o formato antigo {"detail":...}.
  * Do formato "detail" só aproveitamos o campo; o texto não é repassado.
  */
 export function interpretarErro(
@@ -87,8 +87,8 @@ export function interpretarErro(
       e["detalhes"] && typeof e["detalhes"] === "object"
         ? (e["detalhes"] as Record<string, unknown>)
         : {};
-    // Algumas rotas do gateway repetem o código em "mensagem" (ex.: TENANT_NOT_FOUND);
-    // nesse caso vale o texto padrão em português.
+    // Compatibilidade barata com gateways anteriores ao 8f387be, que repetiam o
+    // código em "mensagem" (ex.: TENANT_NOT_FOUND): vale o texto padrão.
     const mensagem =
       typeof e["mensagem"] === "string" && !/^[A-Z0-9_]+$/.test(e["mensagem"])
         ? e["mensagem"]

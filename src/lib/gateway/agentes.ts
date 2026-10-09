@@ -1,17 +1,9 @@
 /**
- * Conferências do painel antes de alterar um agente no gateway, para que o
- * usuário receba o motivo real e o que fazer, em vez de um 409 genérico.
+ * Conferências do painel antes de alterar um agente no gateway: o que falta
+ * para ligar a IA real e a regra do piloto. Campos obrigatórios e integridade
+ * já voltam do gateway com detalhes.campo (gateway:8f387be).
  */
 import { GatewayErro } from "./erros";
-
-/** Colunas que o gateway não aceita vazias (NULL vira 409 sem detalhes). */
-const OBRIGATORIOS: Record<string, string> = {
-  nome: "Nome",
-  status: "Situação",
-  provedor: "Provedor",
-  skyone_auth_tipo: "Autenticação do Skyone",
-  timeout_s: "Tempo limite",
-};
 
 const CAMPOS_IA = new Set([
   "provedor",
@@ -24,18 +16,6 @@ const CAMPOS_IA = new Set([
 
 function invalido(mensagem: string, campo: string): never {
   throw new GatewayErro({ codigo: "VALIDATION_ERROR", status: 400, mensagem, detalhes: { campo } });
-}
-
-/** Troca vazio por "" onde o gateway espera texto e recusa vazio onde é obrigatório. */
-export function normalizarPatchAgente(dados: Record<string, unknown>) {
-  const saida = { ...dados };
-  if (saida["instrucoes_agente"] === null) saida["instrucoes_agente"] = "";
-  for (const [campo, rotulo] of Object.entries(OBRIGATORIOS)) {
-    if (campo in saida && (saida[campo] === null || saida[campo] === "")) {
-      invalido(`O campo “${rotulo}” não pode ficar vazio.`, campo);
-    }
-  }
-  return saida;
 }
 
 export function tocaIaReal(dados: Record<string, unknown>) {
@@ -115,24 +95,6 @@ export function conferirIaReal(
       faltando.includes("a URL do fluxo") ? "skyone_webhook_url" : "skyone_auth",
     );
   }
-}
-
-/** 409 do gateway ao gravar agente: hoje significa campo obrigatório vazio no banco. */
-export function explicarConflitoAgente(erro: unknown): unknown {
-  if (
-    erro instanceof GatewayErro &&
-    erro.codigo === "CONFLICT" &&
-    Object.keys(erro.detalhes).length === 0
-  ) {
-    return new GatewayErro({
-      codigo: "CONFLICT",
-      status: 409,
-      mensagem:
-        "O gateway recusou a gravação porque algum campo obrigatório do agente ficou vazio " +
-        "(provedor, autenticação, tempo limite ou nome). Preencha esses campos e salve de novo.",
-    });
-  }
-  return erro;
 }
 
 export const AVISO_PILOTO_VAZIO = "Com a lista vazia, o agente não responde ninguém.";

@@ -5,8 +5,6 @@ import {
   conferirIaReal,
   conferirPiloto,
   problemaPiloto,
-  explicarConflitoAgente,
-  normalizarPatchAgente,
   type EstadoAgente,
 } from "./agentes";
 import { GatewayErro, interpretarErro, mensagemParaUsuario } from "./erros";
@@ -30,21 +28,6 @@ const mensagem = (f: () => unknown) => {
     return (e as GatewayErro).message;
   }
 };
-
-describe("campos obrigatórios", () => {
-  test("vazio em campo obrigatório é recusado com o nome do campo", () => {
-    expect(mensagem(() => normalizarPatchAgente({ timeout_s: null }))).toContain("Tempo limite");
-    expect(mensagem(() => normalizarPatchAgente({ provedor: null }))).toContain("Provedor");
-    expect(mensagem(() => normalizarPatchAgente({ skyone_auth_tipo: "" }))).toContain(
-      "Autenticação",
-    );
-  });
-
-  test("instruções vazias viram texto vazio, não NULL", () => {
-    expect(normalizarPatchAgente({ instrucoes_agente: null })).toEqual({ instrucoes_agente: "" });
-    expect(normalizarPatchAgente({ fallback: null })).toEqual({ fallback: null });
-  });
-});
 
 describe("ativar IA real", () => {
   test("agente sem URL nem senha: diz exatamente o que falta", () => {
@@ -120,14 +103,6 @@ describe("ativar IA real", () => {
 });
 
 describe("mensagens do gateway", () => {
-  test("409 sem detalhes ao gravar agente vira explicação", () => {
-    const erro = interpretarErro(409, {
-      erro: { codigo: "CONFLICT", mensagem: "CONFLICT", detalhes: {} },
-    });
-    const explicado = explicarConflitoAgente(erro) as GatewayErro;
-    expect(explicado.message).toContain("campo obrigatório do agente ficou vazio");
-  });
-
   test("detalhes.campo vira orientação, nunca só a mensagem genérica", () => {
     const erro = interpretarErro(400, {
       erro: {

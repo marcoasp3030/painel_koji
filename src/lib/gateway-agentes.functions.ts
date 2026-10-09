@@ -100,7 +100,7 @@ export const alterarAgente = createServerFn({ method: "POST" })
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
       await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
-      const corpo = a.normalizarPatchAgente(data.dados);
+      const corpo = data.dados;
       // Só o admin da plataforma chega aqui com campos de IA; para os demais o
       // módulo recusa o PATCH logo abaixo.
       // Piloto ligado sem contatos deixaria o agente mudo: vale para todos os papéis.
@@ -123,14 +123,10 @@ export const alterarAgente = createServerFn({ method: "POST" })
           empresa.tenant_teste,
         );
       }
-      try {
-        const { dados } = await t.chamar<AgenteGateway>("PATCH", ["agentes", data.agente], {
-          corpo,
-        });
-        return dados;
-      } catch (erro) {
-        throw a.explicarConflitoAgente(erro);
-      }
+      const { dados } = await t.chamar<AgenteGateway>("PATCH", ["agentes", data.agente], {
+        corpo,
+      });
+      return dados;
     });
   });
 
