@@ -1,3 +1,4 @@
+import { Capacidade } from "@/components/luxtia/Capacidade";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -305,7 +306,7 @@ function EditarEmpresa({
 
   return (
     <Dialog open onOpenChange={(a) => !a && onFechar()}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar {empresa.nome}</DialogTitle>
           <DialogDescription>
@@ -367,6 +368,12 @@ function EditarEmpresa({
             {mutation.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </form>
+        <details className="mt-4">
+          <summary className="cursor-pointer font-medium">Avançado</summary>
+          <div className="mt-3">
+            <Capacidade empresa={empresa.id} />
+          </div>
+        </details>
       </DialogContent>
     </Dialog>
   );

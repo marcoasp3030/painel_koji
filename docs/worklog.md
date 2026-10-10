@@ -1,3 +1,10 @@
+## 2026-10-10 — Limites de capacidade exclusivos da plataforma
+
+- Empresa (Editar → Avançado) e agente (aba Avançado): 1–100, reset null, valor efetivo do gateway, ajuda e erro junto ao campo.
+- Funções do servidor exigem plataforma nas leituras/escritas; nenhum segredo no navegador e nenhuma alteração no repositório gateway.
+- 60 testes aprovados, seis integrações REST antigas ignoradas; TypeScript/lint/build aprovados. Publicação com imagem de volta `painel:4f0eaea` e backup validado `pre-capacidade-20261010T014040Z`.
+- Apenas painel recriado, saúde OK, admin público 404, zero segredos no bundle/logs. HTTP autenticado confirmou valores efetivos (30/30 By Koji) e recusou 101 nos dois campos sem gravar. Nenhuma configuração alterada. Detalhes e volta em `instrucoes.md`; revisão visual pendente do Marco.
+
 # Worklog
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.

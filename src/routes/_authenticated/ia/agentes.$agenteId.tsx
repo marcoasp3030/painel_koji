@@ -1,3 +1,4 @@
+import { Capacidade } from "@/components/luxtia/Capacidade";
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,7 +23,7 @@ import { ehAgenteDeTeste } from "@/lib/gateway/ocultos";
 import { prontidao, type AcaoProntidao } from "@/lib/gateway/prontidao";
 import { ENVIO, RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
-const ABAS = ["visao", "comportamento", "conexao", "canais"] as const;
+const ABAS = ["visao", "comportamento", "conexao", "canais", "avancado"] as const;
 type Aba = (typeof ABAS)[number];
 
 export const Route = createFileRoute("/_authenticated/ia/agentes/$agenteId")({
@@ -61,7 +62,10 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const plataforma = ctx.papel === "plataforma";
   const [criandoCanal, setCriandoCanal] = useState(false);
 
-  const aba: Aba = abaPedida === "conexao" && !plataforma ? "visao" : (abaPedida ?? "visao");
+  const aba: Aba =
+    (abaPedida === "conexao" || abaPedida === "avancado") && !plataforma
+      ? "visao"
+      : (abaPedida ?? "visao");
   const irPara = (nova: Aba) =>
     navigate({
       search: (s: { aba?: Aba; empresa?: string }) => ({ ...s, aba: nova }),
@@ -162,8 +166,14 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
           <TabsTrigger value="comportamento">Comportamento</TabsTrigger>
           {plataforma ? <TabsTrigger value="conexao">Conexão com IA</TabsTrigger> : null}
           <TabsTrigger value="canais">Canais</TabsTrigger>
+          {plataforma ? <TabsTrigger value="avancado">Avançado</TabsTrigger> : null}
         </TabsList>
 
+        {plataforma ? (
+          <TabsContent value="avancado" className="mt-6">
+            <Capacidade empresa={ctx.empresa!} agente={agenteId} />
+          </TabsContent>
+        ) : null}
         <TabsContent value="visao" className="mt-6">
           <VisaoGeral
             ctx={ctx}

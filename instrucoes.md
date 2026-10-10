@@ -14,7 +14,20 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 
   Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
-- Imagem de volta atual: `painel:ed9de0c` (antes de Aguardando atendente). Tags anteriores preservadas.
+- Imagem de volta atual: `painel:4f0eaea` (antes dos limites de capacidade). Tags anteriores preservadas.
+
+## Fase — Limites de capacidade no painel (2026-10-10)
+
+- Empresa → Editar → Avançado: `max_lotes_simultaneos` por PUT no config. Agente → Avançado: `max_concorrencia` por PATCH. Formulários exclusivos da plataforma; leitura e escrita conferem o perfil no servidor antes de chamar o gateway. Admin da empresa e membro recusados mesmo com chamadas forjadas.
+- Inteiros 1–100; Voltar ao padrão envia null. Padrão da plataforma 5; agente mostra o valor real de `configuracao_efetiva` e respeita herança empresa/modelo após reset. Ajuda com fórmula de capacidade, validação local/servidor e erros `detalhes.campo` junto ao campo. Sem alterar modos do agente ou outros campos.
+- Testes: 60 aprovados, seis cenários REST antigos ignorados por falta de ambiente próprio; TypeScript e lint aprovados. Testes cobrem papéis, acesso cruzado recusado, PUT/PATCH exatos, null, limites, herança e erros de campo sem detalhes adicionais.
+- Imagem de volta conferida: `painel:4f0eaea` (`sha256:ec29b1c9398b17576181189c2113b944b6f177ae554e0c05a91a3a325c6c3b2f`). Backup `/home/twadmin/backups/painel/pre-capacidade-20261010T014040Z`, diretório 700, dump/ambiente/Compose 600, `pg_restore --list` aprovado. SHA-256: `ea03f1a5d5bdcd4ccaa2374db8b9a1ab15961e5b70c9f67cb273c3c22db30e5c`.
+- Volta sem mudança de schema: conferir `docker image inspect painel:4f0eaea`, executar `docker tag painel:4f0eaea painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`. Não restaurar dump sobre a base em uso.
+
+- Publicação: build e verificação de bundle aprovados (zero chaves e referências internas no front); somente painel recriado, IDs dos serviços permanentes do gateway, bancos, Redis, autenticação, REST e Caddy preservados. Nenhum arquivo do gateway editado.
+- HTTP após subida: `/`, `/ia/empresas`, `/ia/agentes`, `/ia/conversas`, health da autenticação e gateway → 200; admin público do gateway → 404. Segredos nos logs do painel: zero ocorrências.
+- Funções HTTP autenticadas: GET de capacidade By Koji → 30; agente `bykoji_atendimento` → 30, igual à configuração efetiva do GET do agente. Valor 101 nos dois formulários → erro no respectivo campo, sem gravar. Nenhum limite ou modo alterado; escritas válidas/null verificadas com transporte simulado nos testes. A primeira verificação HTTP foi iniciada enquanto o container ainda era recriado e retornou 500; repetida após conclusão da subida com os identificadores atuais das funções → aprovada. Volta não necessária.
+- Conferência visual pelo Marco: Avançado da empresa/agente, valor em vigor, ajuda, erros 0/101/fracionado, salvar e reset em empresa de teste; ausência desses controles para usuários da empresa.
 
 ## Fase — Aguardando atendente e fallback (2026-10-10)
 
