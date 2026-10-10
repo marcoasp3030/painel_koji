@@ -14,7 +14,21 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 
   Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
-- Imagem de volta atual: `painel:4f0eaea` (antes dos limites de capacidade). Tags anteriores preservadas.
+- Imagem de volta atual: `painel:e2f8cd9` (antes da gestão G1). Tags anteriores preservadas.
+
+## Gestão G1 — Unidades, horários e histórico (2026-10-10)
+
+- Escopo autorizado: telas 1, 2 e 9. Unidades/agenda para plataforma, admin e membro; membro pausa/reabre apenas pelas rotas específicas, sem PATCH, grade, exceções ou histórico. Resposta de unidade ao membro omite grade e campos de gestão. Papéis e tenant resolvidos no servidor; X-Actor exclusivamente da sessão; entradas estritas recusam actor forjado e campos adicionais.
+- `/ia/unidades`: lista em cartões, situação diretamente do gateway, “Horário não informado” para null, pausa com data/hora no fuso da unidade ou indefinida, reabertura sem forçar aberta. Detalhe na mesma página com agenda de sete dias, edição parcial dos dados, grade semanal e exceções. Ações rápidas com alvos mínimos de 44 px; modais adaptados ao celular.
+- Grade com até 12 turnos, validação HH:MM/meia-noite/sobreposição inclusive domingo→segunda; copiar dias com confirmação. Exceção cria/substitui por data após conferir a existente. Agenda reflete só configuração salva. Fuso IANA, pausa futura até 60 dias, telefone normalizado 10–15 dígitos com DDI. Erros seguros com campo e rascunho preservado.
+- `/ia/gestao/alteracoes`: entidades G1, identificador exato e paginação por cursor, antes/depois dos campos recebidos e telefone já mascarado. Sem filtro de período e sem agregação unidade+exceções. Datas preservam offset recebido; sem offset mostram “horário do servidor”.
+- ESPEC atualizada com decisões do Marco: matriz de papéis, importações futuras (20 para consulta; desfazer só mais recente com perda de edições posteriores), códigos G1–G6 e divergência de telefone como pendência para o gateway. G3–G6 não implementados.
+- Imagem anterior `painel:e2f8cd9` conferida, ID `sha256:212bef92ce7e1d7b88d852f1e46ae825f1fbe4f49765eb41c662d54a01b06981`. Backup `/home/twadmin/backups/painel/pre-gestao-g1-20261010T204453Z`, diretório 700, dump/ambiente/Compose 600; `pg_restore --list` válido. SHA-256 `b6340e2c0b1d141819eec4e2eba1a4524875fe49a0b934d8fbad6896b02393c8`.
+- Volta (sem alteração de schema): conferir `docker image inspect painel:e2f8cd9`, executar `docker tag painel:e2f8cd9 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`. Preservar banco e ambiente atuais; não restaurar dump sobre o banco em uso.
+
+- Validação final: **72 testes aprovados**, seis integrações REST antigas ignoradas; TypeScript aprovado; lint zero erros (três avisos Fast Refresh). Build aprovado. Testes cobrem isolamento, membro, actor, projeção segura, horários/pausas/exceções, telefone e erros por campo.
+- Produção, somente leitura: quatro unidades By Koji com detalhe, quatro agendas de sete dias, exceções e histórico pela função autenticada do painel → OK; zero escritas. Páginas e health → 200; admin público do gateway → 404. Zero segredos no bundle/logs. Somente painel recriado; IDs dos demais serviços permanentes preservados.
+- Sem unidade de teste criada, sem alteração em unidade real, sem alteração no repositório gateway, sem prune ou migração. Nenhuma falha pós-publicação ou rollback. Relatório e descrição das telas em `docs/VALIDACAO_G1_PAINEL.md`; revisão visual no navegador com Marco. Parada ao fim de G1.
 
 ## Fase — Limites de capacidade no painel (2026-10-10)
 

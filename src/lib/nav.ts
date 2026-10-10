@@ -15,6 +15,20 @@ export type ItemMenu = {
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
   {
+    to: "/ia/unidades",
+    label: "Unidades e horários",
+    grupo: "Agentes",
+    icone: "empresas",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/gestao/alteracoes",
+    label: "Histórico de gestão",
+    grupo: "Agentes",
+    icone: "conversas",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/conversas",
     label: "Conversas",
     grupo: "Agentes",
@@ -59,6 +73,20 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
 ];
 
 const AGENTES_EMPRESA: ItemMenu[] = [
+  {
+    to: "/ia/unidades",
+    label: "Unidades e horários",
+    grupo: "Agentes",
+    icone: "empresas",
+    papeis: ["admin", "membro"],
+  },
+  {
+    to: "/ia/gestao/alteracoes",
+    label: "Histórico de gestão",
+    grupo: "Agentes",
+    icone: "conversas",
+    papeis: ["admin"],
+  },
   {
     to: "/ia/conversas",
     label: "Conversas",

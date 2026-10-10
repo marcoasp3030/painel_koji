@@ -302,7 +302,6 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], { status: "pausado" }],
       ["POST", ["agentes", "ag_1", "testar"]],
       ["POST", ["agentes", "ag_1", "simular"], {}],
-      ["GET", ["unidades"]],
       ["POST", ["unidades"], { nome: "Loja" }],
       ["POST", ["canais"], {}],
       ["GET", ["api-keys"]],

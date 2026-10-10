@@ -158,7 +158,10 @@ export function PaginaGateway({
             <Label htmlFor="empresa-gateway">Empresa</Label>
             <Select
               value={escolha.empresa ?? ""}
-              onValueChange={escolha.escolher}
+              onValueChange={(v) => {
+                if (window.dispatchEvent(new Event("gestao:trocar", { cancelable: true })))
+                  escolha.escolher(v);
+              }}
               disabled={escolha.carregando || escolha.empresas.length === 0}
             >
               <SelectTrigger id="empresa-gateway" className="bg-card">

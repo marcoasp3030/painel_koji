@@ -98,11 +98,31 @@ const REGRAS: Regra[] = [
   { metodo: "GET", caminho: ["canais", "*"], papeis: AMBOS },
   { metodo: "GET", caminho: ["consumo"], papeis: AMBOS },
   // Unidades e horários: admin da empresa.
-  { metodo: "GET", caminho: ["unidades"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["unidades"], papeis: AMBOS },
   { metodo: "POST", caminho: ["unidades"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["unidades", "*"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["unidades", "*"], papeis: AMBOS },
   { metodo: "PATCH", caminho: ["unidades", "*"], papeis: ADMIN },
   { metodo: "DELETE", caminho: ["unidades", "*"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["unidades", "*", "agenda"], papeis: AMBOS },
+  {
+    metodo: "POST",
+    caminho: ["unidades", "*", "pausar"],
+    papeis: AMBOS,
+    corpo: (c) => {
+      if (
+        !c ||
+        typeof c !== "object" ||
+        Object.keys(c).some((k) => !["ate", "indefinida", "motivo"].includes(k))
+      )
+        throw new AcessoNegado("Campos de pausa inválidos.");
+    },
+  },
+  { metodo: "POST", caminho: ["unidades", "*", "reabrir"], papeis: AMBOS, corpo: semCorpo },
+  { metodo: "PUT", caminho: ["unidades", "*", "horarios"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["unidades", "*", "excecoes"], papeis: ADMIN },
+  { metodo: "POST", caminho: ["unidades", "*", "excecoes"], papeis: ADMIN },
+  { metodo: "DELETE", caminho: ["unidades", "*", "excecoes", "*"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["gestao", "alteracoes"], papeis: ADMIN },
   // Conversas e atendimento humano.
   { metodo: "GET", caminho: ["conversas"], papeis: AMBOS },
   { metodo: "GET", caminho: ["conversas", "*", "mensagens"], papeis: AMBOS },

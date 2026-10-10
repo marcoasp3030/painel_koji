@@ -1,3 +1,7 @@
+## 2026-10-10 — Gestão G1 do painel
+
+Unidades, grade/agenda, pausa/reabertura, exceções e histórico publicados. Atendente lê unidades/agenda e pausa/reabre; gestão restante só plataforma/admin, por regra no servidor. X-Actor da sessão. 72 testes aprovados, TypeScript e build OK, lint sem erros. Validação autenticada de quatro unidades/agendas e histórico somente em leitura; zero escritas de produção. Backup/tag de volta preservados; só painel recriado; gateway intocado e zero segredos no bundle/logs. Relatório e descrição das telas: `docs/VALIDACAO_G1_PAINEL.md`. Aguardar revisão visual do Marco; sem outros blocos.
+
 ## 2026-10-10 — Limites de capacidade exclusivos da plataforma
 
 - Empresa (Editar → Avançado) e agente (aba Avançado): 1–100, reset null, valor efetivo do gateway, ajuda e erro junto ao campo.
