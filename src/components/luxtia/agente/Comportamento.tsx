@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { alterarAgente } from "@/lib/gateway-agentes.functions";
+import { salvarComportamento } from "@/lib/gateway-agentes.functions";
+import { FALLBACK_PADRAO, problemaFallback } from "@/lib/gateway/fallback";
 import { problemaPiloto } from "@/lib/gateway/agentes";
 import { diferencas, paraTexto, valoresIniciais, type Formulario } from "@/lib/gateway/formulario";
 import type { AgenteDetalhe } from "@/lib/gateway/tipos";
@@ -32,7 +33,7 @@ type CampoAgente = keyof typeof CAMPO_AGENTE;
 
 export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }) {
   const queryClient = useQueryClient();
-  const alterar = useServerFn(alterarAgente);
+  const alterar = useServerFn(salvarComportamento);
   const plataforma = ctx.papel === "plataforma";
   const podeEditar = plataforma || ctx.papel === "admin";
   const campos = useMemo(
@@ -47,10 +48,17 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const alterados = diferencas(campos, form, original);
   const sujo = Object.keys(alterados).length > 0;
 
+  const [erroFallback, setErroFallback] = useState<string | null>(null);
+  const avisoFallback = problemaFallback(form["fallback"]);
   const salvar = useMutation({
     mutationFn: () =>
       alterar({ data: { empresa: ctx.empresa, agente: agente.id, dados: alterados } }),
-    onSuccess: async () => {
+    onSuccess: async (r) => {
+      if (!r.ok) {
+        setErroFallback(r.erro.mensagem);
+        return;
+      }
+      setErroFallback(null);
       toast.success("Comportamento salvo.");
       await queryClient.invalidateQueries({
         queryKey: ["gateway", "agente", ctx.empresa, agente.id],
@@ -62,7 +70,10 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
 
   const efetiva = agente.configuracao_efetiva ?? {};
   const origem = (efetiva["origem_config"] ?? {}) as Record<string, string>;
-  const definir = (campo: string, valor: string) => setForm((f) => ({ ...f, [campo]: valor }));
+  const definir = (campo: string, valor: string) => {
+    if (campo === "fallback") setErroFallback(null);
+    setForm((f) => ({ ...f, [campo]: valor }));
+  };
 
   // Funções que devolvem JSX (não componentes), para os campos não perderem o foco.
   /** Linha "Padrão" com o link para voltar ao padrão quando o agente tem valor próprio. */
@@ -127,7 +138,13 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
       <div className="space-y-1.5">
         <RotuloCampo htmlFor={id} campo={CAMPO_AGENTE[campo]} />
         {tipo === "longo" ? (
-          <Textarea {...comum} rows={2} placeholder={dica} />
+          <Textarea
+            {...comum}
+            rows={2}
+            placeholder={campo === "fallback" ? FALLBACK_PADRAO : dica}
+            aria-invalid={campo === "fallback" && !!(avisoFallback || erroFallback)}
+            aria-describedby={campo === "fallback" ? "fallback-ajuda fallback-erro" : undefined}
+          />
         ) : (
           <Input
             {...comum}
@@ -139,6 +156,16 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             className="max-w-xs"
           />
         )}
+        {campo === "fallback" ? (
+          <>
+            <p id="fallback-ajuda" className="text-xs text-ink-500">
+              Exemplo: {FALLBACK_PADRAO} Vazio usa o padrão.
+            </p>
+            <p id="fallback-erro" role="alert" className="text-sm text-destructive">
+              {avisoFallback || erroFallback}
+            </p>
+          </>
+        ) : null}
         {campo !== "nome" ? padrao(campo) : null}
       </div>
     );
@@ -153,7 +180,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
       className="space-y-6 pb-24"
       onSubmit={(e) => {
         e.preventDefault();
-        if (sujo && !avisoPiloto) salvar.mutate();
+        if (podeEditar && sujo && !avisoPiloto && !avisoFallback) salvar.mutate();
       }}
     >
       {!podeEditar ? (
@@ -219,7 +246,10 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             >
               Descartar
             </Button>
-            <Button type="submit" disabled={salvar.isPending || Boolean(avisoPiloto)}>
+            <Button
+              type="submit"
+              disabled={salvar.isPending || Boolean(avisoPiloto || avisoFallback)}
+            >
               {salvar.isPending ? "Salvando…" : "Salvar alterações"}
             </Button>
           </div>

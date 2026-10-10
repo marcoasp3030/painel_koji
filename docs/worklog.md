@@ -2,6 +2,12 @@
 
 Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
 
+## [2026-10-10] — Aguardando atendente no painel
+
+- Selo com tempo e motivo, filtro no servidor, prioridade pela espera mais antiga e aviso discreto por evento visível. Sem botão para limpar; reflete o estado do gateway após atendimento.
+- Fallback com exemplo, mínimo de 15 caracteres e letra, vazio herdado, erro de campo seguro; papéis conferidos no servidor.
+- 57 testes aprovados, TypeScript/lint/build verdes. Publicação apenas do painel, imagem anterior `painel:ed9de0c`, backup validado; chave ausente do front/logs. HTTP autenticado conferido sem alterar dados do gateway. Detalhes e checklist em `instrucoes.md`.
+
 ## [2026-10-09 15:52] — Publicação do cursor oficial
 - **Autor:** Auto (Cursor)
 - **Objetivo:** Publicar só o painel, com imagem de volta e backup, para validação de `/ia/conversas`.

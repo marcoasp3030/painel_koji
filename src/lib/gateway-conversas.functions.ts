@@ -7,6 +7,8 @@ import {
   avancarCursor,
   chaveNovidades,
   desdeDoCursor,
+  ordenarConversas,
+  contarEsperasVisiveis,
   type Conversa,
   type Eventos,
 } from "./gateway/conversas";
@@ -20,6 +22,7 @@ export const listarConversas = createServerFn({ method: "POST" })
         empresa,
         agente: idRecurso.optional(),
         canal: idRecurso.optional(),
+        aguardando: z.boolean().optional(),
         status: z.enum(["ativa", "pausada"]).optional(),
         busca: z.string().max(200).optional(),
         desde: z.string().datetime({ offset: true }).optional(),
@@ -35,6 +38,27 @@ export const listarConversas = createServerFn({ method: "POST" })
       if (data.agente) await exigirAgenteVisivel(t, data.agente);
       const ocultos = await agentesOcultos(t);
       const { empresa: _, ...query } = data;
+      if (data.aguardando === true) {
+        // A API ordena por ID; reúne a fila de espera para ordenar globalmente por idade.
+        const itens: Conversa[] = [];
+        let cursor: string | null = null;
+        for (let pagina = 0; pagina < 20; pagina++) {
+          const { dados }: { dados: Pagina<Conversa> } = await t.chamar("GET", ["conversas"], {
+            query: { ...query, aguardando: true, cursor, limite: 100 },
+          });
+          itens.push(...dados.itens.filter((c) => !ocultos.has(c.agente_id)));
+          if (!dados.proximo_cursor)
+            return { itens: ordenarConversas(itens), proximo_cursor: null };
+          if (dados.proximo_cursor === cursor) break;
+          cursor = dados.proximo_cursor;
+        }
+        const { GatewayErro } = await import("./gateway/erros");
+        throw new GatewayErro({
+          codigo: "VALIDATION_ERROR",
+          status: 400,
+          mensagem: "Há muitas conversas aguardando. Restrinja os filtros por agente ou canal.",
+        });
+      }
       const { dados } = await t.chamar<Pagina<Conversa>>("GET", ["conversas"], {
         query: { ...query, limite: 100 },
       });
@@ -67,13 +91,21 @@ export const acompanharConversas = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
-      const resultado = await avancarCursor(
-        async (desde, limite) =>
-          (await t.chamar<Eventos>("GET", ["eventos"], { query: { desde, limite } })).dados,
-        data.desde,
-      );
+      const { exigirConversaVisivel } = await import("./gateway/ocultos");
+      let novosAguardando = 0;
+      const resultado = await avancarCursor(async (desde, limite) => {
+        const p = (await t.chamar<Eventos>("GET", ["eventos"], { query: { desde, limite } })).dados;
+        novosAguardando += await contarEsperasVisiveis(p.itens ?? [], (alvo) =>
+          exigirConversaVisivel(t, alvo),
+        );
+        return p;
+      }, data.desde);
       // Os eventos brutos (inclusive de agentes ocultos) nunca chegam ao navegador.
-      return { ...resultado, chaveLocal: chaveNovidades(sessao.perfil.userId, t.id) };
+      return {
+        ...resultado,
+        novosAguardando,
+        chaveLocal: chaveNovidades(sessao.perfil.userId, t.id),
+      };
     });
   });
 export const atenderConversa = createServerFn({ method: "POST" })

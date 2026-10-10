@@ -14,7 +14,21 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 
   Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
-- Imagem de volta atual: `painel:24c8436` (Conversas antes do cursor oficial). A anterior à tela Conversas continua em `painel:15f98ec`.
+- Imagem de volta atual: `painel:ed9de0c` (antes de Aguardando atendente). Tags anteriores preservadas.
+
+## Fase — Aguardando atendente e fallback (2026-10-10)
+
+- Somente painel: `/ia/conversas` usa `aguardando_atendente_desde` e `aguardando_motivo`; selo com minutos (atualiza em 30 s), quatro motivos traduzidos, filtro `aguardando=true` e fila antes das conversas normais, da espera mais antiga para a mais nova.
+- Como o gateway pagina por ID, o servidor reúne até 20 páginas de 100 da fila de espera, aplica visibilidade de agentes e ordena por data. Acima disso, exige restringir filtros sem apresentar uma fila incompleta como completa. Conversas normais continuam paginadas, com `aguardando=false`.
+- Polling reconhece `conversa.aguardando_atendente`, atualiza lista/histórico e mostra aviso discreto dispensável. Apenas contagem de eventos visíveis chega ao navegador; alvos de agentes `[teste]` e eventos brutos não são expostos. As ações existentes de assumir/devolver/responder invalidam a lista; não existe botão para limpar a marca. Cursor oficial e marcadores locais por usuário/empresa preservados.
+- Fallback: exemplo `Tive uma instabilidade agora. Pode repetir sua mensagem em instantes? 🙏`; mínimo de 15 caracteres Unicode e uma letra, validado na tela e no servidor. Vazio vira null (herança). `salvarComportamento` restringe campos, aplica papéis no servidor, preserva validação de piloto e devolve apenas erro seguro de `detalhes.campo=fallback` para exibição junto ao campo.
+- Testes: 57 aprovados; seis cenários REST antigos ignorados por ausência de variáveis próprias. TypeScript, lint dos arquivos alterados e build aprovados. Cobertura de motivos, cronômetro, ordem/remoção por null, eventos invisíveis, fallback e permissões.
+- Imagem anterior conferida e preservada: `painel:ed9de0c`. Backup `/home/twadmin/backups/painel/pre-espera-20261010T001312Z` (diretório 700, dump/ambiente/Compose 600), `pg_restore --list` válido; SHA-256 `1f6df048bbfb4ae73f20471103a54b6f2c17e935f1f9b3f770e8b2cabf57eeb1`.
+- Volta sem mudança de schema: conferir `docker image inspect painel:ed9de0c`, executar `docker tag painel:ed9de0c painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`, conferir saúde. Não restaurar dump sobre o banco em uso.
+- Pós-publicação: somente painel recriado; IDs de gateway/API, workers/agendador, bancos, Redis, autenticação, REST e proxy preservados. Nenhum arquivo do repositório gateway editado, nenhuma chamada ao Skyone, nenhuma credencial ou configuração de agente alterada.
+- Verificação do bundle: zero valor de chave e zero referências internas no front. Busca das credenciais locais nos logs do painel novo: zero ocorrências. `/`, `/ia/conversas`, `/ia/agentes`, health de autenticação/gateway → 200; admin público do gateway → 404.
+- Funções HTTP autenticadas: filtro normal retornou 43 conversas com marca nula; filtro de espera retornou zero (sem provocar falha artificial em agente real); cursor/eventos retornaram o contador esperado. Fallback curto → erro seguro no campo antes de qualquer PATCH. Motivos, idade, prioridade e remoção por null validados com dados sintéticos nos testes, não com uma transferência real nesta implantação.
+- Conferência visual pendente do Marco: selo/motivo com uma conversa marcada, filtro e ordem, aviso discreto ao chegar evento, marca removida após atendimento e fallback com erro junto ao campo. Sem botão de limpeza. Nenhum rollback necessário.
 
 ## Fase — Publicação do cursor oficial nas Conversas (2026-10-09 15:52)
 

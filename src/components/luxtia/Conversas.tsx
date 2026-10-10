@@ -23,6 +23,8 @@ import {
   temNovidade,
   type Conversa,
   type Leitura,
+  MOTIVO_ATENDENTE,
+  seloEspera,
 } from "@/lib/gateway/conversas";
 import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
 
@@ -38,6 +40,13 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
   const [status, setStatus] = useState<"" | "ativa" | "pausada">(""),
     [busca, setBusca] = useState(""),
     [desde, setDesde] = useState("");
+  const [soAguardando, setSoAguardando] = useState(false);
+  const [avisoEspera, setAvisoEspera] = useState(false);
+  const [agora, setAgora] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
   const [filtroBusca, setFiltroBusca] = useState("");
   useEffect(() => {
     const t = setTimeout(() => setFiltroBusca(busca), 350);
@@ -68,14 +77,15 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
     queryFn: () => buscarCanais({ data: { empresa: ctx.empresa } }),
   });
   const lista = useInfiniteQuery({
-    queryKey: ["conversas", ctx.empresa, agente, canal, status, filtroBusca, desde],
-    enabled: cursorInicial.isSuccess,
+    queryKey: ["conversas", ctx.empresa, agente, canal, status, filtroBusca, desde, soAguardando],
+    enabled: cursorInicial.isSuccess && !soAguardando,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       buscar({
         data: {
           empresa: ctx.empresa,
           cursor: pageParam,
+          aguardando: false,
           ...(agente ? { agente } : {}),
           ...(canal ? { canal } : {}),
           ...(status ? { status } : {}),
@@ -84,6 +94,24 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
         },
       }),
     getNextPageParam: (p) => p.proximo_cursor ?? undefined,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  });
+  const espera = useQuery({
+    queryKey: ["conversas", ctx.empresa, "aguardando", agente, canal, status, filtroBusca, desde],
+    enabled: cursorInicial.isSuccess,
+    queryFn: () =>
+      buscar({
+        data: {
+          empresa: ctx.empresa,
+          aguardando: true,
+          ...(agente ? { agente } : {}),
+          ...(canal ? { canal } : {}),
+          ...(status ? { status } : {}),
+          ...(filtroBusca ? { busca: filtroBusca } : {}),
+          ...(desde ? { desde: new Date(desde).toISOString() } : {}),
+        },
+      }),
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   });
@@ -96,6 +124,7 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
         : desdeDoCursor(cursorInicial.data!.ultimo_id);
       const r = await eventos({ data: { empresa: ctx.empresa, desde } });
       const mudou = r.cursor !== desde;
+      if (r.novosAguardando > 0) setAvisoEspera(true);
       cursor.current = r.cursor;
       if (!inicializado.current) {
         inicializado.current = true;
@@ -153,13 +182,35 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
   }, []);
   const itens = ordenarConversas([
     ...new Map(
-      (lista.data?.pages.flatMap((p) => p.itens) ?? []).map((c) => [c.conversation_id, c]),
+      [
+        ...(!soAguardando ? (lista.data?.pages.flatMap((p) => p.itens) ?? []) : []),
+        ...(espera.data?.itens ?? []),
+      ].map((c) => [c.conversation_id, c]),
     ).values(),
   ]);
   const atual =
     itens.find((c) => c.conversation_id === selecionada?.conversation_id) ?? selecionada;
   return (
     <div className="mt-6 space-y-4">
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={soAguardando}
+          onChange={(e) => setSoAguardando(e.target.checked)}
+        />
+        Só aguardando atendente
+      </label>
+      {avisoEspera ? (
+        <div role="status" className="rounded-lg bg-gold-300/20 p-3 text-sm">
+          Há novas conversas aguardando atendente.{" "}
+          <button className="ml-2 underline" onClick={() => setAvisoEspera(false)}>
+            Dispensar aviso
+          </button>
+        </div>
+      ) : null}
+      {espera.isError ? (
+        <p role="alert">Não foi possível carregar a fila de atendimento. {espera.error.message}</p>
+      ) : null}
       <Cartao className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
         <label className="text-sm">
           Buscar contato
@@ -241,8 +292,7 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_2fr]">
         <Cartao className="overflow-hidden">
-          {/* Reservado para transferência humana (Fase 3); hoje o gateway não preenche o campo. */}
-          {itens.some((c) => c.aguardando_humano) ? (
+          {itens.some((c) => c.aguardando_atendente_desde) ? (
             <p className="border-b bg-gold-300/20 p-3 font-medium">Aguardando atendente</p>
           ) : null}
           {lista.isError ? (
@@ -286,13 +336,20 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
                   {dataHora(c.ultima_em)} ·{" "}
                   {c.status === "pausada" ? "Com atendente" : "Com o agente"}
                 </p>
-                {c.aguardando_humano ? (
-                  <Etiqueta tom="alerta">Aguardando atendente</Etiqueta>
+                {c.aguardando_atendente_desde ? (
+                  <div className="mt-2 space-y-1">
+                    <Etiqueta tom="alerta">
+                      {seloEspera(c.aguardando_atendente_desde, agora)}
+                    </Etiqueta>
+                    <p className="text-xs text-gold-700">
+                      {c.aguardando_motivo ? MOTIVO_ATENDENTE[c.aguardando_motivo] : ""}
+                    </p>
+                  </div>
                 ) : null}
               </button>
             ))}
           </div>
-          {lista.hasNextPage ? (
+          {!soAguardando && lista.hasNextPage ? (
             <Button
               variant="ghost"
               className="w-full"

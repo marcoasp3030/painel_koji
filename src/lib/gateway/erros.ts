@@ -108,6 +108,8 @@ export function interpretarErro(
 
 /** O que fazer quando o gateway aponta um campo (detalhes.campo) sem explicar. */
 const AJUDA_POR_CAMPO: Record<string, string> = {
+  fallback:
+    "Escreva pelo menos 15 caracteres, incluindo uma letra, ou deixe vazio para usar o padrão.",
   skyone_webhook_url:
     "Para usar a IA real, cadastre antes a URL do fluxo no Skyone (https, sem usuário e senha na URL).",
   skyone_auth: "Para usar a IA real, cadastre antes o usuário e a senha do fluxo no Skyone.",

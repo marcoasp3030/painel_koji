@@ -72,7 +72,7 @@ test("histórico combina páginas sem duplicar e ordena IDs; atendimento tem pri
   const b = {
     conversation_id: "b",
     ultima_em: "2026-10-09T11:00:00Z",
-    aguardando_humano: true,
+    aguardando_atendente_desde: "2026-10-09T10:00:00Z",
   } as Conversa;
   expect(ordenarConversas([a, b])[0]?.conversation_id).toBe("b");
 });
