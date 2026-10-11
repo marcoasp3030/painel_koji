@@ -1,5 +1,7 @@
 # Gestão G1 — relatório do painel
 
+A descrição das telas no fim deste arquivo é a da primeira publicação. Em 10/10/2026 a interação foi revisada: ações visíveis na lista, grade resumida e histórico por nome da unidade e período. O contrato e as permissões abaixo não mudaram. Detalhe em `docs/worklog.md`.
+
 10/10/2026. Escopo: somente telas 1 (Unidades), 2 (Horários) e 9 (Histórico). Gateway utilizado em modo somente leitura na validação em produção. Nenhuma unidade real alterada e nenhuma unidade de teste precisou ser criada.
 
 ## Entrega

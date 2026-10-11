@@ -24,6 +24,7 @@ import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
 import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenticated/ia/conversas'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
+import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
@@ -110,6 +111,11 @@ const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   path: '/ia/simular',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaPedidosRoute = AuthenticatedIaPedidosRouteImport.update({
+  id: '/ia/pedidos',
+  path: '/ia/pedidos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIaUnidadesRoute = AuthenticatedIaUnidadesRouteImport.update({
   id: '/ia/unidades',
   path: '/ia/unidades',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
+  '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
+  '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/_authenticated/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
+  '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/ia/chaves'
     | '/ia/conversas'
     | '/ia/simular'
+    | '/ia/pedidos'
     | '/ia/unidades'
     | '/admin/'
     | '/ia/agentes/$agenteId'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/ia/chaves'
     | '/ia/conversas'
     | '/ia/simular'
+    | '/ia/pedidos'
     | '/ia/unidades'
     | '/admin'
     | '/ia/agentes/$agenteId'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/chaves'
     | '/_authenticated/ia/conversas'
     | '/_authenticated/ia/simular'
+    | '/_authenticated/ia/pedidos'
     | '/_authenticated/ia/unidades'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
@@ -406,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaSimularRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/pedidos': {
+      id: '/_authenticated/ia/pedidos'
+      path: '/ia/pedidos'
+      fullPath: '/ia/pedidos'
+      preLoaderRoute: typeof AuthenticatedIaPedidosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/unidades': {
       id: '/_authenticated/ia/unidades'
       path: '/ia/unidades'
@@ -486,6 +505,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
   AuthenticatedIaConversasRoute: typeof AuthenticatedIaConversasRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
+  AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
   AuthenticatedIaEmpresasNovaRoute: typeof AuthenticatedIaEmpresasNovaRoute
@@ -506,6 +526,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
   AuthenticatedIaConversasRoute: AuthenticatedIaConversasRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
+  AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
   AuthenticatedIaEmpresasNovaRoute: AuthenticatedIaEmpresasNovaRoute,

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Bot,
   Building2,
+  ClipboardList,
   Factory,
   KeyRound,
   LogOut,
@@ -22,6 +23,7 @@ import { obterAcessoGateway } from "@/lib/gateway.functions";
 import { agruparMenu, filtrarMenu, type IconeMenu, type ItemMenu } from "@/lib/nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LuxtiaWordmark } from "./Brand";
+import { ContadorPedidos } from "./ContadorPedidos";
 
 const ICONES: Record<IconeMenu, LucideIcon> = {
   clientes: Building2,
@@ -32,6 +34,7 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   chaves: KeyRound,
   simular: MessagesSquare,
   conversas: MessagesSquare,
+  pedidos: ClipboardList,
 };
 
 function itemAtivo(caminho: string, destino: string) {
@@ -174,6 +177,9 @@ export function AppShell({
                             >
                               <Icone className="size-4 shrink-0" aria-hidden />
                               <span className={textoMenu}>{item.label}</span>
+                              {item.to === "/ia/pedidos" ? (
+                                <ContadorPedidos papel={acesso.data?.papel} />
+                              ) : null}
                             </Link>
                           </TooltipTrigger>
                           {recolhido && (

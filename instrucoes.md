@@ -14,7 +14,69 @@ Registro das fases do desenvolvimento. Ler este arquivo antes de continuar uma n
 
   Só depois rodar `docker compose build painel`. Para voltar: apontar o serviço para `painel:<commit>` (ou `docker tag painel:<commit> painel_koji-painel`) e `docker compose up -d --no-deps --no-build painel`.
 - **Nenhum `docker image prune`, `docker builder prune` ou `docker system prune`** sem confirmação do Marco. (Em 09/10 a imagem anterior sumiu depois de um rebuild sem tag e a volta teve de ser feita com cópia do `/app`.)
-- Imagem de volta atual: `painel:e2f8cd9` (antes da gestão G1). Tags anteriores preservadas.
+- Imagem de volta atual: `painel:pedidos-20261010` (`sha256:dbb0b27a…`, primeira versão da tela de Pedidos, antes do novo layout). Tags anteriores preservadas: `painel:conversas-20261010`, `painel:operacao-20261010`, `painel:ux-20261010` e `painel:76a6b7a`.
+
+## Pedidos — layout (2026-10-10 22:50)
+
+- Só `Pedidos.tsx` mudou; regras, rotas e permissões iguais. Indicadores clicáveis no topo, barra única (busca, Quadro/Lista, Filtros, som), filtros recolhíveis com fichas, colunas com rolagem própria, lista em tabela e detalhe em painel lateral com ações no rodapé.
+- Backup `/home/twadmin/backups/painel/pre-pedidos-layout-20261011T014936Z` (279 entradas, SHA-256 `e283e82bea49e5f1011c92594b7982e2e2ee13c89ab5bea204eed70bf0e0967d`).
+- Publicação: imagem `sha256:9ae1c74e37140c5db8fd7799c19768dd0f337ce5cb41468cb5343f59f45b8ca6`, container `fdb7ffde05a9`. Somente o painel recriado; chave fora do bundle; rotas públicas 200; admin do gateway 404; segredos nos logs zero.
+- Volta: `docker tag painel:pedidos-20261010 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+
+## Pedidos — PED1-a (2026-10-10)
+
+- Contrato usado: `gateway/docs/ESPEC_PED1.md`, seção 12, somente leitura. Nenhuma rota do PED1-b ou PED1-c foi autorizada.
+- Tela `/ia/pedidos` para plataforma, admin e atendente. Quadro por status, lista com filtros, detalhe, linha do tempo e atalho para a conversa. Ações somente a partir de `proximos_status`. Cancelamento exige motivo com 3 caracteres antes de qualquer chamada. Previsão de 1 a 600 minutos só ao confirmar ou iniciar o preparo.
+- No 409 com `detalhes.campo=status` a mensagem é “Este pedido já foi atualizado” e o detalhe é recarregado. Os motivos `status_final`, `mesmo_status`, `nao_pode_voltar`, `modalidade_incompativel` e `recusa_so_aguardando` não aparecem como texto principal.
+- Contagem a cada 15 s com a aba visível. O número no menu é `aguardando_loja.total`. O som é preferência local do usuário e começa desligado.
+- O período dos filtros usa o fuso da empresa já lido na gestão. Se não houver fuso, usa Brasília e avisa. O atendente continua sem ler a raiz do tenant, então vê o aviso e o período em Brasília.
+- Fora deste bloco: textos dos avisos, reenvio, `X-Role`, nome por prioridade e filtro de encerradas.
+- Testes: 81 aprovados, 6 integrações REST antigas ignoradas. TypeScript e ESLint dos arquivos tocados aprovados.
+- Imagem de volta conferida antes do build: `painel:conversas-20261010` (`sha256:7798ecc08ebb0cdbac22435ae01d8d9fcf30a12cf5757c0bbfde5dfe3f71134b`). `painel:operacao-20261010`, `painel:ux-20261010` e `painel:76a6b7a` permanecem intactas.
+- Backup `/home/twadmin/backups/painel/pre-pedidos-20261011T014002Z`, diretório 700, dump/ambiente/Compose 600; `pg_restore --list` com 279 entradas. SHA-256 `86fa1deb984fa2cd7340a983861d21253fbf5bf0164f22462e96c75b0f530cd7`.
+- Volta sem mudança de schema: conferir `docker image inspect painel:conversas-20261010`, executar `docker tag painel:conversas-20261010 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`. Não restaurar o dump.
+- Publicação: imagem `sha256:dbb0b27ad1d6e6eb221710d33f6fba91ee0641a6548f7d11c55b1a0a80b39e7c`, container `79f702bd4226`. Bundle com zero valor de chave e zero referências no front. Somente o painel foi recriado. Nenhum prune. `/`, `/ia/pedidos`, `/ia/conversas`, `/ia/unidades`, `/ia/gestao/alteracoes`, health da autenticação e do gateway → 200; admin público do gateway → 404. Segredos nos logs do painel novo: zero. Uma linha de log, zero erros. A navegação autenticada desta sessão não foi feita.
+
+## Pedidos e Conversas — especificação (2026-10-10)
+
+- Só levantamento e especificação em `docs/ESPEC_TELAS_PEDIDOS.md`. Nenhuma tela, rota ou chamada nova foi implementada.
+- Fonte do contrato novo: `gateway/docs/ESPEC_PED1.md`, ainda não implementado no gateway. O que não está no `API_ADMIN.md` ficou marcado como pendência. Pagamento e troco continuam pendência G4.
+- Conversas já pode corrigir estado, canal e máscara de telefone com os campos publicados. Nome por prioridade, unidade preferida, filtro `estado` e a tela de Pedidos esperam o PED1.
+- Aguardando aprovação antes de implementar.
+
+## Conversas — estado, canal e telefone (2026-10-10)
+
+- Aprovado seguir só a seção 3 de `docs/ESPEC_TELAS_PEDIDOS.md`. Pedidos, avisos e campos do PED1-c não foram criados.
+- A lista e o cabeçalho derivam o estado de `encerrada_em`, `aguardando_atendente_desde`, `status` e `bot_pausado_ate`. O canal junta `canal` (tipo) com o nome de `GET /canais`. Telefone de 13 dígitos `55` + DDD + celular vira `+55 11 9xxxx-xxxx`; outro identificador permanece como veio. O nome é o campo `nome`, senão o telefone, senão “Contato”.
+- O filtro de atendimento continua `status=ativa|pausada` e `aguardando=true`. Encerrada não é filtro de servidor.
+- Testes: 76 aprovados, seis integrações REST antigas ignoradas, 560 expectativas. TypeScript aprovado.
+- Imagem de volta conferida antes do build: `painel:operacao-20261010` (`sha256:88ec9e1cbb4e250820465d91c7cf3b05b1a45fa9246018de351922f0679862ce`). `painel:ux-20261010` permanece `sha256:19ff368435de8df23855004ebbb3f2fec23cf2edf82f84206f9d30e89db39883`.
+- Backup `/home/twadmin/backups/painel/pre-conversas-20261011T010959Z`, diretório 700, dump/ambiente/Compose 600; `pg_restore --list` com 279 entradas. SHA-256 `857cf362cf53e39ab2ac19757a9f9844c69effe6eae1c057a490d6bf0875b826`.
+- Volta sem mudança de schema: conferir `docker image inspect painel:operacao-20261010`, executar `docker tag painel:operacao-20261010 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`. Não restaurar o dump.
+- Publicação: imagem `sha256:7798ecc08ebb0cdbac22435ae01d8d9fcf30a12cf5757c0bbfde5dfe3f71134b`, container `bd30f1c51470`. Bundle com zero valor de chave e zero referências no front. Somente o painel foi recriado. Nenhum prune. `/`, `/ia/conversas`, `/ia/unidades`, `/ia/gestao/alteracoes`, health da autenticação e do gateway → 200; admin público do gateway → 404. Segredos nos logs do painel novo: zero. Uma linha de log, zero erros. A navegação autenticada desta sessão não foi feita.
+
+## Operação do dia — Unidades (2026-10-10)
+
+- Sem rota nova no gateway. A visão Hoje lê `situacao` da lista e `GET /unidades/{id}/agenda?dias=7` de cada unidade. Pausas ativas são `motivo=pausa`. Exceções são dias com `origem=excecao`. Cache de 20 s, atualização de 30 s só com a aba visível. O navegador não calcula abertura.
+- Pausa rápida, também para o atendente: “30 min” e “1 h” no `fuso_efetivo`; “Até o fim do turno” só quando `situacao.fecha_as` não é null. Continua o `POST .../pausar` já existente.
+- Várias unidades, só plataforma e admin: uma chamada por unidade, resultado individual, e a repetição não reenvia o que já deu certo. O atendente é recusado no servidor. Feriados nacionais (fixos e móveis: Carnaval, Sexta-feira Santa, Corpus Christi) só são criados depois da confirmação; data já existente é substituída.
+- “Copiar grade de outra unidade” entra no rascunho e só grava em “Salvar a semana”. Alertas: unidade ativa sem horário e, para quem vê o campo, unidade ativa sem WhatsApp de pedidos.
+- Histórico: o período usa o `timezone` do tenant. O navegador recebe só esse fuso e a origem. Se o valor faltar ou não for IANA, fica `America/Sao_Paulo` e a tela avisa. Não há pendência de contrato: o campo já existe no tenant.
+- Testes: 75 aprovados, seis integrações REST antigas ignoradas, 542 expectativas. TypeScript aprovado. Lint sem erros; avisos Fast Refresh do hook de gestão. Nenhuma unidade real alterada.
+- Imagem de volta conferida antes do build: `painel:ux-20261010` (`sha256:19ff368435de8df23855004ebbb3f2fec23cf2edf82f84206f9d30e89db39883`). `painel:76a6b7a` permanece `sha256:a96487fd9e9154c862f1af6caa0f0090dd8ae764a02c14c275822a8bb20463f0`.
+- Backup `/home/twadmin/backups/painel/pre-operacao-g1-20261010T222254Z`, diretório 700, dump/ambiente/Compose 600; `pg_restore --list` com 279 entradas. SHA-256 `7c6265c469013834be08d70c87e321c2ae76f4899f96fc32f6bd0b941a1c7ccb`.
+- Volta sem mudança de schema: conferir `docker image inspect painel:ux-20261010`, executar `docker tag painel:ux-20261010 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`. Não restaurar o dump.
+- Publicação: imagem `sha256:88ec9e1cbb4e250820465d91c7cf3b05b1a45fa9246018de351922f0679862ce`, container `611700e17dd7`. Verificação do bundle: zero valor de chave e zero referências no front. Somente o painel foi recriado. Gateway, workers, agendador, bancos, Redis, autenticação, REST e proxy mantiveram os IDs. Nenhum prune. `/`, `/ia/unidades`, `/ia/gestao/alteracoes`, `/ia/conversas`, health da autenticação e do gateway → 200; admin público do gateway → 404. Segredos nos logs do painel novo: zero. Uma linha de log, zero erros. A navegação autenticada desta sessão não foi feita.
+
+## Revisão de uso — Unidades e histórico (2026-10-10)
+
+- Unidades: a lista mostra situação e os botões Agenda, Horários e Exceções. Um clique abre a seção. No computador a lista fica ao lado; no celular a lista some enquanto a unidade está aberta. Pausar, reabrir e editar dados continuam na própria lista. A troca de seção só pede confirmação se houver rascunho. A grade resume os sete dias e abre o editor de um dia; “Dias úteis” copia os turnos. A exceção abre num formulário, não no fim da lista. Salvar a grade grava a semana inteira.
+- Histórico: escolha a unidade pelo nome (`unidade_id`, inclui as exceções dela) e o período em horário de Brasília (`desde` inclusivo, `ate` exclusivo no dia seguinte). O identificador exato continua disponível e não é enviado junto com a unidade. Cada linha mostra a ação e os campos; antes/depois abre sob demanda. Telefone segue mascarado e a data da linha preserva o offset recebido.
+- Contrato usado: `API_ADMIN.md`, filtros G1.1. Sem período inventado só na página e sem busca por prefixo.
+- Imagem de volta conferida: `painel:76a6b7a` (`sha256:a96487fd9e9154c862f1af6caa0f0090dd8ae764a02c14c275822a8bb20463f0`). Backup `/home/twadmin/backups/painel/pre-ux-gestao-20261010T215017Z`, diretório 700, dump/ambiente/Compose 600; `pg_restore --list` com 279 entradas. SHA-256 `5b98ac2f387b4f552ae6e9132948409a97ab723c5e36dd30a1748e4aac452e20`.
+- Volta sem mudança de schema: conferir `docker image inspect painel:76a6b7a`, executar `docker tag painel:76a6b7a painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`. Não restaurar o dump sobre o banco em uso.
+- Testes: 73 aprovados, seis integrações REST antigas ignoradas. TypeScript aprovado. Lint sem erros; permanece o aviso Fast Refresh do hook de gestão.
+- Publicação: build e verificação do bundle aprovados (zero valor de chave e zero referências internas no front). Somente o painel foi recriado. Gateway, workers, agendador, bancos, Redis, autenticação, REST e proxy mantiveram os IDs. `/`, `/ia/unidades`, `/ia/gestao/alteracoes`, `/ia/conversas`, health da autenticação e do gateway → 200; admin público do gateway → 404. Segredos nos logs do painel novo: zero. Nenhuma unidade alterada. A navegação autenticada no navegador não foi feita: a sessão desta revisão caiu na tela de acesso.
 
 ## Gestão G1 — Unidades, horários e histórico (2026-10-10)
 

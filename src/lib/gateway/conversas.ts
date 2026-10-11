@@ -1,11 +1,16 @@
 import type { MensagemGateway } from "./tipos";
+export type EstadoConversa = "encerrada" | "aguardando_atendente" | "atendente" | "bot";
 export type Conversa = {
   conversation_id: string;
   agente_id: string;
-  canal_id: string;
+  canal_id?: string;
+  /** Tipo do canal (`uazapi`, `api`…). O nome cadastrado vem de `GET /canais`. */
   canal: string;
   nome: string | null;
   telefone: string | null;
+  /** PED1-c, quando o gateway passar a enviar. */
+  nome_exibicao?: string | null;
+  telefone_formatado?: string | null;
   status: "ativa" | "pausada";
   bot_pausado_ate: string | null;
   ultima_mensagem: string | null;
@@ -13,7 +18,75 @@ export type Conversa = {
   aguardando_atendente_desde: string | null;
   aguardando_motivo:
     "erro_agente" | "tempo_esgotado" | "circuito_aberto" | "entrega_incerta" | null;
+  encerrada_em?: string | null;
+  desfecho?: string | null;
+  atualizado_em?: string | null;
 };
+const ROTULO_TIPO_CANAL: Record<string, string> = {
+  uazapi: "WhatsApp",
+  meta: "WhatsApp",
+  site: "Site",
+  api: "API",
+  email: "E-mail",
+  teams: "Teams",
+  luxbrain: "Luxbrain",
+};
+export const ROTULO_ESTADO: Record<EstadoConversa, string> = {
+  encerrada: "Encerrada",
+  aguardando_atendente: "Aguardando atendente",
+  atendente: "Atendente",
+  bot: "Bot",
+};
+function preenchido(v: string | null | undefined) {
+  return Boolean(v && v.trim());
+}
+/** Ordem do contrato atual: encerrada, aguardando, pausa vigente, bot. */
+export function estadoConversa(
+  c: Pick<Conversa, "encerrada_em" | "aguardando_atendente_desde" | "status" | "bot_pausado_ate">,
+  agora = Date.now(),
+): EstadoConversa {
+  if (preenchido(c.encerrada_em)) return "encerrada";
+  if (preenchido(c.aguardando_atendente_desde)) return "aguardando_atendente";
+  const pausa = c.bot_pausado_ate ? Date.parse(c.bot_pausado_ate) : NaN;
+  if (c.status === "pausada" || (Number.isFinite(pausa) && pausa > agora)) return "atendente";
+  return "bot";
+}
+/** Dígitos de telefone viram leitura. Identificador que não é telefone volta como veio. */
+export function telefoneExibicao(telefone: string | null | undefined) {
+  if (!telefone) return null;
+  if (!/^\d{10,15}$/.test(telefone)) return telefone;
+  if (/^55\d{2}9\d{8}$/.test(telefone)) {
+    const ddd = telefone.slice(2, 4);
+    const movel = telefone.slice(4);
+    return `+55 ${ddd} ${movel.slice(0, 5)}-${movel.slice(5)}`;
+  }
+  return `+${telefone}`;
+}
+export function telefoneVisivel(c: Pick<Conversa, "telefone" | "telefone_formatado">) {
+  const pronto = c.telefone_formatado?.trim();
+  if (pronto) return pronto;
+  return telefoneExibicao(c.telefone);
+}
+/** Nome do gateway, senão o telefone legível, senão “Contato”. */
+export function nomeContato(
+  c: Pick<Conversa, "nome" | "telefone" | "nome_exibicao" | "telefone_formatado">,
+) {
+  const pronto = c.nome_exibicao?.trim();
+  if (pronto) return pronto;
+  const nome = c.nome?.trim();
+  if (nome) return nome;
+  return telefoneVisivel(c) ?? "Contato";
+}
+export function rotuloTipoCanal(tipo: string | null | undefined) {
+  if (!tipo) return "Canal";
+  return ROTULO_TIPO_CANAL[tipo] ?? tipo;
+}
+export function textoCanal(tipo: string | null | undefined, nome: string | null | undefined) {
+  const rotulo = rotuloTipoCanal(tipo);
+  const cadastrado = nome?.trim();
+  if (!cadastrado || cadastrado === rotulo) return rotulo;
+  return `${rotulo} · ${cadastrado}`;
+}
 export type Eventos = {
   proximo_cursor: number;
   tem_mais: boolean;

@@ -44,7 +44,7 @@ A numeração informal do pedido corresponde aos **assuntos**; a seção 8 da ES
 
 | Tela | Bloco do contrato do gateway | Situação |
 |---|---|---|
-| 1 Unidades; 2 Horários; 9 Histórico | G1 — Horários da unidade | ✅ primeira entrega; filtros adicionais de histórico pendentes |
+| 1 Unidades; 2 Horários; 9 Histórico | G1 — Horários da unidade | ✅ entregue; filtros G1.1 (`unidade_id`, `desde`, `ate`) em uso desde 10/10/2026 |
 | 3 Entrega/pagamento; 8 Pedidos ampliados (referidos como bloco 3 no pedido) | G4 — Entrega e pagamento | ⏳ |
 | 5 Cardápio; 6 Categorias (bloco 4 no pedido) | G5 — Cardápio | ⏳ |
 | 7 Importação (bloco 5 no pedido) | G6 — CSV | ⏳ |
@@ -72,7 +72,13 @@ Lista com nome/código, endereço resumido, fuso efetivo e situação. Edição 
 
 `proxima_abertura` preenchida: mostrar data/hora. Nulo: não inventar próxima abertura nem promessa de retorno. Se a unidade está aberta, uma exceção não deve produzir selo de fechada. Motivos cadastrados pelo usuário são texto simples, sem HTML.
 
-**Pausar pedidos:** modal com data e hora no fuso da unidade, opção “Hoje às HH:MM” (horário passado exige escolher outra data) ou “Até eu reabrir”, e motivo opcional de até 200 caracteres. Enviar exatamente `{ate: ISO com fuso, motivo?}` OU `{indefinida: true, motivo?}`. Futuro e máximo 60 dias; erro 400 permanece junto ao campo/resumo se não houver campo. Informar que pausa com prazo termina sozinha, sujeita à grade/exceções.
+**Pausar pedidos:** modal com data e hora no fuso da unidade, opção “Hoje às HH:MM” (horário passado exige escolher outra data) ou “Até eu reabrir”, e motivo opcional de até 200 caracteres. Atalhos “30 min” e “1 h” calculam o instante no `fuso_efetivo` da unidade. “Até o fim do turno” só aparece quando `situacao.fecha_as` não é null e reenvia esse instante se ainda for futuro e couber em 60 dias. Enviar exatamente `{ate: ISO com fuso, motivo?}` OU `{indefinida: true, motivo?}`. Futuro e máximo 60 dias; erro 400 permanece junto ao campo/resumo se não houver campo. Informar que pausa com prazo termina sozinha, sujeita à grade/exceções. O atendente usa os mesmos atalhos; o servidor continua autorizando só a rota de pausa/reabertura.
+
+**Hoje:** no topo da lista, a situação de cada unidade vem de `situacao` já recebida. Pausas ativas são as unidades com `motivo=pausa`. Exceções dos próximos sete dias vêm de `GET /agenda?dias=7` de cada unidade, só dias com `origem=excecao`. Cache curto compartilhado com o detalhe (20 s) e atualização a cada 30 s enquanto a aba está visível. Falha de uma agenda fica naquela unidade. O navegador não calcula abertura.
+
+**Várias unidades (só plataforma e admin):** a seleção dispara uma chamada existente por unidade (`POST .../pausar` ou `POST .../excecoes`). O resultado é individual. Uma nova tentativa não reenvia o que já deu certo na mesma operação. O atendente é recusado no servidor, não só na tela. “Sugerir feriados nacionais do ano” lista datas fixas e móveis (Carnaval, Sexta-feira Santa, Corpus Christi); o usuário marca dias, unidades e se é fechado ou horário especial. Nada é criado antes da confirmação. Uma exceção já existente na data é substituída, e o texto de confirmação diz isso.
+
+**Alertas na lista:** unidade ativa com `aberta_agora` null ou `motivo=sem_horario` (“Sem horário cadastrado”); unidade ativa sem `whatsapp_pedidos` (“Sem WhatsApp de pedidos”), só para quem recebe esse campo.
 
 **Reabrir:** confirmação “Remover a pausa? O horário cadastrado continuará valendo”; POST sem inventar corpo. Não forçar aberta na interface: reler unidade/agenda e mostrar `situacao`, que pode continuar fechada. Desativar unidade é ação distinta de pausar.
 
@@ -84,7 +90,7 @@ Atualizar situação com refetch ao focar, após ações e atualização periód
 
 ### Grade semanal
 
-Sete dias (`seg`…`dom`), opção fechado e até 12 pares início/fim por dia. Formato HH:MM (00:00–23:59), início diferente do fim. Turno cujo fim é menor que início mostra “termina no dia seguinte”. “Copiar para outros dias” pede destinos e confirma substituição de turnos existentes. Editar localmente e salvar **a grade inteira**, não `{horarios: …}`. Dia ausente é fechado; grade vazia é “Horário não informado”, não uma instrução presumida de fechar todos os dias.
+Sete dias (`seg`…`dom`), opção fechado e até 12 pares início/fim por dia. Formato HH:MM (00:00–23:59), início diferente do fim. Turno cujo fim é menor que início mostra “termina no dia seguinte”. “Copiar para outros dias” pede destinos e confirma substituição de turnos existentes. “Copiar grade de outra unidade” carrega a grade salva da origem no rascunho, depois de confirmar; só “Salvar a semana” grava. Editar localmente e salvar **a grade inteira**, não `{horarios: …}`. Dia ausente é fechado; grade vazia é “Horário não informado”, não uma instrução presumida de fechar todos os dias.
 
 Validar formato, quantidade e sobreposição antes de enviar: considerar transbordo para o dia seguinte e domingo→segunda; intervalos adjacentes são distintos de sobrepostos. Isso só valida o formulário, não calcula situação operacional. Sempre mostrar também a recusa 400 do gateway; não tentar contornar uma validação com normalização silenciosa. Para fechar temporariamente uma unidade sem grade, usar pausa/exceção.
 
@@ -155,7 +161,9 @@ Substituir: aviso de alcance, contagem de desativações e confirmação explíc
 
 Histórico das 20 últimas importações por empresa **somente para consulta**. Desfazer apenas a mais recente, com confirmação explícita: “Edições manuais feitas depois desta importação serão perdidas”. Decisão aprovada; deixa de ser pendência de produto. G6 ainda precisa fechar paginação, elegibilidade, corpo/resposta e vínculo prévia→aplicação. Não criar token de prévia inexistente.
 
-## 10. Tela 8 — Pedidos ⏳ G4
+## 10. Tela 8 — Pedidos ⏳ PED1 (quadro, status e avisos) e G4 (pagamento)
+
+O quadro, a lista, o detalhe operacional, os avisos editáveis e a correção de Conversas estão em `docs/ESPEC_TELAS_PEDIDOS.md`. Esta seção guarda só o que continua pendente de G4.
 
 **Rotas já disponíveis:** `GET /pedidos?status=&unidade=&limite=&cursor=`, `GET /pedidos/{numero}`, `POST .../{numero}/confirmar`, `POST .../{numero}/recusar` (motivo). **Campos ampliados dependem G4:** bairro, CEP, pagamento, troco, agendado_para, frete_gratis e tempo_estimado_min; taxa/total vêm do gateway.
 
@@ -165,9 +173,11 @@ Só permitir decisão de aguardando_loja. Conflito 409 `detalhes.status`: recarr
 
 **PENDÊNCIA GATEWAY:** publicar os novos campos/envelopes/motivos no contrato administrativo G4 e fuso para representação do agendamento; não usar os endpoints de carrinho/Skills para completar a tela.
 
-## 11. Tela 9 — Histórico de alterações ✅ G1 com filtros adicionais pendentes
+## 11. Tela 9 — Histórico de alterações ✅ G1 e filtros G1.1
 
-**Rota fechada:** `GET /gestao/alteracoes?entidade=&entidade_id=&limite=&cursor=`. Resposta `itens`, `proximo_cursor`; mais recentes primeiro, cursor ID. Paginar com “Carregar mais”, preservando filtros; sem presumir total de registros.
+**Atualização 10/10/2026:** `API_ADMIN.md` publica `unidade_id`, `desde` e `ate`. O painel envia esses parâmetros. `unidade_id` traz a unidade e as exceções dela e não é combinado com `entidade`/`entidade_id` (a tela limpa um quando o outro é usado; o servidor também recusa). O período usa o `timezone` do tenant (`GET` da raiz do tenant, já existente). O navegador recebe só `{timezone, origem}`. Se o valor não vier ou não for um fuso IANA, o filtro usa `America/Sao_Paulo` e a tela avisa. `desde` é o início do dia nesse fuso; `ate` é o início do dia seguinte, exclusivo. Data sem fuso continua recusada. O identificador exato permanece para uma alteração específica.
+
+**Rota:** `GET /gestao/alteracoes?entidade=&entidade_id=&unidade_id=&desde=&ate=&limite=&cursor=`. Resposta `itens`, `proximo_cursor`; mais recentes primeiro, cursor ID. Paginar com “Carregar mais”, preservando filtros; sem presumir total de registros.
 
 Linha: quando, quem (`actor`), entidade, ação e resumo; expansão lado a lado Antes/Depois somente dos campos alterados que vieram no JSON. Ausente é diferente de null, false e zero. Telefone já vem mascarado: exibir assim, nunca buscar o número completo para enriquecer histórico. Não chamar a auditoria do painel como substituta.
 
@@ -176,9 +186,9 @@ Entidades G1: `unidade` (id da unidade; criado/alterado/pausado/reaberto/horario
 - Filtro por entidade: disponível.
 - Histórico de uma unidade para entidade `unidade`: usar id exato, disponível.
 - Histórico de uma exceção específica: usar id composto exato, disponível.
-- **PENDÊNCIA GATEWAY:** filtro de uma unidade incluindo todas as suas exceções, sem saber datas previamente. Não assumir busca por prefixo em `entidade_id`.
-- **PENDÊNCIA GATEWAY:** filtro por período completo: G1 não documenta `desde`/`ate` nesta rota (o `desde` na ESPEC não prevalece sobre contrato fechado). Solicitar contrato, sem inventar query nem filtrar só a página. Primeira entrega mostra histórico paginado com filtros disponíveis; período/unidade agregada aguardam extensão.
-- `criado_em`: exibir no fuso/offset que vier. Se não tiver offset, mostrar “horário do servidor”. Não converter para o fuso do navegador nem buscar outro fuso para esse registro. Primeira entrega sem filtro de período e sem agregação unidade+exceções.
+- Filtro da unidade com as exceções: `unidade_id` do contrato G1.1. Não usar busca por prefixo em `entidade_id`.
+- Filtro de período: `desde` e `ate` com fuso, como no contrato. Não filtrar só a página carregada.
+- `criado_em`: exibir no fuso/offset que vier. Se não tiver offset, mostrar “horário do servidor”. Não converter o registro para o fuso do navegador. O filtro de período usa o fuso da empresa; Brasília só entra quando esse fuso não está disponível.
 
 ## 12. Permissões aprovadas
 
@@ -190,6 +200,7 @@ Autorização no servidor, por rota e campos, empresa da sessão. Plataforma esc
 | Pausar/reabrir pedidos da unidade | Sim | Sim | Sim, apenas rotas específicas |
 | Criar/editar/desativar unidade, WhatsApp/fuso | Sim | Sim | Não; PATCH recusado |
 | Grade e exceções | Sim | Sim | Não |
+| Pausa ou exceção em várias unidades, inclusive feriados | Sim | Sim | Não; recusado no servidor |
 | Taxas/pagamentos | Sim | Sim | Não |
 | Preço, item, categoria, cópia e lote | Sim | Sim | Não |
 | Importar/exportar/desfazer | Sim | Sim | Não |
@@ -223,7 +234,7 @@ G1 não habilita ações de G5 ou Pedidos antecipadamente. Member recebe projeç
 
 | Pendência | Impacto |
 |---|---|
-| Histórico: filtros por período e unidade agregando exceções | Parte da tela 9; não bloqueia lista/diferenças G1 |
+| Histórico: filtros por período e unidade agregando exceções | Atendido no painel com o contrato G1.1 (`unidade_id`, `desde`, `ate`) |
 | Histórico: documentar limite permitido | Evitar limites/fuso presumidos |
 | G4: fechar taxa/pagamento, validação de faixas/apelidos, payload dos pedidos novos | Telas 3 e 8 aguardam |
 | G3: relação entre modo fora do horário e modo independente recusa/agendamento; prévia | Tela 4 aguarda |

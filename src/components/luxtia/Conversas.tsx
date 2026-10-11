@@ -18,17 +18,55 @@ import {
 } from "@/lib/gateway-conversas.functions";
 import {
   desdeDoCursor,
+  estadoConversa,
   juntarMensagens,
+  nomeContato,
   ordenarConversas,
+  ROTULO_ESTADO,
   temNovidade,
+  textoCanal,
+  telefoneVisivel,
   type Conversa,
   type Leitura,
   MOTIVO_ATENDENTE,
   seloEspera,
 } from "@/lib/gateway/conversas";
+import type { CanalGateway } from "@/lib/gateway/tipos";
 import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
 
-export function Conversas({ ctx }: { ctx: ContextoGateway }) {
+function esbocoConversa(abertura: {
+  conversa: string;
+  nome?: string;
+  telefone?: string;
+  canal?: string;
+}): Conversa {
+  return {
+    conversation_id: abertura.conversa,
+    agente_id: "",
+    canal: abertura.canal ?? "",
+    nome: abertura.nome ?? null,
+    telefone: abertura.telefone ?? null,
+    status: "ativa",
+    bot_pausado_ate: null,
+    ultima_mensagem: null,
+    ultima_em: null,
+    aguardando_atendente_desde: null,
+    aguardando_motivo: null,
+  };
+}
+
+export function Conversas({
+  ctx,
+  abertura,
+}: {
+  ctx: ContextoGateway;
+  abertura?: {
+    conversa: string;
+    nome?: string;
+    telefone?: string;
+    canal?: string;
+  } | null;
+}) {
   const buscar = useServerFn(listarConversas),
     eventos = useServerFn(acompanharConversas),
     cursorEventos = useServerFn(obterCursorEventos);
@@ -52,7 +90,26 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
     const t = setTimeout(() => setFiltroBusca(busca), 350);
     return () => clearTimeout(t);
   }, [busca]);
-  const [selecionada, setSelecionada] = useState<Conversa | null>(null);
+  const [selecionada, setSelecionada] = useState<Conversa | null>(
+    abertura?.conversa ? esbocoConversa(abertura) : null,
+  );
+  const conversaVinda = abertura?.conversa;
+  const nomeVindo = abertura?.nome;
+  const telefoneVindo = abertura?.telefone;
+  const canalVindo = abertura?.canal;
+  useEffect(() => {
+    if (!conversaVinda) return;
+    setSelecionada((atual) =>
+      atual?.conversation_id === conversaVinda
+        ? atual
+        : esbocoConversa({
+            conversa: conversaVinda,
+            ...(nomeVindo ? { nome: nomeVindo } : {}),
+            ...(telefoneVindo ? { telefone: telefoneVindo } : {}),
+            ...(canalVindo ? { canal: canalVindo } : {}),
+          }),
+    );
+  }, [conversaVinda, nomeVindo, telefoneVindo, canalVindo]);
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const chave = useRef<string | null>(null),
     cursor = useRef(0),
@@ -180,6 +237,7 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
       return proxima;
     });
   }, []);
+  const porCanal = new Map((canais.data?.itens ?? []).map((c) => [c.id, c]));
   const itens = ordenarConversas([
     ...new Map(
       [
@@ -264,8 +322,8 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
             onChange={(e) => setStatus(e.target.value as typeof status)}
           >
             <option value="">Todos</option>
-            <option value="ativa">Com o agente</option>
-            <option value="pausada">Com atendente</option>
+            <option value="ativa">Bot sem pausa</option>
+            <option value="pausada">Bot pausado</option>
           </select>
         </label>
         <label className="text-sm">
@@ -273,6 +331,10 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
           <Input type="datetime-local" value={desde} onChange={(e) => setDesde(e.target.value)} />
         </label>
       </Cartao>
+      <p className="text-xs text-ink-500">
+        O filtro de atendimento usa a pausa do bot. Encerrada e aguardando aparecem no estado de
+        cada conversa.
+      </p>
       {cursorInicial.isError ? (
         <p role="alert" className="text-sm text-destructive">
           Não foi possível acompanhar as novidades.{" "}
@@ -320,7 +382,7 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
                 onClick={() => setSelecionada(c)}
               >
                 <div className="flex items-center gap-2">
-                  <strong className="min-w-0 truncate">{c.nome || c.telefone || "Contato"}</strong>
+                  <strong className="min-w-0 truncate">{nomeContato(c)}</strong>
                   {leitura && temNovidade(c, leitura) ? (
                     <span
                       className="size-2 shrink-0 rounded-full bg-purple-700"
@@ -329,14 +391,20 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
                     />
                   ) : null}
                 </div>
+                <p className="mt-1">
+                  <MarcaCanal
+                    conversa={c}
+                    canal={c.canal_id ? porCanal.get(c.canal_id) : undefined}
+                  />
+                </p>
                 <p className="mt-1 truncate text-sm text-ink-500">
                   {c.ultima_mensagem ?? "Sem mensagem de texto"}
                 </p>
                 <p className="mt-2 text-xs text-ink-500">
-                  {dataHora(c.ultima_em)} ·{" "}
-                  {c.status === "pausada" ? "Com atendente" : "Com o agente"}
+                  {dataHora(c.ultima_em)} · {ROTULO_ESTADO[estadoConversa(c, agora)]}
                 </p>
-                {c.aguardando_atendente_desde ? (
+                {estadoConversa(c, agora) === "aguardando_atendente" &&
+                c.aguardando_atendente_desde ? (
                   <div className="mt-2 space-y-1">
                     <Etiqueta tom="alerta">
                       {seloEspera(c.aguardando_atendente_desde, agora)}
@@ -361,7 +429,14 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
           ) : null}
         </Cartao>
         {atual ? (
-          <Atendimento key={atual.conversation_id} ctx={ctx} conversa={atual} marcar={marcar} />
+          <Atendimento
+            key={atual.conversation_id}
+            ctx={ctx}
+            conversa={atual}
+            canal={atual.canal_id ? porCanal.get(atual.canal_id) : undefined}
+            agora={agora}
+            marcar={marcar}
+          />
         ) : (
           <Cartao className="p-12 text-center text-ink-500">
             Escolha uma conversa para ler o histórico e atender.
@@ -372,13 +447,70 @@ export function Conversas({ ctx }: { ctx: ContextoGateway }) {
   );
 }
 
+function MarcaCanal({ conversa, canal }: { conversa: Conversa; canal: CanalGateway | undefined }) {
+  const tipo = canal?.tipo ?? conversa.canal;
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-ink-500">
+      <IconeCanal tipo={tipo} />
+      <span className="truncate">{textoCanal(tipo, canal?.nome)}</span>
+    </span>
+  );
+}
+export function IconeCanal({ tipo }: { tipo: string }) {
+  const comum = { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": true as const };
+  if (tipo === "uazapi" || tipo === "meta")
+    return (
+      <svg {...comum}>
+        <path
+          fill="currentColor"
+          d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.8A6.5 6.5 0 1 0 8 1.5Zm3.2 8.3c-.1.4-.7.7-1 .8-.3 0-.6.1-2-.5-1.7-.7-2.8-2.4-2.9-2.5-.1-.1-.7-.9-.7-1.7s.4-1.2.6-1.4.4-.3.5-.3h.4c.1 0 .3 0 .4.3.1.4.5 1.3.5 1.4.1.1 0 .3 0 .4-.1.2-.2.3-.3.4l-.2.2c-.1.1-.2.2-.1.4.1.2.5.9 1.2 1.4.8.6 1.4.8 1.6.9.2.1.3.1.4-.1l.3-.4c.1-.2.3-.1.4-.1.2 0 1.1.5 1.3.6.2.1.3.1.4.2.1.2 0 .6-.1 1Z"
+        />
+      </svg>
+    );
+  if (tipo === "email")
+    return (
+      <svg {...comum}>
+        <path
+          fill="currentColor"
+          d="M2 3.5h12v9H2v-9Zm1.2 1 4.8 3.2L12.8 4.5H3.2Zm9.6 7.5V6.2L8 9.6 3.2 6.2v4.8h9.6Z"
+        />
+      </svg>
+    );
+  if (tipo === "site")
+    return (
+      <svg {...comum}>
+        <path
+          fill="currentColor"
+          d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM2.7 8h2.1a10 10 0 0 0 1.4 4.3A5.3 5.3 0 0 1 2.7 8Zm2.1 0h6.4a8.6 8.6 0 0 1-1.5 4.2 8.6 8.6 0 0 1-3.4 0A8.6 8.6 0 0 1 4.8 8Zm7.1 0h2.1a5.3 5.3 0 0 1-3.5 4.3A10 10 0 0 0 11.9 8ZM13.3 6.8h-2.1A10 10 0 0 0 9.8 2.5 5.3 5.3 0 0 1 13.3 6.8ZM8 2.6c.7.8 1.3 2.3 1.5 4.2H6.5C6.7 4.9 7.3 3.4 8 2.6ZM6.2 2.5A10 10 0 0 0 4.8 6.8H2.7A5.3 5.3 0 0 1 6.2 2.5Z"
+        />
+      </svg>
+    );
+  if (tipo === "api")
+    return (
+      <svg {...comum}>
+        <path
+          fill="currentColor"
+          d="M6.2 3.2 2.4 8l3.8 4.8-1.1.9L1 8l4.1-5.7 1.1.9Zm3.6 0 1.1-.9L15 8l-4.1 5.7-1.1-.9L12.6 8 9.8 3.2Z"
+        />
+      </svg>
+    );
+  return (
+    <svg {...comum}>
+      <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
 function Atendimento({
   ctx,
   conversa,
+  canal,
+  agora,
   marcar,
 }: {
   ctx: ContextoGateway;
   conversa: Conversa;
+  canal: CanalGateway | undefined;
+  agora: number;
   marcar: (c: Conversa) => void;
 }) {
   const buscar = useServerFn(historicoConversa),
@@ -442,14 +574,20 @@ function Atendimento({
     },
     retry: false,
   });
+  const titulo = nomeContato(conversa);
+  const fone = telefoneVisivel(conversa);
+  const estado = estadoConversa(conversa, agora);
   return (
     <Cartao className="flex min-w-0 flex-col">
       <div className="space-y-3 border-b p-4">
-        <h2 className="font-display text-xl">{conversa.nome || conversa.telefone || "Conversa"}</h2>
+        <h2 className="font-display text-xl">{titulo}</h2>
+        {fone && fone !== titulo ? <p className="text-sm text-ink-500">{fone}</p> : null}
+        <MarcaCanal conversa={conversa} canal={canal} />
         <p className="text-sm text-ink-500">
-          {conversa.status === "pausada"
-            ? `Atendimento humano até ${dataHora(conversa.bot_pausado_ate)}`
-            : "O agente pode responder automaticamente."}
+          {ROTULO_ESTADO[estado]}
+          {estado === "atendente" && conversa.bot_pausado_ate
+            ? ` · até ${dataHora(conversa.bot_pausado_ate)}`
+            : ""}
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs">

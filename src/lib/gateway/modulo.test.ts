@@ -86,6 +86,10 @@ const ROTAS_DO_TENANT: Op[] = [
   ["GET", ["conversas"]],
   ["GET", ["conversas", "bykoji:can_1:marco", "mensagens"]],
   ["POST", ["conversas", "bykoji:can_1:marco", "assumir"], { minutos: 60 }],
+  ["GET", ["pedidos"]],
+  ["GET", ["pedidos", "contagem"]],
+  ["GET", ["pedidos", "59859"]],
+  ["POST", ["pedidos", "59859", "status"], { status: "confirmado" }],
 ];
 
 let erros: unknown[][] = [];
@@ -233,7 +237,6 @@ describe("papéis", () => {
       ["GET", ["api-keys"]],
       ["POST", ["api-keys"], { nome: "k" }],
       ["DELETE", ["api-keys", "key_1"]],
-      ["GET", []],
       ["PATCH", [], { status: "suspenso" }],
       ["PUT", ["config"], { send_mode: "live" }],
       ["GET", ["contatos"]],
@@ -276,6 +279,7 @@ describe("papéis", () => {
       ["GET", ["canais"]],
       ["GET", ["canais", "can_1"]],
       ["GET", ["consumo"]],
+      ["GET", []],
       ["GET", ["unidades"]],
       ["POST", ["unidades"], { nome: "Loja" }],
       ["GET", ["unidades", "uni_1"]],
@@ -288,6 +292,10 @@ describe("papéis", () => {
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
       ["GET", ["eventos"]],
       ["GET", ["eventos", "cursor"]],
+      ["GET", ["pedidos"]],
+      ["GET", ["pedidos", "contagem"]],
+      ["GET", ["pedidos", "59859"]],
+      ["POST", ["pedidos", "59859", "status"], { status: "confirmado" }],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
@@ -302,9 +310,12 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], { status: "pausado" }],
       ["POST", ["agentes", "ag_1", "testar"]],
       ["POST", ["agentes", "ag_1", "simular"], {}],
+      ["GET", []],
       ["POST", ["unidades"], { nome: "Loja" }],
       ["POST", ["canais"], {}],
       ["GET", ["api-keys"]],
+      ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
+      ["POST", ["pedidos", "59859", "avisos", "confirmado", "reenviar"]],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -327,6 +338,9 @@ describe("papéis", () => {
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
       ["GET", ["eventos"]],
       ["GET", ["eventos", "cursor"]],
+      ["GET", ["pedidos"]],
+      ["GET", ["pedidos", "contagem"]],
+      ["POST", ["pedidos", "59859", "status"], { status: "em_preparo", previsao_min: 40 }],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });

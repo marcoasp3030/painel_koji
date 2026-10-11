@@ -85,6 +85,8 @@ const AMBOS: Regra["papeis"] = ["admin", "membro"];
 const ADMIN: Regra["papeis"] = ["admin"];
 
 const REGRAS: Regra[] = [
+  // Leitura do tenant só para o fuso (`timezone`). A função de gestão devolve apenas esse campo.
+  { metodo: "GET", caminho: [], papeis: ADMIN },
   // Agentes: leitura para todos; edição restrita; testar e simular só admin.
   { metodo: "GET", caminho: ["agentes"], papeis: AMBOS },
   { metodo: "GET", caminho: ["agentes", "*"], papeis: AMBOS },
@@ -131,6 +133,24 @@ const REGRAS: Regra[] = [
   { metodo: "POST", caminho: ["conversas", "*", "devolver"], papeis: AMBOS },
   { metodo: "GET", caminho: ["eventos"], papeis: AMBOS },
   { metodo: "GET", caminho: ["eventos", "cursor"], papeis: AMBOS },
+  // Pedidos PED1-a: leitura e mudança de status para admin e atendente.
+  { metodo: "GET", caminho: ["pedidos"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["pedidos", "*"], papeis: AMBOS },
+  {
+    metodo: "POST",
+    caminho: ["pedidos", "*", "status"],
+    papeis: AMBOS,
+    corpo: (c) => {
+      if (!c || typeof c !== "object" || Array.isArray(c))
+        throw new AcessoNegado("Informe o status do pedido.");
+      const status = (c as { status?: unknown }).status;
+      if (
+        typeof status !== "string" ||
+        Object.keys(c).some((k) => !["status", "motivo", "previsao_min"].includes(k))
+      )
+        throw new AcessoNegado("Campos de status do pedido inválidos.");
+    },
+  },
 ];
 
 function casa(regra: Regra, metodo: MetodoGateway, partes: string[]) {

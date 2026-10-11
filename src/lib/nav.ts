@@ -2,7 +2,15 @@
 import type { PapelGateway } from "./gateway/tipos";
 
 export type IconeMenu =
-  "clientes" | "equipe" | "empresas" | "agentes" | "canais" | "chaves" | "simular" | "conversas";
+  | "clientes"
+  | "equipe"
+  | "empresas"
+  | "agentes"
+  | "canais"
+  | "chaves"
+  | "simular"
+  | "conversas"
+  | "pedidos";
 
 export type ItemMenu = {
   to: string;
@@ -33,6 +41,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     label: "Conversas",
     grupo: "Agentes",
     icone: "conversas",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/pedidos",
+    label: "Pedidos",
+    grupo: "Agentes",
+    icone: "pedidos",
     papeis: ["plataforma"],
   },
   {
@@ -92,6 +107,13 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "Conversas",
     grupo: "Agentes",
     icone: "conversas",
+    papeis: ["admin", "membro"],
+  },
+  {
+    to: "/ia/pedidos",
+    label: "Pedidos",
+    grupo: "Agentes",
+    icone: "pedidos",
     papeis: ["admin", "membro"],
   },
   {

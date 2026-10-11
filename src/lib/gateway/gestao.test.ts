@@ -2,7 +2,20 @@ import { test, expect } from "bun:test";
 import { executarGestao } from "./gestao.server";
 import { criarModuloGateway } from "./modulo.server";
 import { criarClienteGateway } from "./cliente.server";
-import { problemaGrade, textoSituacao, dataRecebida, instanteLocal, type Situacao } from "./gestao";
+import {
+  problemaGrade,
+  textoSituacao,
+  dataRecebida,
+  instanteLocal,
+  periodoNoFuso,
+  instanteDaqui,
+  fimDeTurnoUtil,
+  feriadosNacionais,
+  alertasUnidade,
+  gradeCopiada,
+  pendentesDe,
+  type Situacao,
+} from "./gestao";
 const s: Situacao = {
   aberta_agora: null,
   motivo: "sem_horario",
@@ -64,6 +77,9 @@ test("G1 isolamento: empresa alheia recusada em todas as ações", async () => {
     { acao: "excecao", id: "uni", data: "2026-12-25", fechado: true },
     { acao: "excluir_excecao", id: "uni", eid: 1 },
     { acao: "historico" },
+    { acao: "fuso_empresa" },
+    { acao: "aplicar_pausas", ids: ["uni"], indefinida: true },
+    { acao: "aplicar_excecoes", itens: [{ id: "uni", data: "2026-12-25", fechado: true }] },
   ];
   for (const op of ops) {
     const c = await montar();
@@ -97,6 +113,9 @@ test("G1 membro não altera unidade, grade, exceções nem lê histórico", asyn
     { acao: "excecao", id: "uni", data: "2026-12-25", fechado: true },
     { acao: "excluir_excecao", id: "uni", eid: 1 },
     { acao: "historico" },
+    { acao: "fuso_empresa" },
+    { acao: "aplicar_pausas", ids: ["uni"], indefinida: true },
+    { acao: "aplicar_excecoes", itens: [{ id: "uni", data: "2026-12-25", fechado: true }] },
   ]) {
     const c = await montar("membro");
     await expect(executarGestao(c.sessao, { ...op, empresa: "bykoji" })).rejects.toThrow();
@@ -268,4 +287,145 @@ test("G1 histórico só parâmetros publicados, máscara preservada", async () =
   expect((await executarGestao(c.sessao, { acao: "historico", desde: "2026-01-01" })).ok).toBe(
     false,
   );
+  const antes = c.chamadas.length;
+  const filtrado = await executarGestao(c.sessao, {
+    acao: "historico",
+    unidade_id: "uni",
+    desde: "2026-10-01T00:00:00-03:00",
+    ate: "2026-10-11T00:00:00-03:00",
+  });
+  expect(filtrado.ok).toBe(true);
+  const url = new URL(c.chamadas.at(-1)!.url);
+  expect(url.searchParams.get("unidade_id")).toBe("uni");
+  expect(url.searchParams.get("desde")).toBe("2026-10-01T00:00:00-03:00");
+  expect(url.searchParams.get("ate")).toBe("2026-10-11T00:00:00-03:00");
+  expect(url.searchParams.has("entidade")).toBe(false);
+  expect(c.chamadas.length).toBe(antes + 1);
+  expect(
+    (
+      await executarGestao(c.sessao, {
+        acao: "historico",
+        unidade_id: "uni",
+        entidade: "unidade",
+      })
+    ).ok,
+  ).toBe(false);
+  expect(c.chamadas.length).toBe(antes + 1);
+});
+test("G1 período do histórico inclui o dia final e usa o fuso informado", () => {
+  expect(periodoNoFuso("2026-10-10", "2026-10-10")).toEqual({
+    desde: "2026-10-10T00:00:00-03:00",
+    ate: "2026-10-11T00:00:00-03:00",
+  });
+  expect(periodoNoFuso("2026-10-10", "2026-10-10", "America/Manaus")).toEqual({
+    desde: "2026-10-10T00:00:00-04:00",
+    ate: "2026-10-11T00:00:00-04:00",
+  });
+});
+test("G1 pausa rápida, feriados, alertas, cópia de grade e retomada sem repetir sucesso", () => {
+  const agora = Date.parse("2026-10-10T18:00:00-03:00");
+  expect(instanteDaqui(30, "America/Sao_Paulo", agora)).toBe("2026-10-10T18:30:00-03:00");
+  expect(instanteDaqui(60, "America/Sao_Paulo", agora)).toBe("2026-10-10T19:00:00-03:00");
+  expect(fimDeTurnoUtil("2026-10-10T22:00:00-03:00", agora)).toBe("2026-10-10T22:00:00-03:00");
+  expect(fimDeTurnoUtil(null, agora)).toBeNull();
+  expect(fimDeTurnoUtil("2026-10-10T17:00:00-03:00", agora)).toBeNull();
+  const feriados = feriadosNacionais(2026);
+  expect(feriados.find((f) => f.nome === "Sexta-feira Santa")?.data).toBe("2026-04-03");
+  expect(feriados.find((f) => f.nome === "Segunda-feira de Carnaval")?.data).toBe("2026-02-16");
+  expect(feriados.find((f) => f.nome === "Terça-feira de Carnaval")?.data).toBe("2026-02-17");
+  expect(feriados.find((f) => f.nome === "Corpus Christi")?.data).toBe("2026-06-04");
+  expect(feriados.find((f) => f.nome === "Natal")?.data).toBe("2026-12-25");
+  expect(feriados.find((f) => f.nome === "Consciência Negra")?.data).toBe("2026-11-20");
+  expect(feriadosNacionais(2025).find((f) => f.nome === "Sexta-feira Santa")?.data).toBe(
+    "2025-04-18",
+  );
+  const base = { ativo: true, situacao: s, whatsapp_pedidos: null as string | null };
+  expect(alertasUnidade(base, true)).toEqual({ semHorario: true, semWhatsapp: true });
+  expect(alertasUnidade({ ...base, ativo: false }, true).semHorario).toBe(false);
+  expect(alertasUnidade(base, false).semWhatsapp).toBe(false);
+  expect(alertasUnidade({ ...base, whatsapp_pedidos: "5511999999999" }, true).semWhatsapp).toBe(
+    false,
+  );
+  expect(
+    alertasUnidade({ ...base, situacao: { ...s, aberta_agora: false, motivo: "horario" } }, true)
+      .semHorario,
+  ).toBe(false);
+  const copiada = gradeCopiada({ seg: [["12:00", "15:00"]] });
+  expect(copiada.seg).toEqual([["12:00", "15:00"]]);
+  expect(copiada.seg).not.toBe(undefined);
+  const origem = { seg: [["12:00", "15:00"] as [string, string]] };
+  expect(gradeCopiada(origem).seg).not.toBe(origem.seg);
+  expect(pendentesDe([{ chave: "a" }, { chave: "b" }], ["a"]).map((i) => i.chave)).toEqual(["b"]);
+});
+test("G1 fuso da empresa só devolve o fuso; lote não repete chamada e o atendente é recusado", async () => {
+  const fuso = await montar("admin", [
+    Response.json({ timezone: "America/Manaus", retencao_dias: 90, nome: "Segredo visual" }),
+  ]);
+  const lido = await executarGestao(fuso.sessao, { acao: "fuso_empresa" });
+  expect(lido).toEqual({ ok: true, dados: { timezone: "America/Manaus", origem: "empresa" } });
+  expect(JSON.stringify(lido)).not.toContain("retencao");
+  expect(JSON.stringify(lido)).not.toContain("Segredo");
+  const invalido = await montar("admin", [Response.json({ timezone: "nao-e-fuso" })]);
+  expect(await executarGestao(invalido.sessao, { acao: "fuso_empresa" })).toEqual({
+    ok: true,
+    dados: { timezone: "America/Sao_Paulo", origem: "padrao" },
+  });
+  const membro = await montar("membro");
+  await expect(executarGestao(membro.sessao, { acao: "fuso_empresa" })).rejects.toThrow();
+  await expect(
+    executarGestao(membro.sessao, { acao: "aplicar_pausas", ids: ["uni"], indefinida: true }),
+  ).rejects.toThrow();
+  await expect(
+    executarGestao(membro.sessao, {
+      acao: "aplicar_excecoes",
+      itens: [{ id: "uni", data: "2026-12-25", fechado: true }],
+    }),
+  ).rejects.toThrow();
+  expect(membro.chamadas).toHaveLength(0);
+  const pausa = await montar("membro");
+  const ate = instanteDaqui(30, "America/Sao_Paulo");
+  expect(
+    (await executarGestao(pausa.sessao, { acao: "pausar", id: "uni", ate, motivo: "pausa rápida" }))
+      .ok,
+  ).toBe(true);
+  expect(pausa.chamadas[0]?.body).toEqual({ ate, motivo: "pausa rápida" });
+  const lote = await montar("admin", [
+    Response.json({ id: "a" }),
+    new Response(
+      JSON.stringify({ erro: { codigo: "VALIDATION_ERROR", mensagem: "Recusada", detalhes: {} } }),
+      {
+        status: 400,
+      },
+    ),
+  ]);
+  const primeiro = await executarGestao(lote.sessao, {
+    acao: "aplicar_pausas",
+    ids: ["a", "b", "a"],
+    indefinida: true,
+  });
+  expect(primeiro.ok && primeiro.dados).toBeTruthy();
+  const resultados = (primeiro.ok ? primeiro.dados : {}) as {
+    resultados: { chave: string; ok: boolean }[];
+  };
+  expect(resultados.resultados.map((r) => r.chave)).toEqual(["a", "b"]);
+  expect(resultados.resultados.map((r) => r.ok)).toEqual([true, false]);
+  expect(lote.chamadas).toHaveLength(2);
+  const deNovo = pendentesDe(
+    resultados.resultados,
+    resultados.resultados.filter((r) => r.ok).map((r) => r.chave),
+  );
+  expect(deNovo.map((r) => r.chave)).toEqual(["b"]);
+  const ex = await montar("admin", [Response.json({ id: 1 }), Response.json({ id: 2 })]);
+  const criado = await executarGestao(ex.sessao, {
+    acao: "aplicar_excecoes",
+    itens: [
+      { id: "a", data: "2026-12-25", fechado: true, motivo: "Natal" },
+      { id: "b", data: "2026-12-25", fechado: true, motivo: "Natal" },
+    ],
+  });
+  expect(criado.ok).toBe(true);
+  expect(ex.chamadas).toHaveLength(2);
+  expect(ex.chamadas[0]?.url).toContain("/unidades/a/excecoes");
+  expect(ex.chamadas[1]?.url).toContain("/unidades/b/excecoes");
+  expect(ex.chamadas[0]?.body).toEqual({ data: "2026-12-25", fechado: true, motivo: "Natal" });
 });

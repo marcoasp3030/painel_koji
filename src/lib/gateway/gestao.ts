@@ -1,5 +1,16 @@
 import { z } from "zod";
 export const DIAS = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] as const;
+export const NOMES_DIA: Record<(typeof DIAS)[number], string> = {
+  seg: "Segunda-feira",
+  ter: "Terça-feira",
+  qua: "Quarta-feira",
+  qui: "Quinta-feira",
+  sex: "Sexta-feira",
+  sab: "Sábado",
+  dom: "Domingo",
+};
+/** Fuso do painel para filtros de histórico. O registro em si continua com o offset recebido. */
+export const FUSO_PAINEL = "America/Sao_Paulo";
 export type Grade = Partial<Record<(typeof DIAS)[number], [string, string][]>>;
 export type Situacao = {
   aberta_agora: boolean | null;
@@ -61,6 +72,7 @@ export function dataRecebida(v: string | null) {
     ? `${m[3]}/${m[2]}/${m[1]} ${m[4]} (${m[5] === "Z" ? "UTC" : m[5] ? "UTC" + m[5] : "horário do servidor"})`
     : v;
 }
+export type SecaoUnidade = "agenda" | "horarios" | "excecoes";
 export function textoSituacao(s: Situacao) {
   if (s.aberta_agora === null) return "Horário não informado";
   if (s.aberta_agora) return "Aberta";
@@ -178,6 +190,37 @@ export const gestaoSchema = z.discriminatedUnion("acao", [
     })
     .strict(),
   z.object({ ...alvo, acao: z.literal("reabrir"), id: uid }).strict(),
+  z.object({ ...alvo, acao: z.literal("fuso_empresa") }).strict(),
+  z
+    .object({
+      ...alvo,
+      acao: z.literal("aplicar_pausas"),
+      ids: z.array(uid).min(1).max(40),
+      ate: z.string().optional(),
+      indefinida: z.literal(true).optional(),
+      motivo: z.string().max(200).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...alvo,
+      acao: z.literal("aplicar_excecoes"),
+      itens: z
+        .array(
+          z
+            .object({
+              id: uid,
+              data: dia,
+              fechado: z.literal(true).optional(),
+              faixas: z.array(faixa).max(12).optional(),
+              motivo: z.string().max(200).optional(),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(80),
+    })
+    .strict(),
   z
     .object({
       ...alvo,
@@ -212,6 +255,21 @@ export const gestaoSchema = z.discriminatedUnion("acao", [
       acao: z.literal("historico"),
       entidade: z.enum(["unidade", "excecao"]).optional(),
       entidade_id: z.string().max(150).optional(),
+      unidade_id: uid.optional(),
+      desde: z
+        .string()
+        .regex(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/,
+          "Informe data e hora com fuso.",
+        )
+        .optional(),
+      ate: z
+        .string()
+        .regex(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/,
+          "Informe data e hora com fuso.",
+        )
+        .optional(),
       cursor: z.number().int().positive().optional(),
     })
     .strict(),
@@ -244,4 +302,122 @@ export function instanteLocal(valor: string, fuso: string): string {
   const offset = Math.round((base - instante) / 60000);
   const abs = Math.abs(offset);
   return `${valor}:00${offset < 0 ? "-" : "+"}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+}
+function diaCivilSeguinte(data: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data);
+  if (!m) throw new Error("Informe a data.");
+  const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  dt.setUTCDate(dt.getUTCDate() + 1);
+  return dt.toISOString().slice(0, 10);
+}
+/** Período do histórico: início inclusivo e fim exclusivo, no fuso informado. */
+export function periodoNoFuso(desde?: string, ate?: string, fuso = FUSO_PAINEL) {
+  return {
+    ...(desde ? { desde: instanteLocal(`${desde}T00:00`, fuso) } : {}),
+    ...(ate ? { ate: instanteLocal(`${diaCivilSeguinte(ate)}T00:00`, fuso) } : {}),
+  };
+}
+function relogioNoFuso(ms: number, fuso: string) {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: fuso,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+    .format(new Date(ms))
+    .replace(" ", "T");
+}
+/** Prazo de pausa a partir de agora, no fuso da unidade, com offset. */
+export function instanteDaqui(minutos: number, fuso: string, agora = Date.now()) {
+  if (!Number.isInteger(minutos) || minutos < 1 || minutos > 60 * 24 * 60)
+    throw new Error("Escolha um prazo em minutos.");
+  return instanteLocal(relogioNoFuso(agora + minutos * 60_000, fuso), fuso);
+}
+/** Usa o fecha_as recebido. Nulo se não houver, se já passou ou se passar de 60 dias. */
+export function fimDeTurnoUtil(fechaAs: string | null, agora = Date.now()) {
+  if (!fechaAs || !/(Z|[+-]\d{2}:\d{2})$/.test(fechaAs) || !Number.isFinite(Date.parse(fechaAs)))
+    return null;
+  const t = Date.parse(fechaAs);
+  if (t <= agora || t > agora + 60 * 86400000) return null;
+  return fechaAs;
+}
+export function anoCivil(fuso: string, agora = Date.now()) {
+  return Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: fuso, year: "numeric" }).format(agora),
+  );
+}
+export type Feriado = { data: string; nome: string; tipo: "fixo" | "movel" };
+function pascoa(ano: number) {
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return { mes, dia };
+}
+function deslocar(ano: number, mes: number, dia: number, dias: number) {
+  const dt = new Date(Date.UTC(ano, mes - 1, dia));
+  dt.setUTCDate(dt.getUTCDate() + dias);
+  const y = dt.getUTCFullYear();
+  const m = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(dt.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+/** Feriados nacionais: datas fixas e móveis (Carnaval, Sexta-feira Santa, Corpus Christi). */
+export function feriadosNacionais(ano: number): Feriado[] {
+  if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) throw new Error("Escolha um ano válido.");
+  const p = pascoa(ano);
+  const fixos: [string, string][] = [
+    ["01-01", "Confraternização Universal"],
+    ["04-21", "Tiradentes"],
+    ["05-01", "Dia do Trabalho"],
+    ["09-07", "Independência do Brasil"],
+    ["10-12", "Nossa Senhora Aparecida"],
+    ["11-02", "Finados"],
+    ["11-15", "Proclamação da República"],
+    ["11-20", "Consciência Negra"],
+    ["12-25", "Natal"],
+  ];
+  const lista: Feriado[] = [
+    ...fixos.map(([md, nome]) => ({ data: `${ano}-${md}`, nome, tipo: "fixo" as const })),
+    { data: deslocar(ano, p.mes, p.dia, -48), nome: "Segunda-feira de Carnaval", tipo: "movel" },
+    { data: deslocar(ano, p.mes, p.dia, -47), nome: "Terça-feira de Carnaval", tipo: "movel" },
+    { data: deslocar(ano, p.mes, p.dia, -2), nome: "Sexta-feira Santa", tipo: "movel" },
+    { data: deslocar(ano, p.mes, p.dia, 60), nome: "Corpus Christi", tipo: "movel" },
+  ];
+  return lista.sort((a, b) => a.data.localeCompare(b.data));
+}
+export function alertasUnidade(
+  u: { ativo: boolean; situacao: Situacao; whatsapp_pedidos?: string | null },
+  verWhatsapp: boolean,
+) {
+  return {
+    semHorario:
+      u.ativo && (u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario"),
+    semWhatsapp: verWhatsapp && u.ativo && !u.whatsapp_pedidos,
+  };
+}
+export function gradeCopiada(origem: Grade | undefined): Grade {
+  const n: Grade = {};
+  for (const d of DIAS) if (origem?.[d]?.length) n[d] = origem[d]!.map((f) => [f[0], f[1]]);
+  return n;
+}
+export function pendentesDe<T extends { chave: string }>(
+  itens: T[],
+  concluidos: readonly string[],
+) {
+  const ok = new Set(concluidos);
+  return itens.filter((item) => !ok.has(item.chave));
 }

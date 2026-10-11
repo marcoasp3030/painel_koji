@@ -74,6 +74,7 @@ function useEmpresaEscolhida(ativo: boolean) {
     setEmpresa(id);
     try {
       localStorage.setItem(CHAVE_EMPRESA, id);
+      window.dispatchEvent(new Event("luxtia:empresa"));
     } catch {
       /* A escolha vale enquanto a tela estiver aberta. */
     }
@@ -119,6 +120,7 @@ export function PaginaGateway({
     if (!plataforma || !empresaFixa) return;
     try {
       localStorage.setItem(CHAVE_EMPRESA, empresaFixa);
+      window.dispatchEvent(new Event("luxtia:empresa"));
     } catch {
       /* Sem armazenamento local, a lista volta para a primeira empresa. */
     }

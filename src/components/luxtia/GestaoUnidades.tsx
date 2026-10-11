@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { useBlocker } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
-import { gestao } from "@/lib/gateway-gestao.functions";
+import { Link, useBlocker } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useGestao, EditorFaixas, botoesPausaRapida, textoPrazo } from "./gestao-base";
+import { VisaoHoje, OperacaoVarias } from "./GestaoOperacao";
 import {
   DIAS,
+  NOMES_DIA,
   dataRecebida,
   textoSituacao,
   instanteLocal,
+  gradeCopiada,
+  alertasUnidade,
   problemaGrade,
+  type SecaoUnidade,
   type Unidade,
   type Grade,
   type Agenda,
@@ -17,10 +20,12 @@ import {
   type PedidoGestao,
 } from "@/lib/gateway/gestao";
 import type { ContextoGateway } from "./Gateway";
-import { Cartao } from "./Superficie";
+import { Etiqueta } from "./Gateway";
+import { Cartao, EstadoVazio, Iniciais, Metrica } from "./Superficie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -28,40 +33,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-export function useGestao(ctx: ContextoGateway) {
-  const fn = useServerFn(gestao);
-  const qc = useQueryClient();
-  const [erro, setErro] = useState<{ campo: string; mensagem: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function ler<T>(d: Omit<PedidoGestao, "empresa">): Promise<T> {
-    const r = await fn({ data: { ...d, empresa: ctx.empresa } });
-    if (!r.ok) throw new Error(r.erro.mensagem);
-    return r.dados as T;
-  }
-  async function salvar(d: Record<string, unknown>) {
-    setBusy(true);
-    setErro(null);
-    try {
-      const r = await fn({ data: { ...d, empresa: ctx.empresa } });
-      if (!r.ok) {
-        setErro(r.erro);
-        return false;
-      }
-      await qc.invalidateQueries({ queryKey: ["gestao", ctx.empresa] });
-      toast.success("Alteração salva.");
-      return true;
-    } catch (e) {
-      setErro({
-        campo: "corpo",
-        mensagem: e instanceof Error ? e.message : "Não foi possível salvar.",
-      });
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  }
-  return { ler, salvar, erro, setErro, busy };
-}
+
+const UTEIS = ["seg", "ter", "qua", "qui", "sex"] as const;
+
+export { useGestao, EditorFaixas };
 type G = ReturnType<typeof useGestao>;
 function Erro({ g, campo }: { g: G; campo?: string }) {
   return g.erro && (!campo || g.erro.campo === campo) ? (
@@ -90,24 +65,61 @@ function ProtegeRascunho({ sujo }: { sujo: boolean }) {
   }, [sujo]);
   return null;
 }
+function tomSituacao(u: Unidade) {
+  if (u.situacao.aberta_agora === true) return "sucesso" as const;
+  if (u.situacao.motivo === "pausa") return "alerta" as const;
+  if (u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario")
+    return "roxo" as const;
+  if (u.situacao.motivo === "inativa") return "neutro" as const;
+  return "perigo" as const;
+}
+function resumoSituacao(u: Unidade) {
+  if (u.situacao.aberta_agora === true) return "Aberta";
+  if (u.situacao.motivo === "pausa") return "Pausada";
+  if (u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario") return "Sem horário";
+  if (u.situacao.motivo === "inativa") return "Inativa";
+  if (u.situacao.motivo === "excecao") return "Exceção";
+  return "Fechada";
+}
 export function SituacaoUnidade({ u }: { u: Unidade }) {
   return (
     <div className="space-y-1 text-sm">
-      <strong className={u.situacao.aberta_agora === true ? "text-green-800" : "text-amber-900"}>
-        {textoSituacao(u.situacao)}
-      </strong>
+      <Etiqueta tom={tomSituacao(u)}>{resumoSituacao(u)}</Etiqueta>
+      <p>{textoSituacao(u.situacao)}</p>
       {u.situacao.fecha_as && <p>Fecha: {dataRecebida(u.situacao.fecha_as)}</p>}
       {u.situacao.proxima_abertura && (
         <p>Próxima abertura: {dataRecebida(u.situacao.proxima_abertura)}</p>
       )}
       {u.pausa_motivo && u.situacao.motivo === "pausa" && <p>Motivo: {u.pausa_motivo}</p>}
-      <p>Fuso: {u.fuso_efetivo}</p>
+      <p className="text-ink-500">Fuso: {u.fuso_efetivo}</p>
     </div>
   );
 }
-export function GestaoUnidades({ ctx }: { ctx: ContextoGateway }) {
+function dataCurta(iso: string) {
+  return iso.split("-").reverse().join("/");
+}
+function resumoTurnos(faixas: [string, string][] | undefined, gradeVazia: boolean) {
+  if (!faixas?.length) return gradeVazia ? "Sem horário" : "Fechado";
+  return faixas.map(([a, b]) => `${a}–${b}${b < a ? " (dia seguinte)" : ""}`).join(", ");
+}
+function podeTrocar() {
+  return window.dispatchEvent(new Event("gestao:trocar", { cancelable: true }));
+}
+
+export function GestaoUnidades({
+  ctx,
+  unidadeId,
+  secao,
+  aoNavegar,
+}: {
+  ctx: ContextoGateway;
+  unidadeId: string | null;
+  secao: SecaoUnidade;
+  aoNavegar: (destino: { unidade?: string; secao?: SecaoUnidade }) => void;
+}) {
   const g = useGestao(ctx);
-  const [id, setId] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const [editar, setEditar] = useState<Unidade | "nova" | null>(null);
   const [pausar, setPausar] = useState<Unidade | null>(null);
   const q = useQuery({
@@ -117,60 +129,216 @@ export function GestaoUnidades({ ctx }: { ctx: ContextoGateway }) {
     refetchIntervalInBackground: false,
   });
   const admin = ctx.papel !== "membro";
-  if (id) return <Detalhe key={id} ctx={ctx} id={id} voltar={() => setId(null)} />;
+  const secaoEfetiva: SecaoUnidade = admin ? secao : "agenda";
+  const itens = q.data?.itens ?? [];
+  const termo = busca.trim().toLocaleLowerCase("pt-BR");
+  const visiveis = itens.filter((u) =>
+    [u.nome, u.codigo, u.endereco].some((v) =>
+      (v ?? "").toLocaleLowerCase("pt-BR").includes(termo),
+    ),
+  );
+  const contagem = {
+    abertas: itens.filter((u) => u.situacao.aberta_agora === true).length,
+    pausadas: itens.filter((u) => u.situacao.motivo === "pausa").length,
+    sem: itens.filter(
+      (u) => u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario",
+    ).length,
+  };
+  function seguir(id: string | null, proxima: SecaoUnidade = "agenda") {
+    if (id === unidadeId && (id === null || proxima === secaoEfetiva)) return;
+    if (!podeTrocar()) return;
+    aoNavegar(id ? { unidade: id, secao: proxima } : {});
+  }
+  function reabrir(id: string) {
+    if (window.confirm("Remover a pausa? O horário cadastrado continuará valendo."))
+      void g.salvar({ acao: "reabrir", id });
+  }
   return (
     <div className="mt-6 space-y-4">
-      <div className="flex flex-wrap justify-between gap-2">
-        <p>Unidades da empresa · situação informada pelo gateway</p>
-        {admin && <Button onClick={() => setEditar("nova")}>Nova unidade</Button>}
+      {itens.length > 0 ? (
+        <VisaoHoje ctx={ctx} itens={itens} onAbrir={(id) => seguir(id, "agenda")} />
+      ) : null}
+      {admin && itens.length > 0 ? (
+        <OperacaoVarias
+          ctx={ctx}
+          unidades={itens}
+          selecionadas={selecionadas}
+          onLimpar={() => setSelecionadas([])}
+        />
+      ) : null}
+      <div className={`grid gap-3 sm:grid-cols-3 ${unidadeId ? "hidden lg:grid" : ""}`}>
+        <Metrica rotulo="Abertas agora" valor={q.data ? contagem.abertas : "—"} />
+        <Metrica rotulo="Pedidos pausados" valor={q.data ? contagem.pausadas : "—"} />
+        <Metrica
+          rotulo="Sem horário"
+          valor={q.data ? contagem.sem : "—"}
+          detalhe="Situação recebida do gateway"
+        />
       </div>
-      {q.isPending ? <p>Carregando unidades…</p> : null}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <label className={`min-w-0 flex-1 text-sm ${unidadeId ? "hidden lg:block" : ""}`}>
+          Buscar unidade
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Nome, código ou endereço"
+            className="mt-1 max-w-md"
+          />
+        </label>
+        {admin && (
+          <Button className="min-h-11" onClick={() => setEditar("nova")}>
+            Nova unidade
+          </Button>
+        )}
+      </div>
+      {q.isPending ? (
+        <div className="grid gap-3 lg:grid-cols-[minmax(280px,340px)_1fr]">
+          <Skeleton className="h-40" />
+          <Skeleton className="hidden h-64 lg:block" />
+        </div>
+      ) : null}
       {q.error ? (
-        <p role="alert">
+        <p role="alert" className="text-sm">
           {q.error.message} {q.data ? "A informação abaixo pode estar desatualizada." : ""}{" "}
           <Button variant="outline" onClick={() => q.refetch()}>
             Tentar novamente
           </Button>
         </p>
       ) : null}
-      {q.data?.itens.length === 0 ? <Cartao>Nenhuma unidade cadastrada.</Cartao> : null}
-      <div className="grid gap-4 md:grid-cols-2">
-        {q.data?.itens.map((u) => (
-          <Cartao key={u.id}>
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold">{u.nome}</h2>
-              <p className="text-sm">
-                {u.codigo} · {u.endereco ?? "Endereço não informado"}
-              </p>
-              <SituacaoUnidade u={u} />
-              <div className="flex flex-wrap gap-2">
-                <Button className="min-h-11" variant="outline" onClick={() => setId(u.id)}>
-                  Ver unidade e agenda
-                </Button>
-                <Button
-                  className="min-h-11"
-                  disabled={g.busy}
-                  onClick={() =>
-                    u.situacao.motivo === "pausa"
-                      ? window.confirm(
-                          "Remover a pausa? O horário cadastrado continuará valendo.",
-                        ) && g.salvar({ acao: "reabrir", id: u.id })
-                      : setPausar(u)
-                  }
-                >
-                  {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
-                </Button>
-                {admin && (
-                  <Button variant="outline" onClick={() => setEditar(u)}>
-                    Editar dados
-                  </Button>
-                )}
-              </div>
-            </div>
-          </Cartao>
-        ))}
-      </div>
       <Erro g={g} />
+      {!q.isPending && itens.length === 0 ? (
+        <Cartao>
+          <EstadoVazio
+            titulo="Nenhuma unidade cadastrada"
+            texto="Crie uma unidade para definir a agenda, a grade semanal e as exceções."
+          />
+        </Cartao>
+      ) : null}
+      {itens.length > 0 && (
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
+          <div className={`space-y-3 ${unidadeId ? "hidden lg:block" : ""}`}>
+            {visiveis.length === 0 ? (
+              <Cartao>
+                <EstadoVazio
+                  titulo="Nenhuma unidade encontrada"
+                  texto="Limpe a busca para ver todas as unidades da empresa."
+                />
+              </Cartao>
+            ) : (
+              visiveis.map((u) => (
+                <Cartao
+                  key={u.id}
+                  className={`space-y-3 p-4 ${unidadeId === u.id ? "ring-1 ring-purple-700" : ""}`}
+                >
+                  <button
+                    className="flex w-full items-start gap-3 text-left"
+                    onClick={() => seguir(u.id, "agenda")}
+                  >
+                    <Iniciais nome={u.nome} />
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{u.nome}</span>
+                      <span className="block truncate text-sm text-ink-500">
+                        {u.codigo ?? "Sem código"} · {u.endereco ?? "Endereço não informado"}
+                      </span>
+                    </span>
+                  </button>
+                  <SituacaoUnidade u={u} />
+                  <AlertasDaUnidade u={u} admin={admin} />
+                  {admin && (
+                    <label className="flex min-h-11 items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selecionadas.includes(u.id)}
+                        onChange={(e) =>
+                          setSelecionadas(
+                            e.target.checked
+                              ? [...selecionadas, u.id]
+                              : selecionadas.filter((id) => id !== u.id),
+                          )
+                        }
+                      />
+                      Incluir ao aplicar em várias
+                    </label>
+                  )}
+                  <div className={`grid gap-1 ${admin ? "grid-cols-3" : "grid-cols-1"}`}>
+                    <Button
+                      className="min-h-11 px-2"
+                      variant={
+                        unidadeId === u.id && secaoEfetiva === "agenda" ? "default" : "outline"
+                      }
+                      onClick={() => seguir(u.id, "agenda")}
+                    >
+                      Agenda
+                    </Button>
+                    {admin && (
+                      <Button
+                        className="min-h-11 px-2"
+                        variant={
+                          unidadeId === u.id && secaoEfetiva === "horarios" ? "default" : "outline"
+                        }
+                        onClick={() => seguir(u.id, "horarios")}
+                      >
+                        Horários
+                      </Button>
+                    )}
+                    {admin && (
+                      <Button
+                        className="min-h-11 px-2"
+                        variant={
+                          unidadeId === u.id && secaoEfetiva === "excecoes" ? "default" : "outline"
+                        }
+                        onClick={() => seguir(u.id, "excecoes")}
+                      >
+                        Exceções
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    className="min-h-11 w-full"
+                    disabled={g.busy}
+                    onClick={() => (u.situacao.motivo === "pausa" ? reabrir(u.id) : setPausar(u))}
+                  >
+                    {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
+                  </Button>
+                  {admin && (
+                    <Button
+                      className="min-h-11 w-full"
+                      variant="outline"
+                      onClick={() => setEditar(u)}
+                    >
+                      Editar dados
+                    </Button>
+                  )}
+                </Cartao>
+              ))
+            )}
+          </div>
+          <div className={unidadeId ? "block" : "hidden lg:block"}>
+            {unidadeId ? (
+              <Detalhe
+                key={unidadeId}
+                ctx={ctx}
+                id={unidadeId}
+                secao={secaoEfetiva}
+                admin={admin}
+                ocupado={g.busy}
+                onSecao={(proxima) => seguir(unidadeId, proxima)}
+                onVoltar={() => seguir(null)}
+                onPausar={setPausar}
+                onEditar={setEditar}
+                onReabrir={reabrir}
+              />
+            ) : (
+              <Cartao>
+                <EstadoVazio
+                  titulo="Escolha uma unidade"
+                  texto="Agenda, horários e exceções abrem aqui. No celular, use os botões de cada unidade."
+                />
+              </Cartao>
+            )}
+          </div>
+        </div>
+      )}
       {editar && (
         <DadosUnidade
           ctx={ctx}
@@ -271,17 +439,40 @@ function DadosUnidade({
             Unidade ativa
           </label>
           <Erro g={g} />
-          <Button disabled={g.busy}>Salvar dados</Button>
+          <Button className="min-h-11" disabled={g.busy}>
+            Salvar dados
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+function AlertasDaUnidade({ u, admin }: { u: Unidade; admin: boolean }) {
+  const a = alertasUnidade(u, admin);
+  if (!a.semHorario && !a.semWhatsapp) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {a.semHorario ? <Etiqueta tom="alerta">Sem horário cadastrado</Etiqueta> : null}
+      {a.semWhatsapp ? <Etiqueta tom="alerta">Sem WhatsApp de pedidos</Etiqueta> : null}
+    </div>
   );
 }
 function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: () => void }) {
   const g = useGestao(ctx);
   const [ind, setInd] = useState(false);
   const [ate, setAte] = useState("");
+  const [prazoIso, setPrazoIso] = useState<string | null>(null);
   const [motivo, setMotivo] = useState("");
+  const atalhos = botoesPausaRapida(
+    u,
+    (iso) => {
+      setInd(false);
+      setAte("");
+      setPrazoIso(iso);
+      g.setErro(null);
+    },
+    (mensagem) => g.setErro({ campo: "ate", mensagem }),
+  );
   return (
     <Dialog open onOpenChange={(a) => !a && !g.busy && fechar()}>
       <DialogContent>
@@ -299,7 +490,7 @@ function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: (
             try {
               const prazo = ind
                 ? { indefinida: true }
-                : { ate: instanteLocal(ate, u.fuso_efetivo) };
+                : { ate: prazoIso ?? instanteLocal(ate, u.fuso_efetivo) };
               if (await g.salvar({ acao: "pausar", id: u.id, ...prazo, motivo })) fechar();
             } catch (e) {
               g.setErro({
@@ -309,6 +500,21 @@ function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: (
             }
           }}
         >
+          <div className="flex flex-wrap gap-2">
+            {atalhos.map((b) => (
+              <Button
+                key={b.rotulo}
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                disabled={g.busy}
+                onClick={b.onClick}
+              >
+                {b.rotulo}
+              </Button>
+            ))}
+          </div>
+          {prazoIso && !ind ? <p className="text-sm">Pausa até {textoPrazo(prazoIso)}.</p> : null}
           <label className="flex min-h-11 items-center gap-2">
             <input
               type="checkbox"
@@ -323,10 +529,14 @@ function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: (
               <Label htmlFor="pausa-ate">Pausar até (hoje ou outra data)</Label>
               <Input
                 id="pausa-ate"
+                className="min-h-11"
                 type="datetime-local"
-                required
+                required={!prazoIso}
                 value={ate}
-                onChange={(e) => setAte(e.target.value)}
+                onChange={(e) => {
+                  setPrazoIso(null);
+                  setAte(e.target.value);
+                }}
                 disabled={g.busy}
                 aria-invalid={g.erro?.campo === "ate"}
               />
@@ -337,6 +547,7 @@ function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: (
             <Label htmlFor="pausa-motivo">Motivo (opcional)</Label>
             <Input
               id="pausa-motivo"
+              className="min-h-11"
               value={motivo}
               maxLength={200}
               disabled={g.busy}
@@ -353,11 +564,30 @@ function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: (
     </Dialog>
   );
 }
-function Detalhe({ ctx, id, voltar }: { ctx: ContextoGateway; id: string; voltar: () => void }) {
+function Detalhe({
+  ctx,
+  id,
+  secao,
+  admin,
+  ocupado,
+  onSecao,
+  onVoltar,
+  onPausar,
+  onEditar,
+  onReabrir,
+}: {
+  ctx: ContextoGateway;
+  id: string;
+  secao: SecaoUnidade;
+  admin: boolean;
+  ocupado: boolean;
+  onSecao: (secao: SecaoUnidade) => void;
+  onVoltar: () => void;
+  onPausar: (u: Unidade) => void;
+  onEditar: (u: Unidade) => void;
+  onReabrir: (id: string) => void;
+}) {
   const g = useGestao(ctx);
-  const [aba, setAba] = useState("agenda");
-  const [pausa, setPausa] = useState(false);
-  const [editar, setEditar] = useState(false);
   const q = useQuery({
     queryKey: ["gestao", ctx.empresa, id],
     queryFn: () => g.ler<Unidade>({ acao: "obter", id } as PedidoGestao),
@@ -365,14 +595,16 @@ function Detalhe({ ctx, id, voltar }: { ctx: ContextoGateway; id: string; voltar
     refetchIntervalInBackground: false,
   });
   const u = q.data;
+  const secoes: { id: SecaoUnidade; rotulo: string }[] = admin
+    ? [
+        { id: "agenda", rotulo: "Agenda" },
+        { id: "horarios", rotulo: "Horários" },
+        { id: "excecoes", rotulo: "Exceções" },
+      ]
+    : [{ id: "agenda", rotulo: "Agenda" }];
   return (
-    <div className="mt-6 space-y-4">
-      <Button
-        variant="outline"
-        onClick={() => {
-          if (window.dispatchEvent(new Event("gestao:trocar", { cancelable: true }))) voltar();
-        }}
-      >
+    <div className="space-y-4">
+      <Button className="min-h-11 lg:hidden" variant="outline" onClick={onVoltar}>
         ← Unidades
       </Button>
       {q.error && (
@@ -381,66 +613,70 @@ function Detalhe({ ctx, id, voltar }: { ctx: ContextoGateway; id: string; voltar
         </p>
       )}
       {!u ? (
-        <p>Carregando unidade…</p>
+        <Skeleton className="h-48" />
       ) : (
         <>
-          <Cartao>
-            <h2 className="text-xl font-semibold">{u.nome}</h2>
-            <p>{u.endereco}</p>
+          <Cartao className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-display text-2xl text-purple-800">{u.nome}</h2>
+                <p className="text-sm text-ink-500">
+                  {u.codigo ?? "Sem código"} · {u.endereco ?? "Endereço não informado"}
+                </p>
+              </div>
+              {admin && (
+                <Link
+                  to="/ia/gestao/alteracoes"
+                  search={{ unidade: u.id }}
+                  className="text-sm font-medium text-purple-800 underline-offset-4 hover:underline"
+                >
+                  Histórico desta unidade
+                </Link>
+              )}
+            </div>
             <SituacaoUnidade u={u} />
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 className="min-h-11"
-                disabled={g.busy}
-                onClick={() =>
-                  u.situacao.motivo === "pausa"
-                    ? window.confirm("Remover a pausa? O horário cadastrado continuará valendo.") &&
-                      g.salvar({ acao: "reabrir", id })
-                    : setPausa(true)
-                }
+                disabled={ocupado}
+                onClick={() => (u.situacao.motivo === "pausa" ? onReabrir(u.id) : onPausar(u))}
               >
                 {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
               </Button>
-              {ctx.papel !== "membro" && (
-                <Button variant="outline" onClick={() => setEditar(true)}>
+              {admin && (
+                <Button className="min-h-11" variant="outline" onClick={() => onEditar(u)}>
                   Editar dados
                 </Button>
               )}
             </div>
-            <Erro g={g} />
           </Cartao>
-          <div className="flex flex-wrap gap-2">
-            {(ctx.papel === "membro" ? ["agenda"] : ["agenda", "horarios", "excecoes"]).map((a) => (
-              <Button
-                variant={aba === a ? "default" : "outline"}
-                key={a}
-                onClick={() => {
-                  if (
-                    aba === a ||
-                    window.confirm("Trocar de seção? Alterações não salvas serão descartadas.")
-                  )
-                    setAba(a);
-                }}
-              >
-                {
-                  {
-                    agenda: "Agenda · 7 dias",
-                    horarios: "Grade semanal",
-                    excecoes: "Exceções por data",
-                  }[a]
-                }
-              </Button>
-            ))}
-          </div>
-          {aba === "agenda" ? (
+          {admin && (
+            <div
+              role="tablist"
+              aria-label="Seções da unidade"
+              className="flex gap-1 rounded-xl bg-base-100 p-1"
+            >
+              {secoes.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={secao === s.id}
+                  className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-medium ${secao === s.id ? "bg-card text-purple-800 shadow-sm" : "text-ink-500"}`}
+                  onClick={() => onSecao(s.id)}
+                >
+                  {s.rotulo}
+                </button>
+              ))}
+            </div>
+          )}
+          {secao === "agenda" ? (
             <Previa ctx={ctx} id={id} />
-          ) : aba === "horarios" && ctx.papel !== "membro" ? (
+          ) : secao === "horarios" && admin ? (
             <Horarios ctx={ctx} u={u} />
-          ) : ctx.papel !== "membro" ? (
+          ) : admin ? (
             <Excecoes ctx={ctx} u={u} />
           ) : null}
-          {pausa && <Pausa ctx={ctx} u={u} fechar={() => setPausa(false)} />}{" "}
-          {editar && <DadosUnidade ctx={ctx} u={u} fechar={() => setEditar(false)} />}
         </>
       )}
     </div>
@@ -451,31 +687,37 @@ function Previa({ ctx, id }: { ctx: ContextoGateway; id: string }) {
   const q = useQuery({
     queryKey: ["gestao", ctx.empresa, id, "agenda"],
     queryFn: () => g.ler<Agenda>({ acao: "agenda", id } as PedidoGestao),
+    staleTime: 20_000,
     refetchInterval: 30000,
     refetchIntervalInBackground: false,
   });
   return (
-    <Cartao>
-      <h3 className="font-semibold">Próximos 7 dias · configuração salva</h3>
-      {q.isPending && <p>Carregando agenda…</p>}
+    <Cartao className="p-4 sm:p-5">
+      <h3 className="font-semibold">Próximos 7 dias</h3>
+      <p className="text-sm text-ink-500">
+        Mostra só o que já foi salvo. Um rascunho da grade não entra aqui.
+      </p>
+      {q.isPending && <Skeleton className="mt-3 h-24" />}
       {q.error && (
-        <p role="alert">
+        <p role="alert" className="mt-3">
           {q.error.message} <Button onClick={() => q.refetch()}>Tentar novamente</Button>
         </p>
       )}
       {q.data && (
         <>
-          <p>
+          <p className="mt-3 text-sm">
             Fuso: {q.data.fuso} · {textoSituacao(q.data.situacao)}
           </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {q.data.dias.map((d) => (
-              <div key={d.data} className="rounded border p-3">
+              <div key={d.data} className="rounded-lg border border-base-200 p-3">
                 <strong>
-                  {d.data.split("-").reverse().join("/")} · {d.dia}
+                  {dataCurta(d.data)} · {d.dia}
                 </strong>
-                <p>{d.origem === "excecao" ? "Exceção" : "Grade semanal"}</p>
-                <p>
+                <p className="text-sm text-ink-500">
+                  {d.origem === "excecao" ? "Exceção" : "Grade semanal"}
+                </p>
+                <p className="text-sm">
                   {q.data.situacao.aberta_agora === null && d.origem !== "excecao"
                     ? "Horário não informado"
                     : d.fechado
@@ -484,7 +726,7 @@ function Previa({ ctx, id }: { ctx: ContextoGateway; id: string }) {
                           .map(([a, b]) => `${a}–${b}${b < a ? " (dia seguinte)" : ""}`)
                           .join(", ")}
                 </p>
-                {d.motivo && <p>{d.motivo}</p>}
+                {d.motivo && <p className="text-sm">{d.motivo}</p>}
               </div>
             ))}
           </div>
@@ -493,119 +735,137 @@ function Previa({ ctx, id }: { ctx: ContextoGateway; id: string }) {
     </Cartao>
   );
 }
-export function EditorFaixas({
-  faixas,
-  onChange,
-  disabled = false,
-}: {
-  faixas: [string, string][];
-  onChange: (v: [string, string][]) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="space-y-2">
-      {faixas.map(([a, b], i) => (
-        <div key={i} className="flex flex-wrap items-center gap-2">
-          <Input
-            className="w-28"
-            aria-label={`Início do turno ${i + 1}`}
-            type="time"
-            value={a}
-            disabled={disabled}
-            onChange={(e) => onChange(faixas.map((f, j) => (j === i ? [e.target.value, b] : f)))}
-          />
-          <span>até</span>
-          <Input
-            className="w-28"
-            aria-label={`Fim do turno ${i + 1}`}
-            type="time"
-            value={b}
-            disabled={disabled}
-            onChange={(e) => onChange(faixas.map((f, j) => (j === i ? [a, e.target.value] : f)))}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled}
-            onClick={() => onChange(faixas.filter((_, j) => j !== i))}
-          >
-            Remover turno {i + 1}
-          </Button>
-          {b < a && <span className="text-sm">Termina no dia seguinte</span>}
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        disabled={disabled || faixas.length >= 12}
-        onClick={() => onChange([...faixas, ["12:00", "15:00"]])}
-      >
-        Adicionar turno
-      </Button>
-    </div>
-  );
-}
 function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
   const g = useGestao(ctx);
   const [grade, setGrade] = useState<Grade>(u.horarios ?? {});
   const [salva, setSalva] = useState(JSON.stringify(u.horarios ?? {}));
+  const [aberto, setAberto] = useState<(typeof DIAS)[number] | null>(null);
   const [copiar, setCopiar] = useState<(typeof DIAS)[number] | null>(null);
-  const [destinos, setDestinos] = useState<string[]>([]);
+  const [destinos, setDestinos] = useState<(typeof DIAS)[number][]>([]);
   const problema = problemaGrade(grade);
   const sujo = JSON.stringify(grade) !== salva;
+  const gradeVazia = DIAS.every((d) => !grade[d]?.length);
+  const outras = useQuery({
+    queryKey: ["gestao", ctx.empresa, "unidades"],
+    queryFn: () => g.ler<{ itens: Unidade[] }>({ acao: "listar" }),
+    staleTime: 20_000,
+  });
+  function aplicar(origem: (typeof DIAS)[number], alvos: (typeof DIAS)[number][]) {
+    setGrade((prev) => {
+      const n = { ...prev };
+      for (const d of alvos)
+        if (prev[origem]?.length) n[d] = prev[origem]!.map((f) => [...f] as [string, string]);
+        else delete n[d];
+      return n;
+    });
+  }
   return (
-    <Cartao>
+    <Cartao className="p-4 sm:p-5">
       <ProtegeRascunho sujo={sujo} />
       <h3 className="font-semibold">Grade semanal · {u.fuso_efetivo}</h3>
-      <p className="text-sm">
-        Até 12 turnos por dia. Fim menor que início termina no dia seguinte. Sem nenhum turno:
-        horário não informado.
+      <p className="text-sm text-ink-500">
+        Abra o dia para editar. Até 12 turnos. Um salvamento grava a semana inteira. Sem nenhum
+        turno, o horário fica não informado.
       </p>
+      <label className="mt-3 block text-sm">
+        Copiar grade de outra unidade
+        <select
+          className="mt-1 block min-h-11 w-full max-w-md rounded-md border bg-card px-3"
+          value=""
+          onChange={(e) => {
+            const origem = outras.data?.itens.find((item) => item.id === e.target.value);
+            if (!origem) return;
+            if (
+              !window.confirm(
+                `Carregar a grade de ${origem.nome} neste rascunho? Nada é gravado até Salvar a semana.`,
+              )
+            )
+              return;
+            setGrade(gradeCopiada(origem.horarios));
+            setAberto(null);
+          }}
+        >
+          <option value="">Escolha uma unidade</option>
+          {outras.data?.itens
+            .filter((item) => item.id !== u.id)
+            .map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+        </select>
+      </label>
       {sujo && (
-        <p role="status">Alterações não salvas; a agenda ainda mostra a configuração salva.</p>
+        <p role="status" className="mt-3 rounded-lg bg-gold-300/20 p-3 text-sm">
+          Alterações ainda não salvas. A agenda continua mostrando a configuração salva.
+        </p>
       )}
-      <div className="my-4 space-y-4">
+      <div className="my-4 space-y-2">
         {DIAS.map((d) => (
-          <fieldset key={d} className="rounded border p-3">
-            <legend className="px-2 font-semibold">
-              {
-                {
-                  seg: "Segunda",
-                  ter: "Terça",
-                  qua: "Quarta",
-                  qui: "Quinta",
-                  sex: "Sexta",
-                  sab: "Sábado",
-                  dom: "Domingo",
-                }[d]
-              }
-            </legend>
-            {!grade[d]?.length && (
-              <p className="text-sm">Fechado neste dia (se houver grade cadastrada).</p>
+          <div key={d} className="rounded-lg border border-base-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <div>
+                <p className="font-medium">{NOMES_DIA[d]}</p>
+                <p className="text-sm text-ink-500">{resumoTurnos(grade[d], gradeVazia)}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  aria-expanded={aberto === d}
+                  onClick={() => setAberto(aberto === d ? null : d)}
+                >
+                  {aberto === d ? "Fechar" : "Editar"}
+                </Button>
+                {(UTEIS as readonly string[]).includes(d) && !!grade[d]?.length && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11"
+                    onClick={() => {
+                      const alvos = UTEIS.filter((x) => x !== d);
+                      if (
+                        window.confirm(
+                          `Copiar os turnos de ${NOMES_DIA[d]} para os outros dias úteis? Os horários desses dias serão substituídos.`,
+                        )
+                      )
+                        aplicar(d, alvos);
+                    }}
+                  >
+                    Dias úteis
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="min-h-11"
+                  onClick={() => {
+                    setCopiar(d);
+                    setDestinos([]);
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+            </div>
+            {aberto === d && (
+              <div className="border-t border-base-200 p-3">
+                <EditorFaixas
+                  disabled={g.busy}
+                  faixas={grade[d] ?? []}
+                  onChange={(v) =>
+                    setGrade((prev) => {
+                      const n = { ...prev };
+                      if (v.length) n[d] = v;
+                      else delete n[d];
+                      return n;
+                    })
+                  }
+                />
+              </div>
             )}
-            <EditorFaixas
-              disabled={g.busy}
-              faixas={grade[d] ?? []}
-              onChange={(v) =>
-                setGrade((prev) => {
-                  const n = { ...prev };
-                  if (v.length) n[d] = v;
-                  else delete n[d];
-                  return n;
-                })
-              }
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setCopiar(d);
-                setDestinos([]);
-              }}
-            >
-              Copiar para outros dias
-            </Button>
-          </fieldset>
+          </div>
         ))}
       </div>
       {problema && (
@@ -614,27 +874,65 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
         </p>
       )}
       <Erro g={g} />
-      <Button
-        disabled={!!problema || g.busy}
-        onClick={async () => {
-          if (await g.salvar({ acao: "horarios", id: u.id, grade }))
-            setSalva(JSON.stringify(grade));
-        }}
-      >
-        Salvar grade inteira
-      </Button>
+      <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-200 bg-card p-3 shadow">
+        <p className="text-sm text-ink-500">
+          {sujo ? "Há dias alterados nesta semana." : "A semana está como foi salva."}
+        </p>
+        <Button
+          className="min-h-11"
+          disabled={!!problema || !sujo || g.busy}
+          onClick={async () => {
+            if (await g.salvar({ acao: "horarios", id: u.id, grade }))
+              setSalva(JSON.stringify(grade));
+          }}
+        >
+          Salvar a semana
+        </Button>
+      </div>
       {copiar && (
         <Dialog open onOpenChange={(a) => !a && setCopiar(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Copiar turnos de {copiar}</DialogTitle>
+              <DialogTitle>Copiar turnos de {NOMES_DIA[copiar]}</DialogTitle>
               <DialogDescription>
-                Substitui os turnos dos dias selecionados, inclusive por fechado se a origem estiver
-                vazia.
+                Substitui os turnos dos dias escolhidos. Se a origem estiver vazia, esses dias ficam
+                fechados.
               </DialogDescription>
             </DialogHeader>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() =>
+                  setDestinos(
+                    DIAS.filter((d) => d !== copiar && (UTEIS as readonly string[]).includes(d)),
+                  )
+                }
+              >
+                Dias úteis
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() =>
+                  setDestinos(DIAS.filter((d) => d !== copiar && (d === "sab" || d === "dom")))
+                }
+              >
+                Fim de semana
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() => setDestinos(DIAS.filter((d) => d !== copiar))}
+              >
+                Todos os outros
+              </Button>
+            </div>
             {DIAS.filter((d) => d !== copiar).map((d) => (
-              <label key={d} className="flex min-h-11 gap-2">
+              <label key={d} className="flex min-h-11 items-center gap-2">
                 <input
                   type="checkbox"
                   checked={destinos.includes(d)}
@@ -644,19 +942,14 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
                     )
                   }
                 />
-                {d}
+                {NOMES_DIA[d]}
               </label>
             ))}
             <Button
+              className="min-h-11"
               disabled={!destinos.length}
               onClick={() => {
-                setGrade((prev) => {
-                  const n = { ...prev };
-                  for (const d of destinos as (typeof DIAS)[number][])
-                    if (prev[copiar]?.length) n[d] = prev[copiar]!.map((f) => [...f]);
-                    else delete n[d];
-                  return n;
-                });
+                aplicar(copiar, destinos);
                 setCopiar(null);
               }}
             >
@@ -672,10 +965,7 @@ function Excecoes({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
   const g = useGestao(ctx);
   const [desde, setDesde] = useState("");
   const [ate, setAte] = useState("");
-  const [data, setData] = useState("");
-  const [fechado, setFechado] = useState(true);
-  const [faixas, setFaixas] = useState<[string, string][]>([["12:00", "16:00"]]);
-  const [motivo, setMotivo] = useState("");
+  const [form, setForm] = useState<Excecao | "nova" | null>(null);
   const q = useQuery({
     queryKey: ["gestao", ctx.empresa, u.id, "excecoes", desde, ate],
     queryFn: () =>
@@ -687,139 +977,236 @@ function Excecoes({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
       } as PedidoGestao),
   });
   return (
-    <Cartao>
-      <ProtegeRascunho sujo={!!data || !!motivo} />
-      <h3 className="font-semibold">Exceções · {u.fuso_efetivo}</h3>
-      <p className="text-sm">
-        Sem filtros: de ontem em diante. Exceção não corta um turno iniciado na véspera.
-      </p>
-      <div className="my-3 flex flex-wrap gap-3">
-        <label>
-          Desde
-          <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
-        </label>
-        <label>
-          Até
-          <Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} />
-        </label>
+    <Cartao className="space-y-4 p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">Exceções · {u.fuso_efetivo}</h3>
+          <p className="text-sm text-ink-500">
+            {desde || ate
+              ? `Período ${desde ? dataCurta(desde) : "…"} até ${ate ? dataCurta(ate) : "…"}.`
+              : "Sem período: de ontem em diante."}{" "}
+            Uma exceção não corta um turno que começou na véspera.
+          </p>
+        </div>
+        <Button className="min-h-11" onClick={() => setForm("nova")}>
+          Nova exceção
+        </Button>
       </div>
-      {q.isPending && <p>Carregando exceções…</p>}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-sm">
+          Desde
+          <Input
+            className="mt-1 min-h-11"
+            type="date"
+            value={desde}
+            onChange={(e) => setDesde(e.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          Até
+          <Input
+            className="mt-1 min-h-11"
+            type="date"
+            value={ate}
+            onChange={(e) => setAte(e.target.value)}
+          />
+        </label>
+        {(desde || ate) && (
+          <Button
+            className="min-h-11"
+            variant="outline"
+            onClick={() => {
+              setDesde("");
+              setAte("");
+            }}
+          >
+            Limpar período
+          </Button>
+        )}
+      </div>
+      {q.isPending && <Skeleton className="h-16" />}
       {q.error && (
         <p role="alert">
           {q.error.message}
           <Button onClick={() => q.refetch()}>Tentar novamente</Button>
         </p>
       )}
-      {q.data?.itens.length === 0 && <p>Nenhuma exceção neste período.</p>}
-      {q.data?.itens.map((e) => (
-        <div key={e.id} className="my-2 rounded border p-3">
-          <strong>{e.data}</strong>
-          <p>
-            {e.fechado ? "Fechado o dia inteiro" : e.faixas.map((f) => f.join("–")).join(", ")} ·{" "}
-            {e.motivo}
-          </p>
-          <Button
-            disabled={g.busy}
-            variant="outline"
-            onClick={() => {
-              setData(e.data);
-              setFechado(e.fechado);
-              setFaixas(e.faixas.length ? e.faixas : [["12:00", "16:00"]]);
-              setMotivo(e.motivo ?? "");
-            }}
-          >
-            Editar/substituir
-          </Button>{" "}
-          <Button
-            disabled={g.busy}
-            variant="outline"
-            onClick={() =>
-              window.confirm(`Excluir exceção de ${e.data}? A grade volta a valer.`) &&
-              g.salvar({ acao: "excluir_excecao", id: u.id, eid: e.id })
-            }
-          >
-            Excluir
-          </Button>
-        </div>
-      ))}
-      <form
-        className="mt-5 space-y-3 border-t pt-4"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!fechado) {
-            const p = problemaGrade({ seg: faixas });
-            if (p) {
-              g.setErro({ campo: "faixas", mensagem: p });
-              return;
-            }
-          }
-          try {
-            const atual = await g.ler<{ itens: Excecao[] }>({
-              acao: "excecoes",
-              id: u.id,
-              desde: data,
-              ate: data,
-            } as PedidoGestao);
-            if (
-              atual.itens.length &&
-              !window.confirm(
-                `Substituir a exceção de ${data}? Atual: ${atual.itens[0]!.fechado ? "Fechado" : atual.itens[0]!.faixas.map((f) => f.join("–")).join(", ")}.`,
-              )
-            )
-              return;
-            if (
-              await g.salvar({
-                acao: "excecao",
-                id: u.id,
-                data,
-                ...(fechado ? { fechado: true } : { faixas }),
-                motivo,
-              })
-            ) {
-              setData("");
-              setMotivo("");
-            }
-          } catch (err) {
-            g.setErro({
-              campo: "corpo",
-              mensagem: err instanceof Error ? err.message : "Não foi possível conferir a data.",
-            });
-          }
-        }}
-      >
-        <Label htmlFor="ex-data">Data da exceção</Label>
-        <Input
-          id="ex-data"
-          type="date"
-          required
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          disabled={g.busy}
+      {q.data?.itens.length === 0 && (
+        <EstadoVazio
+          titulo="Nenhuma exceção neste período"
+          texto="Use Nova exceção para um feriado ou um horário especial."
         />
-        <Erro g={g} campo="data" />
-        <label className="flex min-h-11 gap-2 items-center">
-          <input
-            type="checkbox"
-            checked={fechado}
-            onChange={(e) => setFechado(e.target.checked)}
+      )}
+      <div className="space-y-2">
+        {q.data?.itens.map((e) => (
+          <div
+            key={e.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-200 p-3"
+          >
+            <div>
+              <strong>{dataCurta(e.data)}</strong>
+              <p className="text-sm text-ink-500">
+                {e.fechado ? "Fechado o dia inteiro" : e.faixas.map((f) => f.join("–")).join(", ")}
+                {e.motivo ? ` · ${e.motivo}` : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="min-h-11"
+                variant="outline"
+                disabled={g.busy}
+                onClick={() => setForm(e)}
+              >
+                Editar
+              </Button>
+              <Button
+                className="min-h-11"
+                variant="outline"
+                disabled={g.busy}
+                onClick={() =>
+                  window.confirm(
+                    `Excluir exceção de ${dataCurta(e.data)}? A grade volta a valer.`,
+                  ) && g.salvar({ acao: "excluir_excecao", id: u.id, eid: e.id })
+                }
+              >
+                Excluir
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {form && (
+        <FormExcecao
+          ctx={ctx}
+          u={u}
+          atual={form === "nova" ? null : form}
+          fechar={() => setForm(null)}
+        />
+      )}
+    </Cartao>
+  );
+}
+function FormExcecao({
+  ctx,
+  u,
+  atual,
+  fechar,
+}: {
+  ctx: ContextoGateway;
+  u: Unidade;
+  atual: Excecao | null;
+  fechar: () => void;
+}) {
+  const g = useGestao(ctx);
+  const [data, setData] = useState(atual?.data ?? "");
+  const [fechado, setFechado] = useState(atual?.fechado ?? true);
+  const [faixas, setFaixas] = useState<[string, string][]>(
+    atual && atual.faixas.length ? atual.faixas : [["12:00", "16:00"]],
+  );
+  const [motivo, setMotivo] = useState(atual?.motivo ?? "");
+  const faixasIniciais = atual && atual.faixas.length ? atual.faixas : [["12:00", "16:00"]];
+  const sujo =
+    data !== (atual?.data ?? "") ||
+    motivo !== (atual?.motivo ?? "") ||
+    fechado !== (atual?.fechado ?? true) ||
+    JSON.stringify(faixas) !== JSON.stringify(faixasIniciais);
+  const sair = () => {
+    if (!sujo || window.confirm("Descartar alterações não salvas?")) fechar();
+  };
+  return (
+    <Dialog open onOpenChange={(a) => !a && !g.busy && sair()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <ProtegeRascunho sujo={sujo} />
+        <DialogHeader>
+          <DialogTitle>
+            {atual ? `Exceção de ${dataCurta(atual.data)}` : "Nova exceção"}
+          </DialogTitle>
+          <DialogDescription>
+            A data é o dia civil no fuso {u.fuso_efetivo}. Salvar na mesma data substitui a exceção
+            anterior.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!fechado) {
+              const p = problemaGrade({ seg: faixas });
+              if (p) {
+                g.setErro({ campo: "faixas", mensagem: p });
+                return;
+              }
+            }
+            try {
+              const existente = await g.ler<{ itens: Excecao[] }>({
+                acao: "excecoes",
+                id: u.id,
+                desde: data,
+                ate: data,
+              } as PedidoGestao);
+              if (
+                existente.itens.length &&
+                !window.confirm(
+                  `Substituir a exceção de ${dataCurta(data)}? Atual: ${existente.itens[0]!.fechado ? "Fechado" : existente.itens[0]!.faixas.map((f) => f.join("–")).join(", ")}.`,
+                )
+              )
+                return;
+              if (
+                await g.salvar({
+                  acao: "excecao",
+                  id: u.id,
+                  data,
+                  ...(fechado ? { fechado: true } : { faixas }),
+                  motivo,
+                })
+              )
+                fechar();
+            } catch (err) {
+              g.setErro({
+                campo: "corpo",
+                mensagem: err instanceof Error ? err.message : "Não foi possível conferir a data.",
+              });
+            }
+          }}
+        >
+          <Label htmlFor="ex-data">Data da exceção</Label>
+          <Input
+            id="ex-data"
+            className="min-h-11"
+            type="date"
+            required
+            value={data}
+            onChange={(e) => setData(e.target.value)}
             disabled={g.busy}
           />
-          Fechado o dia inteiro
-        </label>
-        {!fechado && <EditorFaixas faixas={faixas} onChange={setFaixas} disabled={g.busy} />}
-        <Erro g={g} campo="faixas" />
-        <Label htmlFor="ex-motivo">Motivo (opcional)</Label>
-        <Input
-          id="ex-motivo"
-          value={motivo}
-          maxLength={200}
-          onChange={(e) => setMotivo(e.target.value)}
-          disabled={g.busy}
-        />
-        <Erro g={g} campo="motivo" />
-        <Erro g={g} />
-        <Button disabled={g.busy}>Salvar exceção</Button>
-      </form>
-    </Cartao>
+          <Erro g={g} campo="data" />
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="checkbox"
+              checked={fechado}
+              onChange={(e) => setFechado(e.target.checked)}
+              disabled={g.busy}
+            />
+            Fechado o dia inteiro
+          </label>
+          {!fechado && <EditorFaixas faixas={faixas} onChange={setFaixas} disabled={g.busy} />}
+          <Erro g={g} campo="faixas" />
+          <Label htmlFor="ex-motivo">Motivo (opcional)</Label>
+          <Input
+            id="ex-motivo"
+            className="min-h-11"
+            value={motivo}
+            maxLength={200}
+            onChange={(e) => setMotivo(e.target.value)}
+            disabled={g.busy}
+          />
+          <Erro g={g} campo="motivo" />
+          <Erro g={g} />
+          <Button className="min-h-11" disabled={g.busy}>
+            Salvar exceção
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

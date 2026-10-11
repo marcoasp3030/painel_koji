@@ -1,3 +1,107 @@
+## [2026-10-10 22:50] — Pedidos: layout mais compacto e moderno
+- **Autor:** Grok 4.7
+- **Objetivo:** Deixar a tela de Pedidos mais compacta, moderna e intuitiva, com menos espaço vazio.
+- **Arquivos alterados:**
+  - `src/components/luxtia/Pedidos.tsx` — modificado — indicadores clicáveis, barra única, filtros recolhíveis, colunas com rolagem, cartões densos, lista em tabela, detalhe em painel lateral
+  - `instrucoes.md`, `README.md` — modificados
+- **Resumo das mudanças:** Contagem virou cinco indicadores que levam à coluna. Busca, Quadro/Lista, Filtros (com número de ativos e fichas removíveis) e som ficam numa linha. Cartão com cor por status, tempo de espera, canal, entrega/retirada, itens, aviso e total. Detalhe em painel lateral com ações fixas no rodapé e atalhos de previsão (20/30/45/60 min).
+- **Decisões e justificativas:** Nenhuma regra ou chamada mudou; as ações continuam saindo de `proximos_status`. O destaque de espera (borda dourada e tempo em vermelho a partir de 15 min) é só visual. Os números das colunas contam o que foi carregado (“+” se há mais), porque a contagem do gateway ignora filtros.
+- **Comandos executados:** `bun test` → 81 aprovados, 6 ignorados; `tsc` e ESLint → OK; build, verificação da chave, recriação só do painel → OK; rotas públicas 200 e admin do gateway 404; segredos nos logs: zero
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** conferência visual autenticada, inclusive no celular
+- **Próximos passos:** Marco revisar o layout logado
+
+## [2026-10-10 22:41] — Tela de Pedidos (PED1-a)
+- **Autor:** Grok 4.7
+- **Objetivo:** Publicar a tela de Pedidos só com o contrato PED1-a já em produção.
+- **Arquivos alterados:**
+  - `src/lib/gateway/pedidos.ts` — criado — status, ações, avisos e validação
+  - `src/lib/gateway/pedidos.server.ts` — criado — lista, contagem, detalhe e mudança de status
+  - `src/lib/gateway/pedidos.test.ts` — criado — 409, cancelamento, isolamento e atendente
+  - `src/lib/gateway-pedidos.functions.ts` — criado — função de servidor
+  - `src/components/luxtia/Pedidos.tsx` — criado — quadro, lista, detalhe e ações
+  - `src/components/luxtia/ContadorPedidos.tsx` — criado — contador e som
+  - `src/lib/pedidos-som.ts` — criado — preferência local do som
+  - `src/routes/_authenticated/ia/pedidos.tsx` — criado — rota do menu
+  - `src/lib/nav.ts`, `src/components/luxtia/AppShell.tsx`, `src/lib/gateway/modulo.server.ts`, `src/lib/gateway/modulo.test.ts` — modificados — menu e permissão
+  - `src/components/luxtia/Conversas.tsx`, `src/routes/_authenticated/ia/conversas.tsx` — modificados — atalho da conversa
+  - `src/routeTree.gen.ts`, `docs/ESPEC_TELAS_PEDIDOS.md`, `instrucoes.md`, `README.md` — modificados
+- **Resumo das mudanças:** O quadro e a lista leem os pedidos da empresa. O detalhe mostra itens, entrega, cliente, aviso e linha do tempo. As ações usam só `proximos_status`. O 409 recarrega o pedido e avisa que ele já foi atualizado.
+- **Decisões e justificativas:** Textos de aviso, reenvio, `X-Role`, nome por prioridade e filtro de encerradas ficam de fora. O motivo da recusa continua opcional; o do cancelamento exige 3 caracteres antes da chamada. O som começa desligado.
+- **Comandos executados:** `bun test` → 81 aprovados, 6 ignorados; `tsc` e ESLint → OK; verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
+- **Erros e resoluções:** O ator da sessão é o e-mail do perfil, não o id; o teste passou a esperar esse e-mail. `exactOptionalPropertyTypes` recusou filtro com `undefined`; o objeto só inclui o que foi preenchido.
+- **Pendências / TODO:** conferência visual autenticada; PED1-b, PED1-c e pagamento G4
+- **Próximos passos:** Marco revisar Pedidos logado, inclusive o celular e o som
+
+## [2026-10-10 22:11] — Conversas: estado, canal e telefone
+- **Autor:** Grok 4.7
+- **Objetivo:** Corrigir a lista e o cabeçalho de Conversas com os campos que o gateway já devolve.
+- **Arquivos alterados:**
+  - `src/lib/gateway/conversas.ts` — modificado — estado, telefone legível, rótulo do canal e nome de exibição
+  - `src/lib/gateway/conversas.test.ts` — modificado — cobre a ordem do estado e a máscara
+  - `src/components/luxtia/Conversas.tsx` — modificado — lista e cabeçalho
+  - `docs/ESPEC_TELAS_PEDIDOS.md`, `instrucoes.md`, `README.md` — modificados
+- **Resumo das mudanças:** Cada conversa mostra Encerrada, Aguardando atendente, Atendente ou Bot, o tipo do canal com o nome cadastrado e o celular no formato +55 11 9xxxx-xxxx. O nome continua o campo atual.
+- **Decisões e justificativas:** Pedidos e os campos do PED1-c ficam de fora até o contrato ser publicado. O filtro de encerrada não foi inventado. `nome_exibicao` e `telefone_formatado`, se um dia vierem, passam na frente.
+- **Comandos executados:** `bun test` → 76 aprovados, 6 ignorados; `tsc --noEmit` → OK; build e verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
+- **Erros e resoluções:** TypeScript recusou `canal={undefined}` com `exactOptionalPropertyTypes`; a prop passou a aceitar `undefined` explicitamente
+- **Pendências / TODO:** conferência visual autenticada; Pedidos, avisos e nome por prioridade esperam o PED1
+- **Próximos passos:** Marco revisar Conversas logado; Pedidos só depois do contrato publicado
+
+## [2026-10-10 22:04] — Especificação de pedidos e conversas
+- **Autor:** Grok 4.7
+- **Objetivo:** Levantar Pedidos e o defeito de Conversas e escrever a especificação, sem implementar.
+- **Arquivos alterados:**
+  - `docs/ESPEC_TELAS_PEDIDOS.md` — criado — telas, pendências do PED1 e o que Conversas já pode corrigir
+  - `docs/ESPEC_TELAS_GESTAO.md` — modificado — a tela 8 aponta para a especificação nova
+  - `instrucoes.md`, `README.md` — modificados
+- **Resumo das mudanças:** A lista de conversas lê `nome`, `telefone` e ignora canal e encerramento. Nome, unidade preferida e os status novos de pedido dependem do PED1, que ainda não está publicado.
+- **Decisões e justificativas:** Nada de rota ou campo inventado. Pagamento e troco continuam no G4. A correção parcial de Conversas fica separada da tela de Pedidos.
+- **Comandos executados:** leitura de `ESPEC_PED1.md`, `API_ADMIN.md` e da tela de Conversas → especificação escrita
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** aprovação desta especificação; horário do pedido na lista não está no contrato; motivo da recusa opcional no PED1
+- **Próximos passos:** esperar o Marco aprovar antes de implementar
+
+## [2026-10-10 19:27] — Operação do dia nas unidades
+- **Autor:** Grok 4.7
+- **Objetivo:** Visão Hoje, pausa rápida, aplicação em várias unidades, feriados, cópia de grade, alertas e período do histórico no fuso da empresa, sem rota nova no gateway.
+- **Arquivos alterados:**
+  - `src/lib/gateway/gestao.ts` — modificado — prazos, feriados, alertas, cópia e ações de lote
+  - `src/lib/gateway/gestao.server.ts` — modificado — fuso projetado e uma chamada por unidade
+  - `src/lib/gateway/gestao.test.ts` — modificado — atendente, lote e feriados
+  - `src/lib/gateway/modulo.server.ts` — modificado — admin pode ler a raiz do tenant
+  - `src/lib/gateway/modulo.test.ts` — modificado — leitura da raiz para admin e recusa para atendente
+  - `src/components/luxtia/GestaoOperacao.tsx` — criado — Hoje, seleção e feriados
+  - `src/components/luxtia/gestao-base.tsx` — criado — hook e pausa rápida
+  - `src/components/luxtia/GestaoUnidades.tsx` — modificado — alertas, atalhos e cópia de grade
+  - `src/components/luxtia/HistoricoGestao.tsx` — modificado — período no fuso da empresa
+  - `instrucoes.md`, `README.md`, `docs/ESPEC_TELAS_GESTAO.md` — modificados
+- **Resumo das mudanças:** O topo mostra situação, pausas e exceções de sete dias. A pausa rápida vale para o atendente. Lote e feriados só existem para admin/plataforma e não repetem sucesso. A grade copiada fica no rascunho até salvar. O histórico usa o timezone do tenant.
+- **Decisões e justificativas:** O campo `timezone` já existe no tenant, então não há pendência de contrato. Brasília só entra se o valor vier ausente ou inválido, com aviso na tela. A leitura da raiz devolve ao navegador apenas o fuso.
+- **Comandos executados:** `bun test` → 75 aprovados, 6 ignorados; `tsc --noEmit` → OK; eslint → 0 erros, avisos Fast Refresh; build e verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** conferência visual autenticada; fallback de Brasília só se o fuso do tenant não vier válido
+- **Próximos passos:** Marco revisar Hoje, pausa rápida, lote e feriados numa empresa de teste, sem alterar unidades reais
+
+## [2026-10-10 21:50] — Uso de unidades e histórico
+- **Autor:** Grok 4.7
+- **Objetivo:** Deixar Unidades e horários e Histórico de gestão mais diretos, com menos cliques para achar cada função.
+- **Arquivos alterados:**
+  - `src/components/luxtia/GestaoUnidades.tsx` — modificado — lista com ações visíveis, detalhe ao lado e grade/exceção mais curtas
+  - `src/components/luxtia/HistoricoGestao.tsx` — modificado — filtro por nome e período; resumo da alteração sem abrir o detalhe
+  - `src/routes/_authenticated/ia/unidades.tsx` — modificado — unidade e seção no endereço
+  - `src/routes/_authenticated/ia/gestao.alteracoes.tsx` — modificado — unidade no endereço
+  - `src/lib/gateway/gestao.ts` — modificado — período com fuso de Brasília e filtros publicados
+  - `src/lib/gateway/gestao.server.ts` — modificado — envia `unidade_id`, `desde` e `ate`; recusa a combinação proibida
+  - `src/lib/gateway/gestao.test.ts` — modificado — cobre o período e a combinação
+  - `instrucoes.md`, `README.md`, `docs/ESPEC_TELAS_GESTAO.md`, `docs/VALIDACAO_G1_PAINEL.md` — modificados
+- **Resumo das mudanças:** Agenda, horários e exceções abrem no primeiro clique. A grade mostra a semana resumida. O histórico escolhe a unidade pelo nome e inclui as exceções dela.
+- **Decisões e justificativas:** Os filtros `unidade_id`, `desde` e `ate` já estão no contrato publicado. O identificador exato não vai junto com a unidade. A data da linha continua com o offset recebido; só o filtro usa Brasília.
+- **Comandos executados:** `bun test` → 73 aprovados, 6 ignorados; `tsc --noEmit` → OK; eslint → 0 erros, 1 aviso Fast Refresh já existente; build e verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** conferência visual autenticada; a sessão de revisão caiu na tela de acesso
+- **Próximos passos:** Marco revisar pausa, grade, exceção e o filtro de histórico numa unidade real, só em leitura se não houver unidade de teste
+
 ## 2026-10-10 — Gestão G1 do painel
 
 Unidades, grade/agenda, pausa/reabertura, exceções e histórico publicados. Atendente lê unidades/agenda e pausa/reabre; gestão restante só plataforma/admin, por regra no servidor. X-Actor da sessão. 72 testes aprovados, TypeScript e build OK, lint sem erros. Validação autenticada de quatro unidades/agendas e histórico somente em leitura; zero escritas de produção. Backup/tag de volta preservados; só painel recriado; gateway intocado e zero segredos no bundle/logs. Relatório e descrição das telas: `docs/VALIDACAO_G1_PAINEL.md`. Aguardar revisão visual do Marco; sem outros blocos.
