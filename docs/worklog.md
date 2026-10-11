@@ -1,3 +1,10 @@
+## PED1-b — avisos de pedido (11/10/2026)
+
+- Publicado `painel:6027ea7`: X-Role da sessão em todas as chamadas administrativas; Configurações → Avisos de pedido por status/modalidade, prévia e padrão; reenvio na linha do tempo com confirmação e tratamento de entrega incerta. Contador existente preservado.
+- 87 testes aprovados, 6 integrações REST antigas ignoradas, zero falhas. TypeScript, lint, builds e bundle aprovados. Validação autenticada: 12 avisos, prévia e contagem; zero escritas/envios em produção.
+- Imagem de volta `painel:54188e4` conferida antes do build. Backup validado em `/home/twadmin/backups/painel/pre-ped1b-20261011T030002Z`, permissões 700/600. Só painel recriado; zero segredos nos logs, gateway intocado, nenhum prune.
+- Relatório completo, volta e conferência visual: `docs/VALIDACAO_PED1B_PAINEL.md`. Alterações locais anteriores preservadas separadamente no commit `54188e4`. Parar para validação do Marco; PED1-c não iniciado.
+
 ## [2026-10-10 22:50] — Pedidos: layout mais compacto e moderno
 - **Autor:** Grok 4.7
 - **Objetivo:** Deixar a tela de Pedidos mais compacta, moderna e intuitiva, com menos espaço vazio.

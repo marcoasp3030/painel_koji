@@ -15,7 +15,12 @@
 - Testes: 87 aprovados, 6 integrações REST antigas ignoradas por ausência de ambiente dedicado, zero falhas; 655 verificações.
 - Novos testes: três papéis em GET e escrita, chamadas globais, autor forjado, papel forjado, isolamento entre tenants, membro bloqueado com status 403 e mensagem legível, 403 do gateway, 400 no campo texto, prévia com sintaxe preservada, restauração com null, reenvio pelo membro e conflito incerto sem repetição automática.
 - Testes de escrita utilizam HTTP simulado. Nenhuma configuração real de avisos ou pedido é alterada para testar a entrega.
-- Tipos, lint, build e validação pós-publicação: resultados registrados abaixo ao concluir.
+- TypeScript (`tsc --noEmit`), ESLint dos arquivos alterados, build Vite e build Docker aprovados.
+- Bundle: zero valores da chave; zero referências ao gateway interno no frontend; credencial lida somente pelo servidor.
+- Validação autenticada pela sessão do painel: 12 avisos, prévia com/sem opcionais e contador aprovados. Zero escritas e zero envios.
+- HTTP: `/`, `/ia/configuracoes/avisos`, `/ia/pedidos`, `/ia/conversas`, `/auth/v1/health` e `/gateway/health` → 200; `/gateway/admin/v1/tenants` → 404.
+- Somente o container do painel mudou de ID. Gateway, workers, agendador, bancos, Redis, autenticação, REST e Caddy preservados. Zero segredos nos logs do painel novo.
+- Imagem publicada e conferida: `painel:6027ea7`. Nenhuma validação pós-publicação falhou; rollback não necessário. Sem prune ou alterações no repositório gateway.
 
 ## Publicação e volta
 
