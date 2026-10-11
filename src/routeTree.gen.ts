@@ -23,11 +23,12 @@ import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
 import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenticated/ia/conversas'
-import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
+import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
+import { Route as AuthenticatedIaConfiguracoesAvisosRouteImport } from './routes/_authenticated/ia/configuracoes.avisos'
 import { Route as AuthenticatedIaEmpresasIndexRouteImport } from './routes/_authenticated/ia/empresas.index'
 import { Route as AuthenticatedIaEmpresasNovaRouteImport } from './routes/_authenticated/ia/empresas.nova'
 import { Route as AuthenticatedIaGestaoAlteracoesRouteImport } from './routes/_authenticated/ia/gestao.alteracoes'
@@ -106,14 +107,14 @@ const AuthenticatedIaConversasRoute =
     path: '/ia/conversas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
-  id: '/ia/simular',
-  path: '/ia/simular',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedIaPedidosRoute = AuthenticatedIaPedidosRouteImport.update({
   id: '/ia/pedidos',
   path: '/ia/pedidos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
+  id: '/ia/simular',
+  path: '/ia/simular',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedIaUnidadesRoute = AuthenticatedIaUnidadesRouteImport.update({
@@ -131,6 +132,12 @@ const AuthenticatedIaAgentesAgenteIdRoute =
   AuthenticatedIaAgentesAgenteIdRouteImport.update({
     id: '/ia/agentes/$agenteId',
     path: '/ia/agentes/$agenteId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIaConfiguracoesAvisosRoute =
+  AuthenticatedIaConfiguracoesAvisosRouteImport.update({
+    id: '/ia/configuracoes/avisos',
+    path: '/ia/configuracoes/avisos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedIaEmpresasIndexRoute =
@@ -170,11 +177,12 @@ export interface FileRoutesByFullPath {
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
-  '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
@@ -193,11 +201,12 @@ export interface FileRoutesByTo {
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
-  '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
@@ -219,11 +228,12 @@ export interface FileRoutesById {
   '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/_authenticated/ia/conversas': typeof AuthenticatedIaConversasRoute
-  '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/_authenticated/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/_authenticated/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/_authenticated/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
@@ -245,11 +255,12 @@ export interface FileRouteTypes {
     | '/ia/canais'
     | '/ia/chaves'
     | '/ia/conversas'
-    | '/ia/simular'
     | '/ia/pedidos'
+    | '/ia/simular'
     | '/ia/unidades'
     | '/admin/'
     | '/ia/agentes/$agenteId'
+    | '/ia/configuracoes/avisos'
     | '/ia/empresas/nova'
     | '/ia/gestao/alteracoes'
     | '/api/public/food99/webhook'
@@ -268,11 +279,12 @@ export interface FileRouteTypes {
     | '/ia/canais'
     | '/ia/chaves'
     | '/ia/conversas'
-    | '/ia/simular'
     | '/ia/pedidos'
+    | '/ia/simular'
     | '/ia/unidades'
     | '/admin'
     | '/ia/agentes/$agenteId'
+    | '/ia/configuracoes/avisos'
     | '/ia/empresas/nova'
     | '/ia/gestao/alteracoes'
     | '/api/public/food99/webhook'
@@ -293,11 +305,12 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/canais'
     | '/_authenticated/ia/chaves'
     | '/_authenticated/ia/conversas'
-    | '/_authenticated/ia/simular'
     | '/_authenticated/ia/pedidos'
+    | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
+    | '/_authenticated/ia/configuracoes/avisos'
     | '/_authenticated/ia/empresas/nova'
     | '/_authenticated/ia/gestao/alteracoes'
     | '/api/public/food99/webhook'
@@ -411,18 +424,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaConversasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/ia/simular': {
-      id: '/_authenticated/ia/simular'
-      path: '/ia/simular'
-      fullPath: '/ia/simular'
-      preLoaderRoute: typeof AuthenticatedIaSimularRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/ia/pedidos': {
       id: '/_authenticated/ia/pedidos'
       path: '/ia/pedidos'
       fullPath: '/ia/pedidos'
       preLoaderRoute: typeof AuthenticatedIaPedidosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/simular': {
+      id: '/_authenticated/ia/simular'
+      path: '/ia/simular'
+      fullPath: '/ia/simular'
+      preLoaderRoute: typeof AuthenticatedIaSimularRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/unidades': {
@@ -444,6 +457,13 @@ declare module '@tanstack/react-router' {
       path: '/ia/agentes/$agenteId'
       fullPath: '/ia/agentes/$agenteId'
       preLoaderRoute: typeof AuthenticatedIaAgentesAgenteIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/configuracoes/avisos': {
+      id: '/_authenticated/ia/configuracoes/avisos'
+      path: '/ia/configuracoes/avisos'
+      fullPath: '/ia/configuracoes/avisos'
+      preLoaderRoute: typeof AuthenticatedIaConfiguracoesAvisosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/empresas/': {
@@ -504,10 +524,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaCanaisRoute: typeof AuthenticatedIaCanaisRoute
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
   AuthenticatedIaConversasRoute: typeof AuthenticatedIaConversasRoute
-  AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
+  AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
+  AuthenticatedIaConfiguracoesAvisosRoute: typeof AuthenticatedIaConfiguracoesAvisosRoute
   AuthenticatedIaEmpresasNovaRoute: typeof AuthenticatedIaEmpresasNovaRoute
   AuthenticatedIaGestaoAlteracoesRoute: typeof AuthenticatedIaGestaoAlteracoesRoute
   AuthenticatedIaAgentesIndexRoute: typeof AuthenticatedIaAgentesIndexRoute
@@ -525,10 +546,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaCanaisRoute: AuthenticatedIaCanaisRoute,
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
   AuthenticatedIaConversasRoute: AuthenticatedIaConversasRoute,
-  AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
+  AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
+  AuthenticatedIaConfiguracoesAvisosRoute:
+    AuthenticatedIaConfiguracoesAvisosRoute,
   AuthenticatedIaEmpresasNovaRoute: AuthenticatedIaEmpresasNovaRoute,
   AuthenticatedIaGestaoAlteracoesRoute: AuthenticatedIaGestaoAlteracoesRoute,
   AuthenticatedIaAgentesIndexRoute: AuthenticatedIaAgentesIndexRoute,

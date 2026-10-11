@@ -13,6 +13,7 @@ export type RequisicaoGateway = {
   caminho: string[];
   /** Usuário logado no painel, enviado em X-Actor. */
   ator: string;
+  papel: "plataforma" | "admin" | "membro";
   query?: Record<string, string | number | boolean | null | undefined>;
   corpo?: unknown;
   /** Tempo máximo em ms; /testar do agente pode levar mais que o padrão. */
@@ -93,6 +94,7 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
       const cabecalhos: Record<string, string> = {
         Authorization: `Bearer ${deps.chave}`,
         "X-Actor": atorSeguro(req.ator),
+        "X-Role": ["plataforma", "admin", "membro"].includes(req.papel) ? req.papel : "membro",
         Accept: "application/json",
       };
       if (req.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";

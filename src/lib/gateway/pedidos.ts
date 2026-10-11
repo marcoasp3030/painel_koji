@@ -144,7 +144,13 @@ export const pedidoSchema = z.discriminatedUnion("acao", [
 ]);
 export type PedidoEntrada = z.infer<typeof pedidoSchema>;
 
-export type AvisoPedido = { status: string; em?: string | null; erro?: string | null } | null;
+export type AvisoPedido = {
+  status: string;
+  em?: string | null;
+  erro?: string | null;
+  incerto?: boolean;
+  pode_reenviar?: boolean;
+} | null;
 export type ItemPedido = {
   codigo: string;
   nome: string;

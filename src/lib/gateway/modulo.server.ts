@@ -22,7 +22,7 @@ export type PerfilGateway = {
 
 export type UsuarioSessao = { userId: string; email: string | null };
 
-type Opcoes = Omit<RequisicaoGateway, "metodo" | "caminho" | "ator">;
+type Opcoes = Omit<RequisicaoGateway, "metodo" | "caminho" | "ator" | "papel">;
 
 export class AcessoNegado extends GatewayErro {
   constructor(mensagem: string) {
@@ -133,6 +133,30 @@ const REGRAS: Regra[] = [
   { metodo: "POST", caminho: ["conversas", "*", "devolver"], papeis: AMBOS },
   { metodo: "GET", caminho: ["eventos"], papeis: AMBOS },
   { metodo: "GET", caminho: ["eventos", "cursor"], papeis: AMBOS },
+  {
+    metodo: "PUT",
+    caminho: ["pedidos", "avisos", "*"],
+    papeis: ADMIN,
+    corpo: (c) => {
+      if (
+        !c ||
+        typeof c !== "object" ||
+        Array.isArray(c) ||
+        Object.keys(c).some((k) => !["texto", "ativo", "modalidade"].includes(k))
+      )
+        throw new AcessoNegado("Campos de aviso inválidos.");
+    },
+  },
+  { metodo: "POST", caminho: ["pedidos", "avisos", "*", "previa"], papeis: ADMIN },
+  {
+    metodo: "POST",
+    caminho: ["pedidos", "*", "avisos", "*", "reenviar"],
+    papeis: AMBOS,
+    corpo: (c) => {
+      if (c && (typeof c !== "object" || Object.keys(c).some((k) => k !== "mesmo_incerto")))
+        throw new AcessoNegado("Campos de reenvio inválidos.");
+    },
+  },
   // Pedidos PED1-a: leitura e mudança de status para admin e atendente.
   { metodo: "GET", caminho: ["pedidos"], papeis: AMBOS },
   { metodo: "GET", caminho: ["pedidos", "*"], papeis: AMBOS },
@@ -224,8 +248,12 @@ export function criarModuloGateway(deps: {
     async sessao(usuario: UsuarioSessao) {
       const perfil = await deps.carregarPerfil(usuario);
       const ator = perfil.email ?? perfil.userId;
-      const chamar = <T>(metodo: MetodoGateway, caminho: string[], opcoes: Opcoes = {}) =>
-        deps.cliente.requisitar<T>({ ...opcoes, metodo, caminho, ator });
+      const chamar = <T>(
+        papel: PapelGateway,
+        metodo: MetodoGateway,
+        caminho: string[],
+        opcoes: Opcoes = {},
+      ) => deps.cliente.requisitar<T>({ ...opcoes, metodo, caminho, ator, papel });
 
       const negar = async (solicitado: string | null, erro: unknown): Promise<never> => {
         if (erro instanceof AcessoNegado && deps.registrarBloqueio && !perfil.superAdmin) {
@@ -259,7 +287,7 @@ export function criarModuloGateway(deps: {
               } catch (erro) {
                 return negar(id, erro);
               }
-              return chamar<T>(metodo, ["tenants", id, ...partes], opcoes);
+              return chamar<T>(papel, metodo, ["tenants", id, ...partes], opcoes);
             },
           };
         },
@@ -271,7 +299,7 @@ export function criarModuloGateway(deps: {
           }
           return {
             chamar<T = unknown>(metodo: MetodoGateway, partes: string[], opcoes: Opcoes = {}) {
-              return chamar<T>(metodo, partes, opcoes);
+              return chamar<T>("plataforma", metodo, partes, opcoes);
             },
           };
         },

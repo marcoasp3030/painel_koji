@@ -315,7 +315,6 @@ describe("papéis", () => {
       ["POST", ["canais"], {}],
       ["GET", ["api-keys"]],
       ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
-      ["POST", ["pedidos", "59859", "avisos", "confirmado", "reenviar"]],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -423,7 +422,12 @@ describe("cliente HTTP", () => {
         esperas.push(ms);
       },
     });
-    const r = await cliente.requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a" });
+    const r = await cliente.requisitar({
+      metodo: "GET",
+      caminho: ["tenants"],
+      ator: "a",
+      papel: "plataforma",
+    });
     expect(r.dados).toEqual({ ok: true });
     expect(esperas).toEqual([2000]);
     expect(rede.chamadas).toHaveLength(2);
@@ -438,7 +442,7 @@ describe("cliente HTTP", () => {
     ]);
     const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE, fetch: rede.fn });
     const erro = (await cliente
-      .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a" })
+      .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a", papel: "plataforma" })
       .catch((e) => e)) as GatewayErro;
     expect(erro.codigo).toBe("RATE_LIMITED");
     expect(erro.tentarApos).toBe(30);
@@ -471,7 +475,7 @@ describe("cliente HTTP", () => {
       for (let i = 0; i < 2; i += 1) {
         falhas.push(
           await cliente
-            .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a" })
+            .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a", papel: "plataforma" })
             .catch((e) => e),
         );
       }

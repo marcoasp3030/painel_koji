@@ -15,13 +15,20 @@ export type IconeMenu =
 export type ItemMenu = {
   to: string;
   label: string;
-  grupo: "Operação" | "Agentes";
+  grupo: "Operação" | "Agentes" | "Configurações";
   icone: IconeMenu;
   /** Papéis no gateway que veem o item; sem a lista, todos veem. */
   papeis?: PapelGateway[];
 };
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
+  {
+    to: "/ia/configuracoes/avisos",
+    label: "Avisos de pedido",
+    grupo: "Configurações",
+    icone: "pedidos",
+    papeis: ["plataforma"],
+  },
   {
     to: "/ia/unidades",
     label: "Unidades e horários",
@@ -88,6 +95,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
 ];
 
 const AGENTES_EMPRESA: ItemMenu[] = [
+  {
+    to: "/ia/configuracoes/avisos",
+    label: "Avisos de pedido",
+    grupo: "Configurações",
+    icone: "pedidos",
+    papeis: ["admin"],
+  },
   {
     to: "/ia/unidades",
     label: "Unidades e horários",

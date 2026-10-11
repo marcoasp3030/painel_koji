@@ -18,6 +18,7 @@ import {
   Store,
   X,
 } from "lucide-react";
+import { avisos } from "@/lib/gateway-avisos.functions";
 import { pedidos } from "@/lib/gateway-pedidos.functions";
 import {
   COLUNAS_PEDIDO,
@@ -869,6 +870,39 @@ function Detalhe({
       return r.dados as PedidoDetalhe;
     },
   });
+  const reenviarFn = useServerFn(avisos);
+  async function reenviar(status: string, incerto: boolean) {
+    if (
+      !numero ||
+      ocupado ||
+      !window.confirm(
+        incerto
+          ? "O cliente pode já ter recebido este aviso. Reenviar mesmo assim?"
+          : "Reenviar este aviso ao cliente?",
+      )
+    )
+      return;
+    setOcupado(true);
+    setErro(null);
+    try {
+      const r = await reenviarFn({
+        data: {
+          acao: "reenviar",
+          empresa: ctx.empresa,
+          numero,
+          status,
+          ...(incerto ? { mesmo_incerto: true } : {}),
+        },
+      });
+      if (!r.ok) setErro(r.erro.mensagem);
+      else toast.success("Aviso colocado na fila de envio.");
+      await cache.invalidateQueries({ queryKey: ["pedidos", ctx.empresa ?? "vinculada"] });
+    } catch {
+      setErro("Não foi possível confirmar o reenvio. Atualize o pedido antes de tentar novamente.");
+    } finally {
+      setOcupado(false);
+    }
+  }
   const pedido = q.data;
   const botoes = acoesPedido(pedido?.proximos_status ?? []);
   const principais = botoes.filter((b) => b.status !== "cancelado" && b.status !== "recusado");
@@ -1091,6 +1125,17 @@ function Detalhe({
                           <p className="text-xs italic text-ink-700">“{ev.motivo}”</p>
                         ) : null}
                         <MarcaAviso status={ev.aviso?.status} />
+                        {ev.aviso?.status === "falhou" && ev.aviso.pode_reenviar ? (
+                          <Button
+                            className="ml-2 min-h-11"
+                            variant="outline"
+                            size="sm"
+                            disabled={ocupado}
+                            onClick={() => void reenviar(ev.para, ev.aviso?.incerto === true)}
+                          >
+                            Reenviar aviso
+                          </Button>
+                        ) : null}
                         {ev.aviso?.erro ? (
                           <span className="ml-1 text-[11px] text-destructive">
                             ({ev.aviso.erro})
