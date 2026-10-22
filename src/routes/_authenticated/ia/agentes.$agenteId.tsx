@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CanaisDoAgente } from "@/components/luxtia/agente/CanaisDoAgente";
 import { Comportamento } from "@/components/luxtia/agente/Comportamento";
 import { ConexaoIA } from "@/components/luxtia/agente/ConexaoIA";
+import { ModulosDoAgente } from "@/components/luxtia/agente/ModulosDoAgente";
 import { VisaoGeral } from "@/components/luxtia/agente/VisaoGeral";
 import { Etiqueta, PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { CabecalhoPagina, Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
@@ -23,7 +24,7 @@ import { ehAgenteDeTeste } from "@/lib/gateway/ocultos";
 import { prontidao, type AcaoProntidao } from "@/lib/gateway/prontidao";
 import { ENVIO, RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
-const ABAS = ["visao", "comportamento", "conexao", "canais", "avancado"] as const;
+const ABAS = ["visao", "comportamento", "modulos", "conexao", "canais", "avancado"] as const;
 type Aba = (typeof ABAS)[number];
 
 export const Route = createFileRoute("/_authenticated/ia/agentes/$agenteId")({
@@ -62,6 +63,7 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const plataforma = ctx.papel === "plataforma";
   const [criandoCanal, setCriandoCanal] = useState(false);
 
+  const adminOuPlataforma = ctx.papel === "admin" || plataforma;
   const aba: Aba =
     (abaPedida === "conexao" || abaPedida === "avancado") && !plataforma
       ? "visao"
@@ -164,6 +166,7 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
         <TabsList className="h-auto flex-wrap justify-start bg-base-200/60">
           <TabsTrigger value="visao">Visão geral</TabsTrigger>
           <TabsTrigger value="comportamento">Comportamento</TabsTrigger>
+          {adminOuPlataforma ? <TabsTrigger value="modulos">Módulos</TabsTrigger> : null}
           {plataforma ? <TabsTrigger value="conexao">Conexão com IA</TabsTrigger> : null}
           <TabsTrigger value="canais">Canais</TabsTrigger>
           {plataforma ? <TabsTrigger value="avancado">Avançado</TabsTrigger> : null}
@@ -187,6 +190,11 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
         <TabsContent value="comportamento" className="mt-6">
           <Comportamento ctx={ctx} agente={agente} />
         </TabsContent>
+        {adminOuPlataforma ? (
+          <TabsContent value="modulos" className="mt-6">
+            <ModulosDoAgente ctx={ctx} agenteId={agente.id} />
+          </TabsContent>
+        ) : null}
         {plataforma ? (
           <TabsContent value="conexao" className="mt-6">
             <ConexaoIA ctx={ctx} agente={agente} />

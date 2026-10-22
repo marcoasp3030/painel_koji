@@ -33,8 +33,13 @@ export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefi
     refetchInterval: 15_000,
     refetchIntervalInBackground: false,
     queryFn: async () => {
+      // Conta todo pedido aguardando a loja. Em piloto o pedido nasce como
+      // "piloto", então filtrar só "real" deixava o aviso em zero.
       const r = await fn({
-        data: { acao: "contagem", empresa: papel === "plataforma" ? empresa : null },
+        data: {
+          acao: "contagem",
+          empresa: papel === "plataforma" ? empresa : null,
+        },
       });
       if (!r.ok) throw new Error(r.erro.mensagem);
       return r.dados as ContagemPedidos;

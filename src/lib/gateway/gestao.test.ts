@@ -14,6 +14,8 @@ import {
   alertasUnidade,
   gradeCopiada,
   pendentesDe,
+  cidadeUf,
+  UFS,
   type Situacao,
 } from "./gestao";
 const s: Situacao = {
@@ -23,6 +25,12 @@ const s: Situacao = {
   proxima_abertura: null,
   pausada_ate: null,
 };
+/** Ignora o GET /modulos que antecede leituras/escritas de unidade (MULTI1-a). */
+function chamadaUnidade(c: {
+  chamadas: { url: string; method: string | undefined; body: unknown }[];
+}) {
+  return c.chamadas.find((x) => !x.url.includes("/modulos"));
+}
 async function montar(papel = "admin", respostas: Response[] = []) {
   const chamadas: {
     url: string;
@@ -47,6 +55,9 @@ async function montar(papel = "admin", respostas: Response[] = []) {
           headers: init.headers,
           body: init.body ? JSON.parse(String(init.body)) : null,
         });
+        if (String(url).includes("/modulos")) {
+          return Response.json({ itens: [], em_uso: [], telas: [] });
+        }
         return (
           respostas.shift() ??
           Response.json({
@@ -182,8 +193,9 @@ test("G1 envia grade inteira; rejeição 400 aparece no campo", async () => {
   ]);
   const grade = { sex: [["19:00", "02:00"]] };
   const r = await executarGestao(c.sessao, { acao: "horarios", id: "uni", grade });
-  expect(c.chamadas[0]?.method).toBe("PUT");
-  expect(c.chamadas[0]?.body).toEqual(grade);
+  const h = chamadaUnidade(c);
+  expect(h?.method).toBe("PUT");
+  expect(h?.body).toEqual(grade);
   expect(r).toEqual({ ok: false, erro: { campo: "horarios", mensagem: "Turnos sobrepostos." } });
 });
 test("G1 situação nula, pausa expirada e indefinida são apenas o retorno do gateway", () => {
@@ -224,7 +236,7 @@ test("G1 pausa: passado, limite de 60 dias, offset e exclusividade; nenhuma cham
     indefinida: true,
     motivo: "Pausa de teste",
   });
-  expect(c.chamadas[0]?.body).toEqual({ indefinida: true, motivo: "Pausa de teste" });
+  expect(chamadaUnidade(c)?.body).toEqual({ indefinida: true, motivo: "Pausa de teste" });
 });
 test("G1 exceção substitui a mesma data pelo POST; campos mutuamente exclusivos", async () => {
   const c = await montar();
@@ -263,10 +275,40 @@ test("G1 telefone DDI 10–15 normalizado e PATCH parcial não apaga outros camp
     id: "uni",
     dados: { whatsapp_pedidos: "+55 (11) 99999-9999" },
   });
-  expect(c.chamadas[0]?.body).toEqual({ whatsapp_pedidos: "5511999999999" });
+  expect(chamadaUnidade(c)?.body).toEqual({ whatsapp_pedidos: "5511999999999" });
   expect(
     (await executarGestao(c.sessao, { acao: "editar", id: "uni", dados: { telefone: "123" } })).ok,
   ).toBe(false);
+});
+test("CAL1 cidade e UF: gravadas pelo PATCH, UF só das 27, lidas por qualquer papel", async () => {
+  const c = await montar();
+  const r = await executarGestao(c.sessao, {
+    acao: "editar",
+    id: "uni",
+    dados: { cidade: "  Campinas ", uf: "SP" },
+  });
+  expect(r.ok).toBe(true);
+  const p1 = chamadaUnidade(c)!;
+  expect(p1.method).toBe("PATCH");
+  expect(p1.url).toContain("/admin/v1/tenants/bykoji/unidades/uni");
+  expect(p1.body).toEqual({ cidade: "Campinas", uf: "SP" });
+  await executarGestao(c.sessao, { acao: "editar", id: "uni", dados: { cidade: null, uf: null } });
+  const patches = c.chamadas.filter((x) => x.method === "PATCH");
+  expect(patches[1]?.body).toEqual({ cidade: null, uf: null });
+  for (const dados of [{ uf: "XX" }, { uf: "sp" }, { cidade: "a".repeat(81) }, { cidade: "  " }])
+    expect((await executarGestao(c.sessao, { acao: "editar", id: "uni", dados })).ok).toBe(false);
+  expect(c.chamadas.filter((x) => x.method === "PATCH")).toHaveLength(2);
+  const m = await montar("membro", [
+    Response.json({
+      itens: [{ id: "uni", nome: "T", cidade: "São Paulo", uf: "SP", situacao: s }],
+    }),
+  ]);
+  const lista = await executarGestao(m.sessao, { acao: "listar" });
+  expect(JSON.stringify(lista)).toContain('"cidade":"São Paulo","uf":"SP"');
+  expect(cidadeUf({ cidade: "São Paulo", uf: "SP" })).toBe("São Paulo/SP");
+  expect(cidadeUf({ cidade: "São Paulo", uf: null })).toBe("São Paulo");
+  expect(cidadeUf({ cidade: null, uf: "SP" })).toBeNull();
+  expect(UFS).toHaveLength(27);
 });
 test("G1 histórico só parâmetros publicados, máscara preservada", async () => {
   const c = await montar("admin", [
@@ -340,7 +382,13 @@ test("G1 pausa rápida, feriados, alertas, cópia de grade e retomada sem repeti
     "2025-04-18",
   );
   const base = { ativo: true, situacao: s, whatsapp_pedidos: null as string | null };
-  expect(alertasUnidade(base, true)).toEqual({ semHorario: true, semWhatsapp: true });
+  expect(alertasUnidade(base, true)).toEqual({
+    semHorario: true,
+    semWhatsapp: true,
+    semCidade: true,
+  });
+  expect(alertasUnidade({ ...base, cidade: "São Paulo" }, false).semCidade).toBe(false);
+  expect(alertasUnidade({ ...base, ativo: false }, false).semCidade).toBe(false);
   expect(alertasUnidade({ ...base, ativo: false }, true).semHorario).toBe(false);
   expect(alertasUnidade(base, false).semWhatsapp).toBe(false);
   expect(alertasUnidade({ ...base, whatsapp_pedidos: "5511999999999" }, true).semWhatsapp).toBe(

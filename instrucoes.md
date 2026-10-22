@@ -1,9 +1,115 @@
+## Pedidos — quadro vazio corrigido e publicado (20/10/2026)
+
+- A tela de Pedidos abria só com origem **Reais**. No By Koji não há pedido real: 1 aguardando a loja é piloto, 12 antigos estão como teste (marcação da migração) e 1 piloto cancelado. O quadro e o aviso do menu ficavam vazios.
+- Padrão da tela passou a ser todas as origens. O filtro Reais, Piloto, Simulados e Teste continua disponível. O aviso do menu volta a contar todo pedido aguardando a loja.
+- Volta desta troca: `painel:volta-pedidos-b98f06b75967` = `sha256:b98f06b7596782c35dc43343869211b5639cb241018c59901252046f766cb95a` (a imagem `painel:cat3a-20261020`). Nova: `painel:pedidos-20261020` = `sha256:71e678d2651e06979ddc6f6d55ba4334d830b0f1ccf7ae3814d024d1ae100966`. Container `6c90da349d93`. Só o painel foi recriado.
+- Backup `/home/twadmin/backups/painel/pre-pedidos-20261020T205548Z`, diretório 700, dump/ambiente/Compose 600. `pg_restore --list` 279 entradas. SHA-256 do dump `1e52935d72e3fceaf40198fab7c8b95f52a8c65be20147ea262f8ecfbdd2e200`. Sem mudança de schema: não restaurar o dump numa volta.
+- Volta: `docker tag painel:volta-pedidos-b98f06b75967 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+- Conferência só de leitura: lista sem filtro de origem devolve 14 pedidos (piloto: 1 aguardando e 1 cancelado; teste: 10 concluídos, 1 recusado, 1 cancelado). `origem=real` continua 0. Nenhum pedido foi alterado.
+
+## CAT3-a e ENC1-a — publicados (20/10/2026)
+
+- Volta: `painel:volta-cat3-c1c1c96e2719` = `sha256:c1c1c96e2719c9182442f97dd5a2124d42881f501c7178fc2678a29548be7c1b` (a imagem do CAT2, `painel:cat2-20261013`). Nova: `painel:cat3a-20261020` = `sha256:b98f06b7596782c35dc43343869211b5639cb241018c59901252046f766cb95a`. Container `a0c967e48e50`. Só o painel foi recriado.
+- Backup `/home/twadmin/backups/painel/pre-cat3a-20261020T202828Z`, diretório 700, dump/ambiente/Compose 600. `pg_restore --list` 279 entradas. SHA-256 do dump `790526906e651e0d146f915c40b851c5ca733149d7bc07d9d9272ba6f9a35a8e`. Sem mudança de schema: não restaurar o dump numa volta.
+- Volta: `docker tag painel:volta-cat3-c1c1c96e2719 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+- Conferência só de leitura: `/ia/cardapio` abre (título Cardápio | Luxtia). By Koji tem 4 unidades (Einstein, Vila Nova Conceição, Pátio Guedala, Morumbi). Nenhuma categoria tem posição própria, então a ordem na tela é a do cardápio importado que o gateway devolve. Sugestões de pratos iguais: 189 grupos (100 na primeira página). Na primeira página de conversas, as 20 trazem o atendimento atual (12 encerrados, 8 abertos). Nenhum item, categoria ou atendimento foi alterado.
+
+## CAT3-a e ENC1-a — cardápio do dia e atendimentos (20/10/2026, desenvolvimento)
+
+- Contratos (somente leitura): `gateway/docs/ESPEC_CAT3.md` seção 13 (gateway:fbfea15) e `gateway/docs/ESPEC_ENC1A.md` seção 7 (gateway:0268e06). Nada no repositório do gateway foi alterado.
+- Cardápio (`/ia/cardapio`): abas de unidade; categorias em blocos na ordem do cliente, arrastáveis (`PUT …/categorias/ordem`); itens arrastáveis dentro da categoria (`PUT …/categorias/{id}/ordem`). Criar, renomear e arquivar categoria — ao arquivar, a tela pergunta se arquiva os itens ou move para outra categoria.
+- Na linha do item, sem abrir o formulário: Disponível (`ativo`), “Esgotado hoje” (`POST …/esgotar` com `ate=fim_do_dia`, mostra até quando e “Repor” num toque), preço editável e menu “…” (Duplicar, Mover, Copiar para outra unidade, Arquivar).
+- “Novo item” e painel lateral: nome, descrição, categoria, preço, código (gerado, editável), tipo, alcoólico, delivery, disponibilidade e observação interna. Ao salvar uma edição, pergunta “só nesta unidade” ou “em todas as unidades com este prato” (`aplicar_em`).
+- Seleção em lote: reajuste (% ou valor, com prévia `simulacao`), mover, pausar, ativar, esgotar, repor e arquivar, com resultado por item.
+- Tela “Pratos iguais nas unidades”: grupos por nome, confirmar ou ignorar em lote, restaurar ignorados, aviso de preços diferentes e de mais de um item na mesma unidade.
+- Filtros: arquivados, esgotados, categoria e prato. Esgotar e repor também para o membro; o resto só admin e plataforma.
+- Conversas: lista e detalhe mostram o atendimento atual (número, aberto / com humano / encerrado, aberto em, encerrado em, motivo). Histórico em `GET …/conversas/{id}/atendimentos`, com resumo, desfecho, pedidos e mensagens filtradas por `atendimento=`. “Encerrar atendimento” e “Reabrir” (só o último), admin e membro; 409 explica o caso.
+- 143 testes aprovados, 6 ignorados; tsc e ESLint OK. Oito prints com dados fictícios em `docs/prints-cat3-enc1/`. Publicado em seguida; o código segue sem commit.
+
+## LGPD1 / gateway 1e7c6b6 — origem e canal nos Pedidos (2026-10-16, desenvolvimento)
+
+- Gateway passa a devolver `origem` (real, piloto, simulado, teste) e `canal` (whatsapp, api) em GET `/tenants/{t}/pedidos` e no detalhe; filtro `?origem=` (várias separadas por vírgula).
+- Tela Pedidos: filtro de origem (Reais, Piloto, Simulados, Teste). O padrão inicial era só Reais; em 20/10 passou a abrir com todas as origens, porque em piloto o quadro ficava vazio. Etiqueta discreta no cartão/lista/detalhe quando origem ≠ real ou canal ≠ whatsapp. O contador do menu conta todo pedido aguardando a loja (`GET …/pedidos/contagem`). A opção `so_reais` continua no servidor, sem uso na tela.
+- Arquivos: `pedidos.ts`, `pedidos.server.ts`, `pedidos.test.ts`, `Pedidos.tsx`, `ContadorPedidos.tsx`, `README.md`.
+- Não commitado, não publicado.
+
+## Fase — Acesso cesar.almeida@luxtia.ia.br (2026-10-15 19:44)
+
+- Usuário criado no GoTrue com e-mail confirmado e papel `super_admin`.
+- O login foi testado na API de autenticação e retornou sucesso.
+- A senha não foi registrada neste arquivo.
+
+## MULTI1-a — Modelos de agente e Módulos do agente (15/10/2026, desenvolvimento)
+
+- Tela `/ia/modelos` (só plataforma): lista com filtro ativo/inativo, detalhe com seções de módulos permitidos/padrão, referência Skyone, motivos de transferência e tipos de solicitação. Criar modelo (versão 1) e editar (cria nova versão, com aviso explícito de que agentes existentes ficam na versão anterior).
+- Aba "Módulos" no detalhe do agente (`/ia/agentes/{id}?aba=modulos`) para admin e plataforma: mostra GET …/agentes/{id}/modulos (permitidos, da_empresa, ligados_no_agente/padrão). Admin/plataforma pode mudar os módulos ligados no agente (lista ou null = padrão do modelo). Plataforma pode ligar/desligar módulo na empresa (com aviso de que vale para toda a empresa).
+- `ModeloAgenteCompleto` em `tipos.ts` com todos os campos §10.2. Funções de servidor em `gateway-modelos.functions.ts` (listar, obter, criar, editar). Lista de modelos para criação de agente filtra ativo=true.
+- Arquivos: `tipos.ts`, `gateway-modelos.functions.ts`, `modelos.tsx`, `ModulosDoAgente.tsx`, `agentes.$agenteId.tsx`, `gateway-agentes.functions.ts`, `gateway-modulos.functions.ts`, `routeTree.gen.ts`.
+- tsc e ESLint OK. Não commitado, não publicado.
+
+## CAT2 — edição do item no Cardápio (13/10/2026, publicada)
+
+- Confirmação ao salvar é uma janela da própria tela ("Salvar mesmo assim" / "Voltar"), com os textos dos avisos de preço vazio e de categoria que deixa de existir. Histórico segue só para admin/plataforma; o lote segue só com disponibilidade e `atualizado_em`.
+- Publicação: tag de volta `painel:volta-cat2-077a798d9a72` (`sha256:077a798d…`); imagem nova `painel:cat2-20261013` (`sha256:c1c1c96e…`). Só o container do painel foi recriado. Conferência só de leitura: `/ia/cardapio` abre; By Koji com 888 itens, 193 com preço e nenhum sem `disponivel_agora`.
+
+## CAT2 — edição do item no Cardápio (13/10/2026, desenvolvimento)
+
+- Painel lateral do item para admin/plataforma: nome, descrição, preço, ativo e categoria. `PATCH` só com o que mudou e `atualizado_em` como foi lido. Avisos de "sem preço" e de categoria que deixa de existir. Edição rápida do preço na lista (Enter/Esc).
+- 409 com valores atuais e "Recarregar" ou "Reaplicar". Situação de agora por `disponivel_agora` e `indisponivel_motivo` (sai o "A confirmar"). Prévia ao vivo por `POST …/disponibilidade/previa`. Histórico por `gestao/alteracoes`. Erros do gateway junto do campo.
+- Servidor: ações `obter`, `categorias`, `previa`, `historico` e `editar` em `cardapio.server.ts`, com as regras de acesso de `modulo.server.ts`: leitura e prévia para todos; edição e histórico só admin/plataforma.
+- 127 testes aprovados (10 novos em `cardapio-cat2.test.ts`), 6 ignorados; tsc e ESLint OK. Sete prints com dados fictícios em `docs/prints-cardapio/cat2-*.png`. Aguardando revisão antes de publicar.
+
+## Cardápio — revisão UX (13/10/2026, não publicada)
+
+- Nova lista por unidade/categoria, resumos e filtros, URL persistente, painel lateral de disponibilidade, atalhos/cópia e lote com progresso. Consulta do atendente sem controles de edição; PATCH segue exclusivo de admin/plataforma.
+- Prévia visual em Chromium pt-BR com dados fictícios: seis prints em `docs/prints-cardapio/`. Relatório e pendências de contrato em `docs/VALIDACAO_CARDAPIO_UX.md`.
+- 117 testes aprovados, 6 REST antigos ignorados, zero falhas; tsc, ESLint e build Vite aprovados. Nenhum item real alterado, nenhum serviço permanente recriado. Gateway somente leitura, sem commits. Aguardar revisão dos prints antes de publicar a nova versão.
+- O admin DISP1 não devolve disponibilidade avaliada agora/feriados: itens restritos aparecem “A confirmar”, sem classificação inventada. Edição de preço/nome/descrição/ativo/categoria e prévia operacional continuam pendências explícitas do gateway.
+
+## DISP1 — tela Cardápio e disponibilidade por item (12/10/2026, publicada)
+
+- Nova tela `/ia/cardapio` (menu "Cardápio", admin e atendente; plataforma escolhe a empresa): lista dos itens do catálogo do gateway com busca, filtro por unidade e paginação; etiqueta com `disponibilidade.resumo` do gateway quando o item tem restrição.
+- Admin/plataforma: botão "Disponibilidade" abre o diálogo com a chave "Sempre disponível" (envia `null`), dias da semana, "Exceto feriados" e faixas de horário. `PATCH /admin/v1/tenants/{t}/catalogo/itens/{id}` só com `{"disponibilidade": …}`.
+- Servidor: rotas `catalogo/itens` (GET admin/membro) e `catalogo/itens/*` (PATCH admin, só a chave `disponibilidade`). Descrição e observação do item não saem do servidor.
+- Arquivos: `src/lib/gateway/cardapio{,.server,.test}.ts`, `src/lib/gateway-cardapio.functions.ts`, `src/components/luxtia/Cardapio.tsx`, rota, `nav.ts`, `routeTree.gen.ts`, `modulo.server.ts`, `erros.ts`, `gestao-base.tsx`.
+
+## CAL1 — Cidade e UF no cadastro de unidades (12/10/2026)
+
+- Formulário de criar/editar unidade: "Cidade" (texto, até 80) e "UF" (select com as 27 UFs; "—" = sem UF), com a ajuda "Usado para feriados estaduais e municipais no atendimento." Gravados pelos campos `cidade` e `uf` do `POST`/`PATCH /admin/v1/tenants/{t}/unidades[/{id}]` (gateway CAL1, schema 39); vazio vai como `null`.
+- Lista e detalhe da unidade: "Cidade/UF" em texto discreto. Unidade ativa sem cidade: etiqueta "Sem cidade: só feriados nacionais serão considerados".
+- Servidor: `cidade` e `uf` entram na projeção da unidade (todos os papéis) e no schema de escrita (`uf` só das 27; cidade com espaços aparados). Escrita continua só admin/plataforma.
+- Arquivos: `src/lib/gateway/gestao.ts`, `gestao.server.ts`, `gestao.test.ts`, `src/components/luxtia/GestaoUnidades.tsx`.
+
+## CFG1-a — tela "Comportamento do agente" (11/10/2026)
+
+- Contrato: `gateway/docs/ESPEC_CFG1.md` §13 (somente leitura). Rota `/ia/configuracoes/comportamento`, menu Configurações para plataforma, admin e membro.
+- Arquivos: `src/lib/gateway/atendimento.ts` (tipos, rótulos, `situacaoCampo`, `corpoRascunho`), `atendimento.server.ts` (chamadas, membro barrado nas escritas antes do gateway, agente oculto vira 404, tradução de 400/403/404/409), `gateway-atendimento.functions.ts`, componentes em `src/components/luxtia/comportamento/`, regras `regrasAtendimento` em `modulo.server.ts` (empresa e `agentes/*`, chaves do corpo fechadas).
+- Formulário pelo `esquema`: rótulos conhecidos ficam no painel, os desconhecidos viram o nome da chave legível (`nome_empresa` e `descricao_negocio` do CFG1-a.1 já têm rótulo).
+- 409 `sem_rascunho`/`sem_alteracoes`/`versao_desatualizada` recarregam; rascunho desatualizado é rebaseado com PUT só de `baseado_em`. `confirmacao_necessaria` mostra os trechos e reenvia com `confirmar_avisos: true`.
+- Publicado sobre a volta `painel:ped1c-20261011` (`sha256:e836c627…`, PED1-c). Nova imagem `sha256:c420d7eb…`. Backup `/home/twadmin/backups/painel/pre-cfg1a-20261011T154706Z`, 700/600, `pg_restore --list` 279 entradas, SHA-256 do dump `14f95dd1…a3a19d`. Só o painel recriado; nenhum prune.
+- Volta sem mudança de schema: `docker tag painel:ped1c-20261011 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+
+## PED1-c — nome de exibição, estado único e "Editar nome" (11/10/2026)
+
+- Contrato: `gateway/docs/ESPEC_PED1.md` §14 (gateway `6f89149`). Conversas usam `nome_exibicao` com selo de origem, `telefone_formatado`, `canal_info` (selo "teste"), `estado`, `ultima` (autor e tipo), `unidade_preferida_nome` e `pedido_aberto` (atalho `/ia/pedidos?pedido=`). Filtros `estado=` (inclui Encerrada) e `ordem=recentes` (padrão); busca nos três nomes.
+- "Editar nome" no cabeçalho da conversa: `PATCH /contatos/{id}` `{"nome"}` para admin e membro (regra em `modulo.server.ts`, corpo só `nome`); vazio vira `null`. O servidor confere que o contato é o da conversa visível. Auditoria pelo `X-Actor` no gateway.
+- Pedidos: cartão, lista e detalhe usam o `nome_exibicao` atual da conversa, juntado no servidor (cache de 30 s por empresa, limpo ao editar nome); sem conversa ou com falha, fica `cliente.nome`.
+- Publicado sobre a volta `painel:9afa7b3` (`sha256:273ad61a…`, mesmo conteúdo de `painel:6027ea7`). Backup `/home/twadmin/backups/painel/pre-ped1c-20261011T152848Z`, 700/600, `pg_restore --list` 279 entradas, SHA-256 `2d2791dd6e55b636ead3c02d282d4c4998fefdfd0ae989448ed701343308a60f`. Só o painel recriado; nenhum prune.
+- Volta sem mudança de schema: `docker tag painel:9afa7b3 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+
 ## PED1-b — avisos de pedido (11/10/2026)
 
 - Publicado `painel:6027ea7`: X-Role da sessão em todas as chamadas administrativas; Configurações → Avisos de pedido por status/modalidade, prévia e padrão; reenvio na linha do tempo com confirmação e tratamento de entrega incerta. Contador existente preservado.
 - 87 testes aprovados, 6 integrações REST antigas ignoradas, zero falhas. TypeScript, lint, builds e bundle aprovados. Validação autenticada: 12 avisos, prévia e contagem; zero escritas/envios em produção.
 - Imagem de volta `painel:54188e4` conferida antes do build. Backup validado em `/home/twadmin/backups/painel/pre-ped1b-20261011T030002Z`, permissões 700/600. Só painel recriado; zero segredos nos logs, gateway intocado, nenhum prune.
 - Relatório completo, volta e conferência visual: `docs/VALIDACAO_PED1B_PAINEL.md`. Alterações locais anteriores preservadas separadamente no commit `54188e4`. Parar para validação do Marco; PED1-c não iniciado.
+
+## Comportamento do agente — especificação CFG1 (2026-10-11)
+
+- Só especificação em `docs/ESPEC_TELAS_CFG1.md`, a partir de `gateway/docs/ESPEC_CFG1.md` (somente leitura). Nenhuma tela, rota ou chamada nova foi implementada; o gateway também ainda não tem o CFG1-a.
+- Telas: Personalidade, Comportamentos, Base de conhecimento (só depois do CFG1-b), Publicar (rascunho, prévia, "Testar no Simular") e Histórico (comparação e restaurar). Admin e plataforma editam; membro só vê, mas abre a prévia e testa a busca da base.
+- Selo por campo "Padrão do segmento"/"Personalizado" com "voltar ao padrão"; `disponivel=false` como "em breve"; `pediu_humano` e `reclamacao` travados; regras da casa com bloqueio do gateway apontando o trecho e confirmação nos casos duvidosos.
+- 19 pendências do contrato listadas na seção 10. Aguardando aprovação antes de implementar.
 
 # Instruções do projeto — Painel Koji
 
@@ -254,3 +360,7 @@ Sem alteração de schema: manter banco e ambiente atuais. Se precisar voltar, c
 - O projeto local já era o painel Lovable (TanStack Start, React, TypeScript, Tailwind e Supabase).
 - O código foi publicado no repositório https://github.com/marcoasp3030/painel_koji (conta `marcoasp3030`, branch `main`).
 - O arquivo `.env` não entra no Git. As chaves ficam só na máquina local.
+
+## Cardápio UX — publicação autorizada (13/10/2026)
+
+Nova tela publicada; somente painel recriado. Volta `painel:volta-cardapio-756361eb4dd0`; nova `painel:cardapio-ux-20261013` (`sha256:077a798d9a729c08672137909411eefa415cffc1774949c28cbd729ca0fa97d2`). Backup validado, bundle/logs sem segredos, HTTPS e leitura autenticada do By Koji aprovados: 888 itens, quatro unidades, zero escritas. “Agora: a confirmar” mantido. Gateway e demais containers preservados. Evidências e volta em `docs/VALIDACAO_CARDAPIO_UX.md`.

@@ -1,3 +1,5 @@
+import { gerirAtendimentos } from "@/lib/gateway-enc1.functions";
+import { AtendimentosConversa, ResumoAtendimento } from "./AtendimentosConversa";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -13,24 +15,37 @@ import { historicoConversa } from "@/lib/gateway-simular.functions";
 import {
   acompanharConversas,
   atenderConversa,
+  editarNomeContato,
   listarConversas,
   obterCursorEventos,
 } from "@/lib/gateway-conversas.functions";
 import {
+  canalDaConversa,
   desdeDoCursor,
+  ESTADOS_CONVERSA,
   estadoConversa,
   juntarMensagens,
   nomeContato,
+  nomeSemCadastro,
   ordenarConversas,
+  resumoUltima,
   ROTULO_ESTADO,
+  seloOrigemNome,
   temNovidade,
   textoCanal,
   telefoneVisivel,
+  validarNomeCadastro,
+  MOTIVO_NOME,
   type Conversa,
+  type EstadoConversa,
   type Leitura,
+  type OrigemNome,
   MOTIVO_ATENDENTE,
   seloEspera,
 } from "@/lib/gateway/conversas";
+import { ROTULO_STATUS, type StatusPedido } from "@/lib/gateway/pedidos";
+import { Link } from "@tanstack/react-router";
+import { Pencil, ShoppingBag } from "lucide-react";
 import type { CanalGateway } from "@/lib/gateway/tipos";
 import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
 
@@ -75,10 +90,12 @@ export function Conversas({
   const cache = useQueryClient();
   const [agente, setAgente] = useState(""),
     [canal, setCanal] = useState("");
-  const [status, setStatus] = useState<"" | "ativa" | "pausada">(""),
+  const [estado, setEstado] = useState<"" | EstadoConversa>(""),
+    [ordem, setOrdem] = useState<"recentes" | "id">("recentes"),
     [busca, setBusca] = useState(""),
     [desde, setDesde] = useState("");
-  const [soAguardando, setSoAguardando] = useState(false);
+  // A fila de espera tem leitura própria (todas as páginas, ordenada pela idade da espera).
+  const soAguardando = estado === "aguardando_atendente";
   const [avisoEspera, setAvisoEspera] = useState(false);
   const [agora, setAgora] = useState(Date.now());
   useEffect(() => {
@@ -134,7 +151,7 @@ export function Conversas({
     queryFn: () => buscarCanais({ data: { empresa: ctx.empresa } }),
   });
   const lista = useInfiniteQuery({
-    queryKey: ["conversas", ctx.empresa, agente, canal, status, filtroBusca, desde, soAguardando],
+    queryKey: ["conversas", ctx.empresa, agente, canal, estado, ordem, filtroBusca, desde],
     enabled: cursorInicial.isSuccess && !soAguardando,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
@@ -143,9 +160,10 @@ export function Conversas({
           empresa: ctx.empresa,
           cursor: pageParam,
           aguardando: false,
+          ordem,
           ...(agente ? { agente } : {}),
           ...(canal ? { canal } : {}),
-          ...(status ? { status } : {}),
+          ...(estado ? { estado: [estado] } : {}),
           ...(filtroBusca ? { busca: filtroBusca } : {}),
           ...(desde ? { desde: new Date(desde).toISOString() } : {}),
         },
@@ -155,8 +173,9 @@ export function Conversas({
     refetchIntervalInBackground: false,
   });
   const espera = useQuery({
-    queryKey: ["conversas", ctx.empresa, "aguardando", agente, canal, status, filtroBusca, desde],
-    enabled: cursorInicial.isSuccess,
+    queryKey: ["conversas", ctx.empresa, "aguardando", agente, canal, filtroBusca, desde],
+    // Com outro estado escolhido, a fila não entra na lista.
+    enabled: cursorInicial.isSuccess && (!estado || soAguardando),
     queryFn: () =>
       buscar({
         data: {
@@ -164,7 +183,6 @@ export function Conversas({
           aguardando: true,
           ...(agente ? { agente } : {}),
           ...(canal ? { canal } : {}),
-          ...(status ? { status } : {}),
           ...(filtroBusca ? { busca: filtroBusca } : {}),
           ...(desde ? { desde: new Date(desde).toISOString() } : {}),
         },
@@ -238,30 +256,34 @@ export function Conversas({
     });
   }, []);
   const porCanal = new Map((canais.data?.itens ?? []).map((c) => [c.id, c]));
-  const itens = ordenarConversas([
-    ...new Map(
-      [
-        ...(!soAguardando ? (lista.data?.pages.flatMap((p) => p.itens) ?? []) : []),
-        ...(espera.data?.itens ?? []),
-      ].map((c) => [c.conversation_id, c]),
-    ).values(),
-  ]);
+  const itens = ordenarConversas(
+    [
+      ...new Map(
+        [
+          ...(!soAguardando ? (lista.data?.pages.flatMap((p) => p.itens) ?? []) : []),
+          ...(!estado || soAguardando ? (espera.data?.itens ?? []) : []),
+        ].map((c) => [c.conversation_id, c]),
+      ).values(),
+    ],
+    { porRecencia: ordem === "recentes" },
+  );
   const atual =
     itens.find((c) => c.conversation_id === selecionada?.conversation_id) ?? selecionada;
   return (
     <div className="mt-6 space-y-4">
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={soAguardando}
-          onChange={(e) => setSoAguardando(e.target.checked)}
-        />
-        Só aguardando atendente
-      </label>
       {avisoEspera ? (
         <div role="status" className="rounded-lg bg-gold-300/20 p-3 text-sm">
           Há novas conversas aguardando atendente.{" "}
-          <button className="ml-2 underline" onClick={() => setAvisoEspera(false)}>
+          <button
+            className="ml-2 underline"
+            onClick={() => {
+              setEstado("aguardando_atendente");
+              setAvisoEspera(false);
+            }}
+          >
+            Ver a fila
+          </button>
+          <button className="ml-3 underline" onClick={() => setAvisoEspera(false)}>
             Dispensar aviso
           </button>
         </div>
@@ -269,14 +291,15 @@ export function Conversas({
       {espera.isError ? (
         <p role="alert">Não foi possível carregar a fila de atendimento. {espera.error.message}</p>
       ) : null}
-      <Cartao className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <Cartao className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
         <label className="text-sm">
           Buscar contato
           <Input
             value={busca}
             maxLength={200}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome ou telefone"
+            placeholder="Nome, apelido ou telefone"
+            title="Procura no nome de cadastro, no nome informado, no do perfil e no telefone"
           />
         </label>
         <label className="text-sm">
@@ -315,15 +338,30 @@ export function Conversas({
           </select>
         </label>
         <label className="text-sm">
-          Atendimento
+          Estado
           <select
             className="mt-1 w-full rounded-md border bg-card p-2"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as typeof status)}
+            value={estado}
+            onChange={(e) => setEstado(e.target.value as typeof estado)}
           >
             <option value="">Todos</option>
-            <option value="ativa">Bot sem pausa</option>
-            <option value="pausada">Bot pausado</option>
+            {ESTADOS_CONVERSA.map((e) => (
+              <option key={e} value={e}>
+                {ROTULO_ESTADO[e]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Ordenar
+          <select
+            className="mt-1 w-full rounded-md border bg-card p-2"
+            value={ordem}
+            disabled={soAguardando}
+            onChange={(e) => setOrdem(e.target.value as typeof ordem)}
+          >
+            <option value="recentes">Atividade mais recente</option>
+            <option value="id">Ordem de cadastro</option>
           </select>
         </label>
         <label className="text-sm">
@@ -332,8 +370,9 @@ export function Conversas({
         </label>
       </Cartao>
       <p className="text-xs text-ink-500">
-        O filtro de atendimento usa a pausa do bot. Encerrada e aguardando aparecem no estado de
-        cada conversa.
+        {soAguardando
+          ? "Fila de espera: a mais antiga primeiro."
+          : "Quem aguarda atendente aparece no topo. Encerradas só aparecem no filtro “Encerrada” ou em “Todos”."}
       </p>
       {cursorInicial.isError ? (
         <p role="alert" className="text-sm text-destructive">
@@ -383,6 +422,7 @@ export function Conversas({
               >
                 <div className="flex items-center gap-2">
                   <strong className="min-w-0 truncate">{nomeContato(c)}</strong>
+                  <SeloOrigemNome origem={c.nome_origem} />
                   {leitura && temNovidade(c, leitura) ? (
                     <span
                       className="size-2 shrink-0 rounded-full bg-purple-700"
@@ -397,12 +437,20 @@ export function Conversas({
                     canal={c.canal_id ? porCanal.get(c.canal_id) : undefined}
                   />
                 </p>
-                <p className="mt-1 truncate text-sm text-ink-500">
-                  {c.ultima_mensagem ?? "Sem mensagem de texto"}
-                </p>
+                <UltimaMensagemResumo conversa={c} />
+                <ResumoAtendimento atendimento={c.atendimento} />
                 <p className="mt-2 text-xs text-ink-500">
-                  {dataHora(c.ultima_em)} · {ROTULO_ESTADO[estadoConversa(c, agora)]}
+                  {dataHora(c.ultima?.em ?? c.ultima_em)} ·{" "}
+                  {ROTULO_ESTADO[estadoConversa(c, agora)]}
+                  {c.unidade_preferida_nome || c.unidade_preferida
+                    ? ` · ${c.unidade_preferida_nome || c.unidade_preferida}`
+                    : ""}
                 </p>
+                {c.pedido_aberto ? (
+                  <p className="mt-1.5">
+                    <SeloPedidoAberto pedido={c.pedido_aberto} />
+                  </p>
+                ) : null}
                 {estadoConversa(c, agora) === "aguardando_atendente" &&
                 c.aguardando_atendente_desde ? (
                   <div className="mt-2 space-y-1">
@@ -448,11 +496,50 @@ export function Conversas({
 }
 
 function MarcaCanal({ conversa, canal }: { conversa: Conversa; canal: CanalGateway | undefined }) {
-  const tipo = canal?.tipo ?? conversa.canal;
+  const info = canalDaConversa(conversa, canal);
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-ink-500">
-      <IconeCanal tipo={tipo} />
-      <span className="truncate">{textoCanal(tipo, canal?.nome)}</span>
+      <IconeCanal tipo={info.tipo} />
+      <span className="truncate">{textoCanal(info.tipo, info.nome)}</span>
+      {info.teste ? (
+        <span
+          className="shrink-0 rounded border border-dashed border-ink-300 px-1 text-[10px] font-medium uppercase tracking-wide text-ink-500"
+          title="Empresa de teste ou conversa criada no Simular"
+        >
+          teste
+        </span>
+      ) : null}
+    </span>
+  );
+}
+/** Selo discreto da origem do nome (cadastro, informado, perfil, telefone). */
+export function SeloOrigemNome({ origem }: { origem: OrigemNome | null | undefined }) {
+  const selo = seloOrigemNome(origem);
+  if (!selo) return null;
+  return (
+    <span
+      className="shrink-0 rounded bg-base-100 px-1 text-[10px] font-normal text-ink-500"
+      title={selo.ajuda}
+    >
+      {selo.rotulo}
+    </span>
+  );
+}
+function UltimaMensagemResumo({ conversa }: { conversa: Conversa }) {
+  const u = resumoUltima(conversa);
+  return (
+    <p className="mt-1 truncate text-sm text-ink-500">
+      {u.autor ? <span className="font-medium text-ink-700">{u.autor}: </span> : null}
+      {u.tipo ? <span className="italic">[{u.tipo}] </span> : null}
+      {u.texto ?? (u.tipo ? "" : "Sem mensagem de texto")}
+    </p>
+  );
+}
+function SeloPedidoAberto({ pedido }: { pedido: { numero: string; status: string } }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-800">
+      <ShoppingBag className="size-3" aria-hidden />
+      Pedido #{pedido.numero} · {ROTULO_STATUS[pedido.status as StatusPedido] ?? pedido.status}
     </span>
   );
 }
@@ -513,19 +600,34 @@ function Atendimento({
   agora: number;
   marcar: (c: Conversa) => void;
 }) {
+  const enc = useServerFn(gerirAtendimentos);
+  const [atendimentoId, setAtendimentoId] = useState("");
+  const lerAtendimentos = useCallback(
+    (cursor?: number) =>
+      enc({
+        data: { empresa: ctx.empresa, conversa: conversa.conversation_id, acao: "listar", cursor },
+      }),
+    [enc, ctx.empresa, conversa.conversation_id],
+  );
+  const agirAtendimento = useCallback(
+    (acao: "encerrar" | "reabrir") =>
+      enc({ data: { empresa: ctx.empresa, conversa: conversa.conversation_id, acao } }),
+    [enc, ctx.empresa, conversa.conversation_id],
+  );
   const buscar = useServerFn(historicoConversa),
     atender = useServerFn(atenderConversa),
     cache = useQueryClient();
   const [texto, setTexto] = useState(""),
     [minutos, setMinutos] = useState(60);
   const mensagens = useInfiniteQuery({
-    queryKey: ["conversa-mensagens", ctx.empresa, conversa.conversation_id],
+    queryKey: ["conversa-mensagens", ctx.empresa, conversa.conversation_id, atendimentoId],
     initialPageParam: null as number | null,
     queryFn: ({ pageParam }) =>
       buscar({
         data: {
           empresa: ctx.empresa,
           conversa: conversa.conversation_id,
+          ...(atendimentoId ? { atendimento: atendimentoId } : {}),
           antes: pageParam,
           limite: 100,
         },
@@ -577,10 +679,34 @@ function Atendimento({
   const titulo = nomeContato(conversa);
   const fone = telefoneVisivel(conversa);
   const estado = estadoConversa(conversa, agora);
+  const [editando, setEditando] = useState(false);
+  const podeEditarNome = Boolean(conversa.contato_id) && conversa.nome_origem !== "anonimizado";
   return (
     <Cartao className="flex min-w-0 flex-col">
       <div className="space-y-3 border-b p-4">
-        <h2 className="font-display text-xl">{titulo}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="min-w-0 truncate font-display text-xl">{titulo}</h2>
+          <SeloOrigemNome origem={conversa.nome_origem} />
+          {podeEditarNome && !editando ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-ink-500"
+              onClick={() => setEditando(true)}
+            >
+              <Pencil className="size-3.5" aria-hidden />
+              Editar nome
+            </Button>
+          ) : null}
+        </div>
+        {editando && conversa.contato_id ? (
+          <EditarNome
+            ctx={ctx}
+            conversa={conversa}
+            contato={conversa.contato_id}
+            fechar={() => setEditando(false)}
+          />
+        ) : null}
         {fone && fone !== titulo ? <p className="text-sm text-ink-500">{fone}</p> : null}
         <MarcaCanal conversa={conversa} canal={canal} />
         <p className="text-sm text-ink-500">
@@ -588,7 +714,20 @@ function Atendimento({
           {estado === "atendente" && conversa.bot_pausado_ate
             ? ` · até ${dataHora(conversa.bot_pausado_ate)}`
             : ""}
+          {conversa.unidade_preferida_nome || conversa.unidade_preferida
+            ? ` · Unidade preferida: ${conversa.unidade_preferida_nome || conversa.unidade_preferida}`
+            : ""}
         </p>
+        {conversa.pedido_aberto ? (
+          <Link
+            to="/ia/pedidos"
+            search={{ pedido: conversa.pedido_aberto.numero }}
+            className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+            title="Abrir o pedido"
+          >
+            <SeloPedidoAberto pedido={conversa.pedido_aberto} />
+          </Link>
+        ) : null}
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs">
             Pausa em minutos
@@ -617,6 +756,17 @@ function Atendimento({
           </Button>
         </div>
       </div>
+      <AtendimentosConversa
+        atual={conversa.atendimento}
+        selecionado={atendimentoId}
+        selecionar={setAtendimentoId}
+        ler={lerAtendimentos}
+        agir={agirAtendimento}
+        mudou={() => {
+          void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+          void mensagens.refetch();
+        }}
+      />
       <div className="h-[50vh] space-y-3 overflow-y-auto p-4" aria-label="Histórico da conversa">
         {mensagens.hasNextPage ? (
           <Button
@@ -659,6 +809,12 @@ function Atendimento({
           if (texto.trim() && !acao.isPending) acao.mutate("mensagens");
         }}
       >
+        {atendimentoId && atendimentoId !== conversa.atendimento?.id && (
+          <p className="text-sm text-amber-800">
+            Você está consultando um atendimento anterior. Uma nova mensagem será enviada no
+            atendimento atual.
+          </p>
+        )}
         <label className="text-sm" htmlFor="atendimento-texto">
           Sua mensagem ao contato
         </label>
@@ -678,5 +834,93 @@ function Atendimento({
         </Button>
       </form>
     </Cartao>
+  );
+}
+/** Nome de cadastro do contato. Qualquer papel; o gateway registra quem alterou. */
+function EditarNome({
+  ctx,
+  conversa,
+  contato,
+  fechar,
+}: {
+  ctx: ContextoGateway;
+  conversa: Conversa;
+  contato: string;
+  fechar: () => void;
+}) {
+  const editar = useServerFn(editarNomeContato),
+    cache = useQueryClient();
+  const [nome, setNome] = useState(conversa.nomes?.cadastro ?? "");
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useMutation({
+    mutationFn: (valor: string | null) =>
+      editar({
+        data: { empresa: ctx.empresa, conversa: conversa.conversation_id, contato, nome: valor },
+      }),
+    onSuccess: (r) => {
+      toast.success(
+        r.nomes.cadastro
+          ? "Nome atualizado."
+          : `Nome de cadastro removido. Vale: ${r.nome_exibicao}.`,
+      );
+      void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+      void cache.invalidateQueries({ queryKey: ["pedidos", ctx.empresa ?? "vinculada"] });
+      fechar();
+    },
+    onError: (e: Error) => setErro(e.message),
+    retry: false,
+  });
+  const proximo = nomeSemCadastro(conversa);
+  return (
+    <form
+      className="space-y-2 rounded-lg border border-base-200 bg-base-100/60 p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const v = validarNomeCadastro(nome);
+        if (!v.ok) return setErro(MOTIVO_NOME[v.motivo] ?? "Nome inválido.");
+        setErro(null);
+        salvar.mutate(v.nome);
+      }}
+    >
+      <label className="block text-sm" htmlFor="contato-nome">
+        Nome de cadastro
+      </label>
+      <Input
+        id="contato-nome"
+        value={nome}
+        maxLength={60}
+        autoFocus
+        aria-invalid={Boolean(erro)}
+        aria-describedby="contato-nome-ajuda"
+        onChange={(e) => {
+          setNome(e.target.value);
+          setErro(null);
+        }}
+        placeholder={proximo}
+      />
+      <p id="contato-nome-ajuda" className="text-xs text-ink-500">
+        Vale acima do nome informado e do perfil, aqui e nos pedidos. Deixe vazio para remover;
+        volta a valer “{proximo}”.
+      </p>
+      {erro ? (
+        <p role="alert" className="text-sm text-destructive">
+          {erro}
+        </p>
+      ) : null}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={salvar.isPending}>
+          {salvar.isPending ? "Salvando…" : "Salvar"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={salvar.isPending}
+          onClick={fechar}
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
   );
 }

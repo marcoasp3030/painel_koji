@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useGestao, EditorFaixas, botoesPausaRapida, textoPrazo } from "./gestao-base";
+import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
+import { pedidosEmUso } from "@/lib/gateway/modulos";
 import { VisaoHoje, OperacaoVarias } from "./GestaoOperacao";
 import {
   DIAS,
@@ -11,6 +14,8 @@ import {
   instanteLocal,
   gradeCopiada,
   alertasUnidade,
+  cidadeUf,
+  UFS,
   problemaGrade,
   type SecaoUnidade,
   type Unidade,
@@ -240,6 +245,9 @@ export function GestaoUnidades({
                       <span className="block truncate text-sm text-ink-500">
                         {u.codigo ?? "Sem código"} · {u.endereco ?? "Endereço não informado"}
                       </span>
+                      {cidadeUf(u) && (
+                        <span className="block truncate text-xs text-ink-500">{cidadeUf(u)}</span>
+                      )}
                     </span>
                   </button>
                   <SituacaoUnidade u={u} />
@@ -360,6 +368,13 @@ function DadosUnidade({
   fechar: () => void;
 }) {
   const g = useGestao(ctx);
+  const buscarModulos = useServerFn(obterModulosEmpresa);
+  const modulos = useQuery({
+    queryKey: ["gateway", "modulos", ctx.empresa],
+    queryFn: () => buscarModulos({ data: { empresa: ctx.empresa } }),
+    staleTime: 30_000,
+  });
+  const comPedidos = pedidosEmUso(modulos.data);
   const inicial = {
     nome: u?.nome ?? "",
     codigo: u?.codigo ?? "",
@@ -367,10 +382,20 @@ function DadosUnidade({
     telefone: u?.telefone ?? "",
     whatsapp_pedidos: u?.whatsapp_pedidos ?? "",
     fuso: u?.fuso ?? "",
+    cidade: u?.cidade ?? "",
+    uf: u?.uf ?? "",
+    taxa_entrega: u?.taxa_entrega != null ? String(u.taxa_entrega) : "",
+    pedido_minimo: u?.pedido_minimo != null ? String(u.pedido_minimo) : "",
+    area_entrega: u?.area_entrega ?? "",
+    formas_pagamento: u?.formas_pagamento ?? "",
   };
   const [v, setV] = useState(inicial);
   const [ativo, setAtivo] = useState(u?.ativo ?? true);
-  const sujo = JSON.stringify(v) !== JSON.stringify(inicial) || ativo !== (u?.ativo ?? true);
+  const [aceitaRetirada, setAceitaRetirada] = useState<boolean | null>(u?.aceita_retirada ?? null);
+  const sujo =
+    JSON.stringify(v) !== JSON.stringify(inicial) ||
+    ativo !== (u?.ativo ?? true) ||
+    aceitaRetirada !== (u?.aceita_retirada ?? null);
   const sair = () => {
     if (!sujo || window.confirm("Descartar alterações não salvas?")) fechar();
   };
@@ -389,11 +414,37 @@ function DadosUnidade({
           onSubmit={async (e) => {
             e.preventDefault();
             const dados: Record<string, unknown> = {};
-            for (const k of Object.keys(v) as (keyof typeof v)[]) {
+            const texto = [
+              "nome",
+              "codigo",
+              "endereco",
+              "telefone",
+              "whatsapp_pedidos",
+              "fuso",
+              "cidade",
+              "uf",
+            ] as const;
+            for (const k of texto) {
               if (!u || v[k] !== inicial[k])
                 dados[k] = k === "nome" ? v[k].trim() : v[k].trim() || null;
             }
             if (!u || ativo !== u.ativo) dados["ativo"] = ativo;
+            if (comPedidos) {
+              for (const k of ["taxa_entrega", "pedido_minimo"] as const) {
+                if (!u || v[k] !== inicial[k]) {
+                  const t = v[k].trim();
+                  dados[k] = t === "" ? null : Number(t.replace(",", "."));
+                  if (t !== "" && !Number.isFinite(dados[k] as number)) {
+                    return;
+                  }
+                }
+              }
+              for (const k of ["area_entrega", "formas_pagamento"] as const) {
+                if (!u || v[k] !== inicial[k]) dados[k] = v[k].trim() || null;
+              }
+              if (!u || aceitaRetirada !== (u.aceita_retirada ?? null))
+                dados["aceita_retirada"] = aceitaRetirada;
+            }
             if (
               u &&
               v.fuso !== inicial.fuso &&
@@ -425,6 +476,106 @@ function DadosUnidade({
               <Erro g={g} campo={k} />
             </div>
           ))}
+          <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <div>
+              <Label htmlFor="un-cidade">Cidade</Label>
+              <Input
+                id="un-cidade"
+                maxLength={80}
+                value={v.cidade}
+                disabled={g.busy}
+                aria-invalid={g.erro?.campo === "cidade"}
+                aria-describedby="un-cidade-ajuda"
+                onChange={(e) => setV({ ...v, cidade: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="un-uf">UF</Label>
+              <select
+                id="un-uf"
+                className="block h-10 w-full rounded-md border bg-card px-3"
+                value={v.uf}
+                disabled={g.busy}
+                aria-invalid={g.erro?.campo === "uf"}
+                onChange={(e) => setV({ ...v, uf: e.target.value })}
+              >
+                <option value="">—</option>
+                {UFS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <p id="un-cidade-ajuda" className="text-sm text-ink-500">
+            Usado para feriados estaduais e municipais no atendimento.
+          </p>
+          <Erro g={g} campo="cidade" />
+          <Erro g={g} campo="uf" />
+          {comPedidos ? (
+            <fieldset className="space-y-3 rounded-md border border-base-200 p-3">
+              <legend className="px-1 text-sm font-medium text-ink-700">Entrega e pagamento</legend>
+              <p className="text-xs text-ink-500">
+                Visível porque a empresa tem o módulo de pedidos em uso. Vazio = o agente não afirma
+                nada e diz que a unidade confirma.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="un-taxa">Taxa de entrega (R$)</Label>
+                  <Input
+                    id="un-taxa"
+                    inputMode="decimal"
+                    value={v.taxa_entrega}
+                    disabled={g.busy}
+                    onChange={(e) => setV({ ...v, taxa_entrega: e.target.value })}
+                  />
+                  <Erro g={g} campo="taxa_entrega" />
+                </div>
+                <div>
+                  <Label htmlFor="un-minimo">Pedido mínimo (R$)</Label>
+                  <Input
+                    id="un-minimo"
+                    inputMode="decimal"
+                    value={v.pedido_minimo}
+                    disabled={g.busy}
+                    onChange={(e) => setV({ ...v, pedido_minimo: e.target.value })}
+                  />
+                  <Erro g={g} campo="pedido_minimo" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="un-area">Área de entrega</Label>
+                <Input
+                  id="un-area"
+                  value={v.area_entrega}
+                  disabled={g.busy}
+                  onChange={(e) => setV({ ...v, area_entrega: e.target.value })}
+                />
+                <Erro g={g} campo="area_entrega" />
+              </div>
+              <div>
+                <Label htmlFor="un-pagamentos">Formas de pagamento</Label>
+                <Input
+                  id="un-pagamentos"
+                  value={v.formas_pagamento}
+                  disabled={g.busy}
+                  onChange={(e) => setV({ ...v, formas_pagamento: e.target.value })}
+                />
+                <Erro g={g} campo="formas_pagamento" />
+              </div>
+              <label className="flex min-h-11 items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={aceitaRetirada === true}
+                  disabled={g.busy}
+                  onChange={(e) => setAceitaRetirada(e.target.checked ? true : null)}
+                />
+                Aceita retirada no local
+              </label>
+              <Erro g={g} campo="aceita_retirada" />
+            </fieldset>
+          ) : null}
           <p className="text-sm text-ink-500">
             WhatsApp vazio: pedidos ficam no painel, sem aviso para esse número.{" "}
             {u && `Fuso em vigor: ${u.fuso_efetivo}.`}
@@ -449,11 +600,14 @@ function DadosUnidade({
 }
 function AlertasDaUnidade({ u, admin }: { u: Unidade; admin: boolean }) {
   const a = alertasUnidade(u, admin);
-  if (!a.semHorario && !a.semWhatsapp) return null;
+  if (!a.semHorario && !a.semWhatsapp && !a.semCidade) return null;
   return (
     <div className="flex flex-wrap gap-2">
       {a.semHorario ? <Etiqueta tom="alerta">Sem horário cadastrado</Etiqueta> : null}
       {a.semWhatsapp ? <Etiqueta tom="alerta">Sem WhatsApp de pedidos</Etiqueta> : null}
+      {a.semCidade ? (
+        <Etiqueta tom="alerta">Sem cidade: só feriados nacionais serão considerados</Etiqueta>
+      ) : null}
     </div>
   );
 }
@@ -622,6 +776,7 @@ function Detalhe({
                 <h2 className="font-display text-2xl text-purple-800">{u.nome}</h2>
                 <p className="text-sm text-ink-500">
                   {u.codigo ?? "Sem código"} · {u.endereco ?? "Endereço não informado"}
+                  {cidadeUf(u) ? ` · ${cidadeUf(u)}` : ""}
                 </p>
               </div>
               {admin && (

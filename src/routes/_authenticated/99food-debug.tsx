@@ -95,9 +95,23 @@ function Food99DebugPage() {
     queryKey: ["food99-logs", onlyErrors, selectedTenantId ?? "self"],
     queryFn: () =>
       list({ data: { provider: "food99" as const, onlyErrors, tenantId: selectedTenantId } }),
+    enabled: isSuperAdmin,
   });
 
   const items = (data?.items ?? []) as LogRow[];
+
+  if (me && !isSuperAdmin) {
+    return (
+      <AppShell nav={TENANT_NAV} context="Empresa">
+        <Eyebrow>Diagnóstico</Eyebrow>
+        <h1 className="mt-2 font-display text-3xl text-purple-800">Debug do 99Food</h1>
+        <GoldRule className="mt-3" />
+        <p className="mt-4 text-sm text-ink-700">
+          Esta tela é só para a plataforma. Peça à administração se precisar de um diagnóstico.
+        </p>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell nav={isSuperAdmin ? ADMIN_NAV : TENANT_NAV} context={selectedName}>

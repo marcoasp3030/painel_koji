@@ -27,9 +27,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
-import { alterarCanal, listarCanais, rotacionarSegredoCanal } from "@/lib/gateway-canais.functions";
+import {
+  alterarCanal,
+  listarCanais,
+  refazerWebhookCanal,
+  rotacionarSegredoCanal,
+  textoWebhookUazapi,
+} from "@/lib/gateway-canais.functions";
 import { NovoCanal } from "@/components/luxtia/NovoCanal";
-import type { CanalGateway } from "@/lib/gateway/tipos";
+import type { CanalGateway, WebhookUazapi } from "@/lib/gateway/tipos";
 import { PUBLICO_CANAL, TIPO_CANAL } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/canais")({
@@ -54,7 +60,12 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
   const plataforma = ctx.papel === "plataforma";
   const [criando, setCriando] = useState(false);
   // URL com segredo: só em memória, até o usuário fechar o aviso.
-  const [segredo, setSegredo] = useState<{ titulo: string; url: string } | null>(null);
+  const [segredo, setSegredo] = useState<{
+    titulo: string;
+    url: string;
+    uazapi?: WebhookUazapi;
+  } | null>(null);
+  const [uazapiPorCanal, setUazapiPorCanal] = useState<Record<string, WebhookUazapi>>({});
 
   const canais = useQuery({
     queryKey: ["gateway", "canais", ctx.empresa],
@@ -83,8 +94,27 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
   const rotacao = useMutation({
     mutationFn: (c: CanalGateway) => rotacionar({ data: { empresa: ctx.empresa, canal: c.id } }),
     onSuccess: (r) => {
-      setSegredo({ titulo: "Nova URL do webhook", url: r.webhook_url });
+      setSegredo({
+        titulo: "Nova URL do webhook",
+        url: r.webhook_url,
+        ...(r.webhook_uazapi ? { uazapi: r.webhook_uazapi } : {}),
+      });
+      if (r.webhook_uazapi) setUazapiPorCanal((m) => ({ ...m, [r.id]: r.webhook_uazapi! }));
       void recarregar();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const refazerWebhook = useServerFn(refazerWebhookCanal);
+  const webhook = useMutation({
+    mutationFn: (c: CanalGateway) =>
+      refazerWebhook({ data: { empresa: ctx.empresa, canal: c.id } }),
+    onSuccess: (r) => {
+      setUazapiPorCanal((m) => ({ ...m, [r.id]: r.webhook_uazapi }));
+      toast.success(
+        r.webhook_uazapi.registrado
+          ? "Webhook cadastrado na uazapi."
+          : (textoWebhookUazapi(r.webhook_uazapi) ?? "Não foi possível cadastrar o webhook."),
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -170,6 +200,19 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                       </span>
                     ) : null}
                   </p>
+                  {c.tipo === "uazapi"
+                    ? (() => {
+                        const w = uazapiPorCanal[c.id] ?? c.webhook_uazapi;
+                        const texto = textoWebhookUazapi(w);
+                        return texto ? (
+                          <p
+                            className={`mt-1 text-xs ${w?.registrado ? "text-success" : "text-ink-500"}`}
+                          >
+                            {texto}
+                          </p>
+                        ) : null;
+                      })()
+                    : null}
                 </div>
 
                 {plataforma ? (
@@ -183,6 +226,16 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                       />
                       {c.ativo ? "Ativo" : "Inativo"}
                     </label>
+                    {c.tipo === "uazapi" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={webhook.isPending}
+                        onClick={() => webhook.mutate(c)}
+                      >
+                        Refazer webhook
+                      </Button>
+                    ) : null}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" disabled={rotacao.isPending}>
@@ -220,8 +273,12 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
           aberto={criando}
           agentes={agentes.data?.itens ?? []}
           onFechar={() => setCriando(false)}
-          onCriado={(url) => {
-            setSegredo({ titulo: "URL do webhook do novo canal", url });
+          onCriado={(url, uazapi) => {
+            setSegredo({
+              titulo: "URL do webhook do novo canal",
+              url,
+              ...(uazapi ? { uazapi } : {}),
+            });
             void recarregar();
           }}
         />
@@ -229,7 +286,10 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
 
       <SegredoUmaVez
         titulo={segredo?.titulo ?? ""}
-        descricao="Cadastre esta URL no provedor do canal. Ela contém o segredo que autentica as mensagens recebidas."
+        descricao={
+          textoWebhookUazapi(segredo?.uazapi) ??
+          "Cadastre esta URL no provedor do canal. Ela contém o segredo que autentica as mensagens recebidas."
+        }
         valor={segredo?.url ?? null}
         onFechar={() => setSegredo(null)}
       />

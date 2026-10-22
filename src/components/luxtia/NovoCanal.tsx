@@ -39,7 +39,10 @@ export function NovoCanal({
   /** Cria o canal já ligado a este agente (página do agente). */
   agenteFixo?: string | null;
   onFechar: () => void;
-  onCriado: (webhookUrl: string) => void;
+  onCriado: (
+    webhookUrl: string,
+    webhookUazapi?: import("@/lib/gateway/tipos").WebhookUazapi,
+  ) => void;
 }) {
   const criar = useServerFn(criarCanal);
   const [tipo, setTipo] = useState<"api" | "uazapi">("api");
@@ -73,7 +76,7 @@ export function NovoCanal({
     onSuccess: (canal) => {
       limpar();
       onFechar();
-      onCriado(canal.webhook_url);
+      onCriado(canal.webhook_url, canal.webhook_uazapi);
     },
     onError: (e: Error) => toast.error(e.message),
   });

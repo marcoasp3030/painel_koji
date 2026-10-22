@@ -1,6 +1,40 @@
 import type { MensagemGateway } from "./tipos";
 export type EstadoConversa = "encerrada" | "aguardando_atendente" | "atendente" | "bot";
+export const ESTADOS_CONVERSA: EstadoConversa[] = [
+  "bot",
+  "atendente",
+  "aguardando_atendente",
+  "encerrada",
+];
+export type OrigemNome =
+  "cadastro" | "informado" | "perfil" | "telefone" | "identificador" | "anonimizado";
+export type CanalInfo = {
+  id: string;
+  tipo: string;
+  nome: string | null;
+  icone: string | null;
+  teste: boolean;
+};
+/** Item de `GET/PATCH /contatos` (PED1-c). */
+export type ContatoPainel = {
+  id: string;
+  nome: string | null;
+  nome_exibicao: string;
+  nome_origem: OrigemNome;
+  nomes: { cadastro: string | null; informado: string | null; perfil: string | null };
+  telefone_e164: string | null;
+  telefone_formatado: string | null;
+  anonimizado_em: string | null;
+};
+export type UltimaMensagem = {
+  texto: string | null;
+  em: string | null;
+  direcao: "entrada" | "saida" | null;
+  origem: string | null;
+  tipo: string | null;
+};
 export type Conversa = {
+  atendimento?: import("./enc1").AtendimentoConversa | null;
   conversation_id: string;
   agente_id: string;
   canal_id?: string;
@@ -8,9 +42,20 @@ export type Conversa = {
   canal: string;
   nome: string | null;
   telefone: string | null;
-  /** PED1-c, quando o gateway passar a enviar. */
+  /** PED1-c (ESPEC_PED1, seção 14). Opcionais para tolerar um gateway anterior. */
+  contato_id?: string | null;
   nome_exibicao?: string | null;
+  nome_origem?: OrigemNome | null;
+  nomes?: { cadastro: string | null; informado: string | null; perfil: string | null };
+  telefone_e164?: string | null;
   telefone_formatado?: string | null;
+  canal_info?: CanalInfo | null;
+  unidade_preferida?: string | null;
+  unidade_preferida_nome?: string | null;
+  estado?: EstadoConversa;
+  ultima?: UltimaMensagem | null;
+  pedido_aberto?: { numero: string; status: string } | null;
+  /** FUP1-a: presente quando há follow-up agendado. */
   status: "ativa" | "pausada";
   bot_pausado_ate: string | null;
   ultima_mensagem: string | null;
@@ -40,11 +85,17 @@ export const ROTULO_ESTADO: Record<EstadoConversa, string> = {
 function preenchido(v: string | null | undefined) {
   return Boolean(v && v.trim());
 }
-/** Ordem do contrato atual: encerrada, aguardando, pausa vigente, bot. */
+/** Estado único do gateway (PED1-c); sem ele, a mesma ordem: encerrada, aguardando, pausa vigente, bot. */
 export function estadoConversa(
-  c: Pick<Conversa, "encerrada_em" | "aguardando_atendente_desde" | "status" | "bot_pausado_ate">,
+  c: Pick<
+    Conversa,
+    "encerrada_em" | "aguardando_atendente_desde" | "status" | "bot_pausado_ate"
+  > & {
+    estado?: EstadoConversa | undefined;
+  },
   agora = Date.now(),
 ): EstadoConversa {
+  if (c.estado && ESTADOS_CONVERSA.includes(c.estado)) return c.estado;
   if (preenchido(c.encerrada_em)) return "encerrada";
   if (preenchido(c.aguardando_atendente_desde)) return "aguardando_atendente";
   const pausa = c.bot_pausado_ate ? Date.parse(c.bot_pausado_ate) : NaN;
@@ -76,6 +127,83 @@ export function nomeContato(
   const nome = c.nome?.trim();
   if (nome) return nome;
   return telefoneVisivel(c) ?? "Contato";
+}
+/** Selo discreto de onde veio o nome exibido. Origens sem selo devolvem null. */
+export const ROTULO_ORIGEM_NOME: Partial<Record<OrigemNome, { rotulo: string; ajuda: string }>> = {
+  cadastro: { rotulo: "cadastro", ajuda: "Nome cadastrado no painel" },
+  informado: { rotulo: "informado", ajuda: "Nome que o cliente disse na conversa" },
+  perfil: { rotulo: "perfil", ajuda: "Nome do perfil do WhatsApp" },
+  telefone: { rotulo: "telefone", ajuda: "Ainda sem nome: mostra o telefone" },
+  anonimizado: { rotulo: "anonimizado", ajuda: "Dados pessoais removidos (LGPD)" },
+};
+export function seloOrigemNome(origem: OrigemNome | null | undefined) {
+  return origem ? (ROTULO_ORIGEM_NOME[origem] ?? null) : null;
+}
+const ROTULO_TIPO_MENSAGEM: Record<string, string> = {
+  audio: "Áudio",
+  imagem: "Imagem",
+  video: "Vídeo",
+  documento: "Documento",
+  localizacao: "Localização",
+  figurinha: "Figurinha",
+  contato: "Contato",
+  reacao: "Reação",
+  desconhecido: "Mensagem",
+};
+/** Última mensagem com autor e tipo (PED1-c). Sem `ultima`, usa o texto antigo sem autor. */
+export function resumoUltima(c: Pick<Conversa, "ultima" | "ultima_mensagem" | "ultima_em">) {
+  const u = c.ultima;
+  if (!u) return { autor: null, tipo: null, texto: c.ultima_mensagem, em: c.ultima_em };
+  const autor = u.origem ? (AUTOR_MENSAGEM[u.origem] ?? u.origem) : null;
+  const tipo = u.tipo && u.tipo !== "texto" ? (ROTULO_TIPO_MENSAGEM[u.tipo] ?? u.tipo) : null;
+  return { autor, tipo, texto: u.texto, em: u.em ?? c.ultima_em };
+}
+const AUTOR_MENSAGEM: Record<string, string> = {
+  cliente: "Cliente",
+  bot: "IA",
+  humano: "Atendente",
+  sistema: "Sistema",
+};
+/** Tipo e nome do canal: `canal_info` do gateway, senão o tipo da conversa com o nome de `GET /canais`. */
+export function canalDaConversa(
+  c: Pick<Conversa, "canal" | "canal_info">,
+  cadastro?: { tipo?: string; nome?: string | null } | undefined,
+) {
+  const info = c.canal_info;
+  return {
+    tipo: info?.tipo || cadastro?.tipo || c.canal,
+    nome: info?.nome ?? cadastro?.nome ?? null,
+    teste: Boolean(info?.teste),
+  };
+}
+export const MOTIVO_NOME: Record<string, string> = {
+  tamanho: "O nome precisa ter de 2 a 60 caracteres.",
+  telefone: "O nome não pode ter número de telefone.",
+  caractere: "O nome não pode ter emoji nem símbolos.",
+  letras: "O nome precisa ter pelo menos duas letras.",
+};
+/**
+ * Mesma regra do gateway para o nome de cadastro. Vazio = null (apaga o cadastro).
+ * O gateway confere de novo; isto só evita a viagem.
+ */
+export function validarNomeCadastro(
+  bruto: string,
+): { ok: true; nome: string | null } | { ok: false; motivo: keyof typeof MOTIVO_NOME } {
+  const nome = bruto.split(/\s+/).filter(Boolean).join(" ");
+  if (!nome) return { ok: true, nome: null };
+  if (nome.length < 2 || nome.length > 60) return { ok: false, motivo: "tamanho" };
+  if (/(?:\d[\s().+-]*){8,}/.test(nome)) return { ok: false, motivo: "telefone" };
+  if (/[\p{So}\p{Sk}\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\uFE00-\uFE0F]/u.test(nome))
+    return { ok: false, motivo: "caractere" };
+  if ((nome.match(/\p{L}/gu) ?? []).length < 2) return { ok: false, motivo: "letras" };
+  return { ok: true, nome };
+}
+/** O que passa a valer se o nome de cadastro for apagado: informado > perfil > telefone. */
+export function nomeSemCadastro(
+  c: Pick<Conversa, "nomes" | "telefone" | "telefone_formatado">,
+): string {
+  const letras = (v: string | null | undefined) => (v && /\p{L}/u.test(v) ? v : null);
+  return letras(c.nomes?.informado) ?? letras(c.nomes?.perfil) ?? telefoneVisivel(c) ?? "Contato";
 }
 export function rotuloTipoCanal(tipo: string | null | undefined) {
   if (!tipo) return "Canal";
@@ -133,7 +261,11 @@ export function seloEspera(desde: string, agora = Date.now()) {
   const minutos = Math.max(0, Math.floor((agora - Date.parse(desde)) / 60000));
   return `Aguardando atendente há ${Number.isFinite(minutos) ? minutos : 0} min`;
 }
-export function ordenarConversas(itens: Conversa[]) {
+/**
+ * Fila de espera primeiro (mais antiga no topo). O resto por atividade recente ou,
+ * com `porRecencia: false`, na ordem em que o gateway devolveu.
+ */
+export function ordenarConversas(itens: Conversa[], { porRecencia = true } = {}) {
   return [...itens].sort((a, b) => {
     const pa = !!a.aguardando_atendente_desde,
       pb = !!b.aguardando_atendente_desde;
@@ -143,6 +275,7 @@ export function ordenarConversas(itens: Conversa[]) {
         Date.parse(a.aguardando_atendente_desde!) - Date.parse(b.aguardando_atendente_desde!) ||
         a.conversation_id.localeCompare(b.conversation_id)
       );
+    if (!porRecencia) return 0;
     return (Date.parse(b.ultima_em ?? "") || 0) - (Date.parse(a.ultima_em ?? "") || 0);
   });
 }

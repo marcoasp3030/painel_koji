@@ -47,9 +47,12 @@ export const listarModelos = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      // Para criação de agente: só modelos ativos (MULTI1-a §2.4).
       const { dados } = await (
         await sessao.plataforma()
-      ).chamar<{ itens: ModeloAgente[] }>("GET", ["modelos-agente"], { query: { tenant: t.id } });
+      ).chamar<{ itens: ModeloAgente[] }>("GET", ["modelos-agente"], {
+        query: { tenant: t.id, ativo: true },
+      });
       // Mostra só a última versão de cada modelo.
       const ultimas = new Map<string, ModeloAgente>();
       for (const m of dados.itens) {

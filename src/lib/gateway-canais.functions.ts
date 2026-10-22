@@ -83,11 +83,41 @@ export const rotacionarSegredoCanal = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
-      const { dados } = await t.chamar<{ id: string; webhook_url: string }>("POST", [
-        "canais",
-        data.canal,
-        "rotacionar-segredo",
-      ]);
+      const { dados } = await t.chamar<{
+        id: string;
+        webhook_url: string;
+        webhook_uazapi?: import("./gateway/tipos").WebhookUazapi;
+      }>("POST", ["canais", data.canal, "rotacionar-segredo"]);
       return dados;
     });
   });
+
+/** Refaz o cadastro do webhook na instância uazapi (não devolve a URL). */
+export const refazerWebhookCanal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, canal: idRecurso }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      const { dados } = await t.chamar<{
+        id: string;
+        webhook_uazapi: import("./gateway/tipos").WebhookUazapi;
+      }>("POST", ["canais", data.canal, "webhook"], { corpo: {} });
+      return dados;
+    });
+  });
+
+export const MOTIVO_WEBHOOK_UAZAPI: Record<string, string> = {
+  sem_credenciais: "Faltam o endereço e o token da instância.",
+  provedor_recusou: "A uazapi recusou o cadastro do webhook.",
+  provedor_inacessivel: "Não foi possível falar com a uazapi.",
+  endereco_publico_ausente: "O gateway não tem endereço público para o webhook.",
+};
+
+export function textoWebhookUazapi(w: import("./gateway/tipos").WebhookUazapi | undefined) {
+  if (!w) return null;
+  if (w.registrado) return "Webhook cadastrado na instância uazapi.";
+  const motivo = w.motivo ? (MOTIVO_WEBHOOK_UAZAPI[w.motivo] ?? w.motivo) : "Motivo não informado.";
+  return `Webhook não cadastrado: ${motivo}`;
+}

@@ -9,11 +9,17 @@ import {
   desdeDoCursor,
   ordenarConversas,
   contarEsperasVisiveis,
+  ESTADOS_CONVERSA,
+  MOTIVO_NOME,
+  validarNomeCadastro,
+  type ContatoPainel,
   type Conversa,
+  type EstadoConversa,
   type Eventos,
 } from "./gateway/conversas";
 
 const conversa = z.string().min(3).max(300);
+const ESTADOS = ESTADOS_CONVERSA as [EstadoConversa, ...EstadoConversa[]];
 export const listarConversas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -24,6 +30,8 @@ export const listarConversas = createServerFn({ method: "POST" })
         canal: idRecurso.optional(),
         aguardando: z.boolean().optional(),
         status: z.enum(["ativa", "pausada"]).optional(),
+        estado: z.array(z.enum(ESTADOS)).min(1).max(4).optional(),
+        ordem: z.enum(["id", "recentes"]).optional(),
         busca: z.string().max(200).optional(),
         desde: z.string().datetime({ offset: true }).optional(),
         cursor: z.string().max(300).nullish(),
@@ -37,7 +45,8 @@ export const listarConversas = createServerFn({ method: "POST" })
       const { agentesOcultos, exigirAgenteVisivel } = await import("./gateway/ocultos");
       if (data.agente) await exigirAgenteVisivel(t, data.agente);
       const ocultos = await agentesOcultos(t);
-      const { empresa: _, ...query } = data;
+      const { empresa: _, estado, ...resto } = data;
+      const query = { ...resto, ...(estado ? { estado: [...new Set(estado)].join(",") } : {}) };
       if (data.aguardando === true) {
         // A API ordena por ID; reúne a fila de espera para ordenar globalmente por idade.
         const itens: Conversa[] = [];
@@ -144,5 +153,73 @@ export const atenderConversa = createServerFn({ method: "POST" })
           },
         )
       ).dados;
+    });
+  });
+/**
+ * Nome de cadastro do contato da conversa (PED1-c). Qualquer papel; o gateway audita pelo X-Actor.
+ * Vazio vira null: apaga o cadastro e volta a valer o próximo nome da prioridade.
+ */
+export const editarNomeContato = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ empresa, conversa, contato: idRecurso, nome: z.string().max(200).nullable() })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    const { GatewayErro } = await import("./gateway/erros");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      // O contato precisa ser o desta conversa: não deixa renomear contato de outra conversa pelo ID.
+      const identificador = data.conversa.split(":").slice(2).join(":");
+      const { dados: pagina } = await t.chamar<Pagina<Conversa>>("GET", ["conversas"], {
+        query: { busca: identificador.slice(0, 200), limite: 100 },
+      });
+      const alvo = pagina.itens.find((c) => c.conversation_id === data.conversa);
+      if (!alvo || alvo.contato_id !== data.contato) {
+        throw new GatewayErro({
+          codigo: "NOT_FOUND",
+          status: 404,
+          mensagem: "Contato não encontrado nesta conversa.",
+        });
+      }
+      const validado = validarNomeCadastro(data.nome ?? "");
+      if (!validado.ok) {
+        throw new GatewayErro({
+          codigo: "VALIDATION_ERROR",
+          status: 400,
+          mensagem: MOTIVO_NOME[validado.motivo] ?? "Nome inválido.",
+          detalhes: { campo: "nome", motivo: validado.motivo },
+        });
+      }
+      try {
+        const { dados } = await t.chamar<ContatoPainel>("PATCH", ["contatos", data.contato], {
+          corpo: { nome: validado.nome },
+        });
+        (await import("./gateway/pedidos.server")).esquecerNomesRecentes(t.id);
+        return dados;
+      } catch (e) {
+        if (!(e instanceof GatewayErro)) throw e;
+        const motivo = e.detalhes["motivo"];
+        const texto = typeof motivo === "string" ? MOTIVO_NOME[motivo] : undefined;
+        if (e.status === 400 && texto) {
+          throw new GatewayErro({
+            codigo: "VALIDATION_ERROR",
+            status: 400,
+            mensagem: texto,
+            detalhes: { campo: "nome", motivo },
+          });
+        }
+        if (e.status === 409) {
+          throw new GatewayErro({
+            codigo: "CONFLICT",
+            status: 409,
+            mensagem: "Este contato foi anonimizado; o nome não pode ser alterado.",
+          });
+        }
+        throw e;
+      }
     });
   });

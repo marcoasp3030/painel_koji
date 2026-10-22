@@ -62,9 +62,49 @@ export type AgenteDetalhe = AgenteGateway & {
   configuracao_efetiva?: Record<string, Json>;
 };
 
+/** Item das listas motivos_transferencia / tipos_solicitacao do modelo. */
+export type ItemRotulado = {
+  id: string;
+  rotulo: string;
+  /** Motivo que vira aviso à equipe em vez de pausar o bot. */
+  converte_em_solicitacao?: boolean;
+};
+
+/** Resumo mínimo retornado em listagens que não precisam de todos os campos. */
 export type ModeloAgente = { id: string; versao: number; nome: string; tenant_id: string | null };
 
+/** Modelo completo retornado por GET /modelos-agente e GET /modelos-agente/{id} (§10.2). */
+export type ModeloAgenteCompleto = ModeloAgente & {
+  tipo: "atendimento" | "interno";
+  segmento: string;
+  ativo: boolean;
+  skyone_ref: string | null;
+  modulos_permitidos: string[];
+  modulos_padrao: string[];
+  /** Sinônimo de modulos_permitidos (campo antigo). */
+  modulos: string[];
+  motivos_transferencia: ItemRotulado[];
+  tipos_solicitacao: ItemRotulado[];
+  comportamento_padrao: Record<string, Json>;
+  perfil_padrao: Record<string, Json>;
+  desfechos: Json[];
+  followups_padrao: Json[];
+  skyone_fluxo_modelo: string | null;
+  criado_em: string;
+};
+
 export type ResultadoTeste = { ok: boolean; latencia_ms: number; resposta: string[] };
+
+/** Resultado do cadastro do webhook na instância uazapi (MULTI1-a §10.7). */
+export type WebhookUazapi = {
+  registrado: boolean;
+  motivo?:
+    | "sem_credenciais"
+    | "provedor_recusou"
+    | "provedor_inacessivel"
+    | "endereco_publico_ausente"
+    | string;
+};
 
 export type CanalGateway = {
   id: string;
@@ -78,6 +118,7 @@ export type CanalGateway = {
   credenciais_configurado?: boolean;
   status_conexao?: string | null;
   ultimo_evento_em?: string | null;
+  webhook_uazapi?: WebhookUazapi;
 };
 
 export type ChaveGateway = {

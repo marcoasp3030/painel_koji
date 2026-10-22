@@ -130,6 +130,37 @@ export async function executarGestao(
     }
   }
   try {
+    let comPedidos = false;
+    if (
+      t.papel !== "membro" &&
+      ["listar", "obter", "criar", "editar", "pausar", "reabrir", "horarios"].includes(d.acao)
+    ) {
+      try {
+        const mod = await t.chamar<{ em_uso?: string[] }>("GET", ["modulos"]);
+        comPedidos = Array.isArray(mod.dados.em_uso) && mod.dados.em_uso.includes("pedidos");
+      } catch {
+        comPedidos = false;
+      }
+    }
+    // Sem pedidos em uso, não envia campos de entrega ao gateway.
+    if (
+      !comPedidos &&
+      corpo &&
+      typeof corpo === "object" &&
+      !Array.isArray(corpo) &&
+      (d.acao === "criar" || d.acao === "editar")
+    ) {
+      const limpo = { ...(corpo as Record<string, unknown>) };
+      for (const k of [
+        "taxa_entrega",
+        "pedido_minimo",
+        "area_entrega",
+        "aceita_retirada",
+        "formas_pagamento",
+      ])
+        delete limpo[k];
+      corpo = limpo;
+    }
     const { dados } = await t.chamar(metodo, partes, { corpo, query });
     // Projeção impede expor grade/configurações de gestão ao membro pela leitura de unidade.
     function unidade(v: unknown) {
@@ -144,9 +175,14 @@ export async function executarGestao(
         "ativo",
         "fuso",
         "fuso_efetivo",
+        "cidade",
+        "uf",
         "situacao",
         "pausa_motivo",
         ...(t.papel !== "membro" ? ["horarios", "whatsapp_pedidos"] : []),
+        ...(comPedidos && t.papel !== "membro"
+          ? ["taxa_entrega", "pedido_minimo", "area_entrega", "aceita_retirada", "formas_pagamento"]
+          : []),
       ])
         r[k] = (u as unknown as Record<string, unknown>)[k];
       return r;

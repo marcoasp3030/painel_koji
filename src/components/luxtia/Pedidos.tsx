@@ -22,13 +22,19 @@ import { avisos } from "@/lib/gateway-avisos.functions";
 import { pedidos } from "@/lib/gateway-pedidos.functions";
 import {
   COLUNAS_PEDIDO,
+  ORIGENS_PEDIDO,
+  ROTULO_FILTRO_ORIGEM,
   ROTULO_STATUS,
   acoesPedido,
+  nomeClientePedido,
   reais,
+  rotuloCanalPedido,
+  rotuloOrigemPedido,
   tempoDesde,
   textoAviso,
   whatsappPedido,
   type ContagemPedidos,
+  type OrigemPedido,
   type PedidoDetalhe,
   type PedidoLista,
   type StatusPedido,
@@ -37,7 +43,7 @@ import { FUSO_PAINEL, periodoNoFuso, type Unidade } from "@/lib/gateway/gestao";
 import { dataHora, type ContextoGateway } from "./Gateway";
 import { useGestao } from "./gestao-base";
 import { textoCanal } from "@/lib/gateway/conversas";
-import { IconeCanal } from "./Conversas";
+import { IconeCanal, SeloOrigemNome } from "./Conversas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +60,8 @@ import {
 
 type Filtros = {
   status: StatusPedido[];
+  /** Vazio = todas as origens; padrão da tela = só reais. */
+  origem: OrigemPedido[];
   unidade: string;
   modalidade: "" | "delivery" | "retirada";
   desde: string;
@@ -63,6 +71,10 @@ type Filtros = {
 
 const VAZIO: Filtros = {
   status: [],
+  // Todas as origens. O padrão "só reais" escondia o quadro inteiro enquanto a
+  // empresa está em piloto (nenhum pedido nasce como real) e os anteriores
+  // ficaram marcados como teste.
+  origem: [],
   unidade: "",
   modalidade: "",
   desde: "",
@@ -87,14 +99,15 @@ const TOM_STATUS: Record<StatusPedido, { ponto: string; selo: string }> = {
 const campo =
   "h-10 w-full rounded-lg border border-base-200 bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-purple-300";
 
-export function Pedidos({ ctx }: { ctx: ContextoGateway }) {
+export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string | undefined }) {
   const g = useGestao(ctx);
   const [filtros, setFiltros] = useState<Filtros>(VAZIO);
   const [busca, setBusca] = useState("");
   const [visao, setVisao] = useState<"quadro" | "lista">("quadro");
   const [coluna, setColuna] = useState<IdColuna>("aguardando");
   const [verFiltros, setVerFiltros] = useState(false);
-  const [numero, setNumero] = useState<string | null>(null);
+  // Atalho vindo da conversa (?pedido=…): abre o detalhe direto.
+  const [numero, setNumero] = useState<string | null>(abrir ?? null);
   const [agora, setAgora] = useState(Date.now());
   const [usuario, setUsuario] = useState("local");
   const [som, setSom] = useState(false);
@@ -136,6 +149,7 @@ export function Pedidos({ ctx }: { ctx: ContextoGateway }) {
     }
   }
   const consulta = {
+    ...(filtros.origem.length ? { origem: filtros.origem } : {}),
     ...(filtros.unidade ? { unidade: filtros.unidade } : {}),
     ...(filtros.modalidade ? { modalidade: filtros.modalidade } : {}),
     ...(periodo.desde ? { desde: periodo.desde } : {}),
@@ -143,7 +157,9 @@ export function Pedidos({ ctx }: { ctx: ContextoGateway }) {
     ...(filtros.busca.trim().length >= 2 ? { busca: filtros.busca.trim() } : {}),
   };
   const pausa = Boolean(periodo.erro) || !fuso.isFetched;
+  const origemPadrao = filtros.origem.length === 0;
   const ativos =
+    (origemPadrao ? 0 : 1) +
     (filtros.unidade ? 1 : 0) +
     (filtros.modalidade ? 1 : 0) +
     (filtros.desde || filtros.ate ? 1 : 0) +
@@ -256,6 +272,48 @@ export function Pedidos({ ctx }: { ctx: ContextoGateway }) {
                 )}
               </select>
             </label>
+            <fieldset className="space-y-1 text-xs font-medium text-ink-500 sm:col-span-2">
+              <legend>Origem</legend>
+              <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label="Origem">
+                <button
+                  type="button"
+                  aria-pressed={filtros.origem.length === 0}
+                  onClick={() => setFiltros({ ...filtros, origem: [] })}
+                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                    filtros.origem.length === 0
+                      ? "border-purple-800 bg-purple-800 text-white"
+                      : "border-base-200 text-ink-700 hover:bg-base-100"
+                  }`}
+                >
+                  Todas
+                </button>
+                {ORIGENS_PEDIDO.map((o) => {
+                  const marcado = filtros.origem.includes(o);
+                  return (
+                    <button
+                      key={o}
+                      type="button"
+                      aria-pressed={marcado}
+                      onClick={() =>
+                        setFiltros({
+                          ...filtros,
+                          origem: marcado
+                            ? filtros.origem.filter((x) => x !== o)
+                            : [...filtros.origem, o],
+                        })
+                      }
+                      className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                        marcado
+                          ? "border-purple-800 bg-purple-800 text-white"
+                          : "border-base-200 text-ink-700 hover:bg-base-100"
+                      }`}
+                    >
+                      {ROTULO_FILTRO_ORIGEM[o]}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
             <label className="space-y-1 text-xs font-medium text-ink-500">
               Entrega ou retirada
               <select
@@ -338,6 +396,13 @@ export function Pedidos({ ctx }: { ctx: ContextoGateway }) {
         </div>
       ) : ativos > 0 ? (
         <div className="flex flex-wrap gap-1.5">
+          {!origemPadrao ? (
+            <Ficha onTirar={() => setFiltros({ ...filtros, origem: [] })}>
+              {filtros.origem.length === 0
+                ? "Todas as origens"
+                : filtros.origem.map((o) => ROTULO_FILTRO_ORIGEM[o]).join(", ")}
+            </Ficha>
+          ) : null}
           {filtros.unidade ? (
             <Ficha onTirar={() => setFiltros({ ...filtros, unidade: "" })}>
               {nomeUnidade ?? filtros.unidade}
@@ -546,6 +611,7 @@ function usePagina(
   ctx: ContextoGateway,
   status: StatusPedido[],
   consulta: {
+    origem?: OrigemPedido[];
     unidade?: string;
     modalidade?: "delivery" | "retirada";
     desde?: string;
@@ -714,6 +780,25 @@ function IconeModalidade({ modalidade }: { modalidade: PedidoLista["modalidade"]
   return null;
 }
 
+/** Etiqueta discreta de origem/canal do pedido (Piloto, Teste, API…). */
+function EtiquetaOrigemCanal({ origem, canal }: { origem?: string | null; canal?: string | null }) {
+  const o = rotuloOrigemPedido(origem);
+  const c = rotuloCanalPedido(canal);
+  // Real + WhatsApp é o caso comum: não polui a lista.
+  const partes: string[] = [];
+  if (o && origem !== "real") partes.push(o);
+  if (c && canal !== "whatsapp") partes.push(c);
+  if (partes.length === 0) return null;
+  return (
+    <span
+      className="inline-flex items-center rounded border border-base-200 bg-base-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-500"
+      title={[o, c].filter(Boolean).join(" · ")}
+    >
+      {partes.join(" · ")}
+    </span>
+  );
+}
+
 /** Indicador compacto do aviso ao cliente: enviado, falhou ou desligado. */
 function MarcaAviso({ status }: { status: string | null | undefined }) {
   const texto = textoAviso(status);
@@ -741,7 +826,7 @@ function CartaoPedido({
   agora: number;
   onAbrir: () => void;
 }) {
-  const fone = whatsappPedido(pedido.cliente?.telefone);
+  const cliente = nomeClientePedido(pedido.cliente);
   const novo = pedido.status === "aguardando_loja";
   const minutos = (agora - Date.parse(pedido.criado_em)) / 60000;
   const atrasado = novo && minutos >= 15;
@@ -754,9 +839,12 @@ function CartaoPedido({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold text-purple-800">#{pedido.numero}</span>
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <span className="font-semibold text-purple-800">#{pedido.numero}</span>
+          <EtiquetaOrigemCanal origem={pedido.origem ?? null} canal={pedido.canal ?? null} />
+        </span>
         <span
-          className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+          className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-medium ${
             atrasado ? "text-destructive" : "text-ink-500"
           }`}
         >
@@ -770,10 +858,10 @@ function CartaoPedido({
             <IconeCanal tipo={pedido.cliente.canal.tipo || pedido.cliente.canal.icone} />
           </span>
         ) : null}
-        <span className="truncate">{pedido.cliente?.nome || fone || "Cliente sem nome"}</span>
+        <span className="truncate">{cliente.nome}</span>
       </p>
-      {pedido.cliente?.nome && fone ? (
-        <p className="truncate text-xs text-ink-500">{fone}</p>
+      {cliente.temNome && cliente.fone ? (
+        <p className="truncate text-xs text-ink-500">{cliente.fone}</p>
       ) : null}
       <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-500">
         <IconeModalidade modalidade={pedido.modalidade} />
@@ -802,14 +890,17 @@ function LinhaPedido({
   agora: number;
   onAbrir: () => void;
 }) {
-  const fone = whatsappPedido(pedido.cliente?.telefone);
+  const cliente = nomeClientePedido(pedido.cliente);
   return (
     <button
       type="button"
       onClick={onAbrir}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_110px_90px]"
     >
-      <span className="font-semibold text-purple-800">#{pedido.numero}</span>
+      <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-purple-800">
+        #{pedido.numero}
+        <EtiquetaOrigemCanal origem={pedido.origem ?? null} canal={pedido.canal ?? null} />
+      </span>
       <span className="text-right font-semibold md:order-last md:hidden">
         {reais(pedido.total)}
       </span>
@@ -820,8 +911,10 @@ function LinhaPedido({
           </span>
         ) : null}
         <span className="truncate">
-          {pedido.cliente?.nome || fone || "Cliente sem nome"}
-          {pedido.cliente?.nome && fone ? <span className="text-ink-500"> · {fone}</span> : null}
+          {cliente.nome}
+          {cliente.temNome && cliente.fone ? (
+            <span className="text-ink-500"> · {cliente.fone}</span>
+          ) : null}
         </span>
       </span>
       <span className="col-span-2 flex min-w-0 items-center gap-1.5 text-ink-500 md:col-span-1">
@@ -954,6 +1047,7 @@ function Detalhe({
     }
   }
   const fone = whatsappPedido(pedido?.cliente?.telefone);
+  const cliente = pedido ? nomeClientePedido(pedido.cliente) : null;
   const horario = pedido?.entrega?.horario || pedido?.horario;
   const endereco = pedido?.entrega?.endereco || pedido?.endereco;
   const observacao = pedido?.entrega?.observacao || pedido?.observacao;
@@ -961,11 +1055,14 @@ function Detalhe({
     <Sheet open={Boolean(numero)} onOpenChange={(a) => !a && !ocupado && fechar()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
         <SheetHeader className="space-y-1 border-b border-base-200 px-5 py-4 text-left">
-          <div className="flex items-center gap-2 pr-8">
+          <div className="flex flex-wrap items-center gap-2 pr-8">
             <SheetTitle className="font-display text-2xl text-purple-800">
               Pedido #{numero}
             </SheetTitle>
             {pedido ? <SeloStatus status={pedido.status} /> : null}
+            {pedido ? (
+              <EtiquetaOrigemCanal origem={pedido.origem ?? null} canal={pedido.canal ?? null} />
+            ) : null}
           </div>
           <SheetDescription className="flex flex-wrap items-center gap-x-2 text-xs text-ink-500">
             {pedido ? (
@@ -976,6 +1073,12 @@ function Detalhe({
                   <IconeModalidade modalidade={pedido.modalidade} />
                   {pedido.modalidade === "delivery" ? "Entrega" : "Retirada"}
                 </span>
+                {rotuloCanalPedido(pedido.canal) ? (
+                  <>
+                    <span>·</span>
+                    <span>{rotuloCanalPedido(pedido.canal)}</span>
+                  </>
+                ) : null}
                 <span>·</span>
                 <span>entrou {tempoDesde(pedido.criado_em)}</span>
                 {pedido.previsao_min ? (
@@ -1008,10 +1111,11 @@ function Detalhe({
             <>
               <section className="flex items-start justify-between gap-3 rounded-lg bg-base-100/70 p-3">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-ink-700">
-                    {pedido.cliente?.nome || "Cliente sem nome"}
+                  <p className="flex min-w-0 items-center gap-1.5 font-semibold text-ink-700">
+                    <span className="truncate">{cliente?.nome}</span>
+                    <SeloOrigemNome origem={cliente?.origem} />
                   </p>
-                  {fone ? <p className="text-ink-500">{fone}</p> : null}
+                  {cliente?.temNome && fone ? <p className="text-ink-500">{fone}</p> : null}
                   {pedido.cliente?.canal ? (
                     <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-500">
                       <IconeCanal tipo={pedido.cliente.canal.tipo || pedido.cliente.canal.icone} />
@@ -1025,7 +1129,7 @@ function Detalhe({
                       to="/ia/conversas"
                       search={{
                         conversa: pedido.conversation_id,
-                        ...(pedido.cliente?.nome ? { nome: pedido.cliente.nome } : {}),
+                        ...(cliente?.temNome ? { nome: cliente.nome } : {}),
                         ...(pedido.cliente?.telefone ? { telefone: pedido.cliente.telefone } : {}),
                         ...(pedido.cliente?.canal?.tipo
                           ? { canal: pedido.cliente.canal.tipo }

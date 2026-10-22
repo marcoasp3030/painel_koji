@@ -1,4 +1,5 @@
 /** Itens do menu lateral, agrupados para o super admin e para o cliente. */
+import type { TelaModulo } from "./gateway/modulos";
 import type { PapelGateway } from "./gateway/tipos";
 
 export type IconeMenu =
@@ -10,7 +11,8 @@ export type IconeMenu =
   | "chaves"
   | "simular"
   | "conversas"
-  | "pedidos";
+  | "pedidos"
+  | "modelos";
 
 export type ItemMenu = {
   to: string;
@@ -19,15 +21,25 @@ export type ItemMenu = {
   icone: IconeMenu;
   /** Papéis no gateway que veem o item; sem a lista, todos veem. */
   papeis?: PapelGateway[];
+  /** Só aparece se a empresa tiver essa tela nos módulos em uso (MULTI1-a). */
+  tela?: TelaModulo;
 };
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
+  {
+    to: "/ia/configuracoes/comportamento",
+    label: "Comportamento do agente",
+    grupo: "Configurações",
+    icone: "agentes",
+    papeis: ["plataforma"],
+  },
   {
     to: "/ia/configuracoes/avisos",
     label: "Avisos de pedido",
     grupo: "Configurações",
     icone: "pedidos",
     papeis: ["plataforma"],
+    tela: "avisos_de_pedido",
   },
   {
     to: "/ia/unidades",
@@ -35,6 +47,14 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Agentes",
     icone: "empresas",
     papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/cardapio",
+    label: "Cardápio",
+    grupo: "Agentes",
+    icone: "pedidos",
+    papeis: ["plataforma"],
+    tela: "cardapio",
   },
   {
     to: "/ia/gestao/alteracoes",
@@ -56,12 +76,20 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Agentes",
     icone: "pedidos",
     papeis: ["plataforma"],
+    tela: "pedidos",
   },
   {
     to: "/ia/empresas",
     label: "Empresas",
     grupo: "Agentes",
     icone: "empresas",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/modelos",
+    label: "Modelos de agente",
+    grupo: "Agentes",
+    icone: "modelos",
     papeis: ["plataforma"],
   },
   {
@@ -96,11 +124,19 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
 
 const AGENTES_EMPRESA: ItemMenu[] = [
   {
+    to: "/ia/configuracoes/comportamento",
+    label: "Comportamento do agente",
+    grupo: "Configurações",
+    icone: "agentes",
+    papeis: ["admin", "membro"],
+  },
+  {
     to: "/ia/configuracoes/avisos",
     label: "Avisos de pedido",
     grupo: "Configurações",
     icone: "pedidos",
     papeis: ["admin"],
+    tela: "avisos_de_pedido",
   },
   {
     to: "/ia/unidades",
@@ -108,6 +144,14 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agentes",
     icone: "empresas",
     papeis: ["admin", "membro"],
+  },
+  {
+    to: "/ia/cardapio",
+    label: "Cardápio",
+    grupo: "Agentes",
+    icone: "pedidos",
+    papeis: ["admin", "membro"],
+    tela: "cardapio",
   },
   {
     to: "/ia/gestao/alteracoes",
@@ -129,6 +173,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agentes",
     icone: "pedidos",
     papeis: ["admin", "membro"],
+    tela: "pedidos",
   },
   {
     to: "/ia/agentes",
@@ -166,6 +211,15 @@ export const TENANT_NAV: ItemMenu[] = [
 /** Menu conforme o papel no gateway (a proteção real é a do servidor). */
 export function filtrarMenu(itens: ItemMenu[], papel: PapelGateway | null | undefined) {
   return itens.filter((item) => !item.papeis || (papel != null && item.papeis.includes(papel)));
+}
+
+/** Esconde Cardápio/Pedidos/Avisos quando o módulo correspondente não está em uso. */
+export function filtrarMenuPorTelas(
+  itens: ItemMenu[],
+  telas: readonly string[] | null | undefined,
+) {
+  const liberadas = new Set(telas ?? []);
+  return itens.filter((item) => !item.tela || liberadas.has(item.tela));
 }
 
 /** Mantém a ordem em que os grupos aparecem na lista. */

@@ -1,3 +1,262 @@
+## [2026-10-20 17:57] — Pedidos voltaram a aparecer (publicado)
+- **Autor:** Grok 4.7
+- **Objetivo:** O quadro de Pedidos, em Agentes, estava vazio. Analisar e corrigir.
+- **Arquivos alterados:**
+  - `src/components/luxtia/Pedidos.tsx` — modificado — a tela abre com todas as origens
+  - `src/components/luxtia/ContadorPedidos.tsx` — modificado — o aviso conta todo pedido aguardando a loja
+  - `README.md`, `instrucoes.md`, `docs/worklog.md` — modificados — registro
+- **Resumo das mudanças:** A imagem do CAT3-a ligou o filtro que deixava só pedidos reais. No By Koji há 0 reais, 2 de piloto (1 aguardando a loja) e 12 de teste. O quadro e o número do menu ficavam em zero. A tela volta a listar todas as origens; o filtro continua no painel.
+- **Decisões e justificativas:** Não reclassificar pedido em produção: a marcação teste/piloto é do gateway. O padrão “só reais” escondia o único pedido que a loja precisa atender. Nada no gateway foi editado.
+- **Comandos executados:** `bun test` pedidos → 8 OK; `tsc` e ESLint → OK. Tag `painel:volta-pedidos-b98f06b75967` = `sha256:b98f06b7…`. Backup `pre-pedidos-20261020T205548Z`, `pg_restore --list` → 279. Build → `painel:pedidos-20261020` = `sha256:71e678d2…`. `verificar-chave-no-bundle.sh` → OK. `up -d --no-deps --no-build painel` → container `6c90da349d93`. HTTPS: `/` 200, `/ia/pedidos` 200, `/gateway/health` 200, `/gateway/admin/v1/tenants` 404. Leitura: 14 pedidos sem filtro; `origem=real` 0; 1 aguardando (piloto). Logs: 1 linha, zero erros.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** não commitado. Os 12 pedidos antigos seguem como teste e aparecem com a etiqueta Teste.
+- **Próximos passos:** volta, se precisar: `docker tag painel:volta-pedidos-b98f06b75967 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-20 17:30] — CAT3-a e ENC1-a publicados (só o painel)
+- **Autor:** Grok 4.7
+- **Objetivo:** Publicar o cardápio CAT3-a e os atendimentos ENC1-a, e conferir só com leitura.
+- **Arquivos alterados:**
+  - `README.md`, `instrucoes.md`, `docs/worklog.md` — modificados — registro da publicação
+- **Resumo das mudanças:** Imagem de volta `painel:volta-cat3-c1c1c96e2719` (`sha256:c1c1c96e…`, a mesma do CAT2). Imagem nova `painel:cat3a-20261020` (`sha256:b98f06b7…`). Container do painel `a0c967e48e50`. Backup `pre-cat3a-20261020T202828Z`. Nenhum item, categoria ou atendimento foi alterado.
+- **Decisões e justificativas:** Sem mudança de schema: a volta é só a tag da imagem, sem restaurar o dump. Conferência de dados pelo mesmo GET que a tela usa, com papel admin, só leitura.
+- **Comandos executados:** tag conferida → OK; `pg_restore --list` → 279; `docker compose build painel` → OK; `verificar-chave-no-bundle.sh` → OK; `up -d --no-deps --no-build painel` → OK. HTTPS: `/` 200, `/ia/cardapio` 307 e 200 (título Cardápio | Luxtia), `/ia/conversas` 200, `/gateway/health` 200, `/gateway/admin/v1/tenants` 404. Leitura: 4 unidades, categorias na ordem do gateway (nenhuma com posição própria), 189 sugestões, 20/20 conversas da página com atendimento. Logs: 1 linha, zero erros, zero chave.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** nenhum dado de produção alterado. Não commitado.
+- **Próximos passos:** volta, se precisar: `docker tag painel:volta-cat3-c1c1c96e2719 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-20 17:25] — CAT3-a e ENC1-a no painel (não publicado)
+- **Autor:** Grok 4.7
+- **Objetivo:** Cardápio do dia a dia (CAT3-a, gateway:fbfea15) e atendimentos na conversa (ENC1-a, gateway:0268e06), para revisão antes de publicar.
+- **Arquivos alterados:**
+  - `src/components/luxtia/cardapio/CardapioCat3.tsx`, `ItemCat3.tsx`, `OperacoesCat3.tsx`, `Cardapio.tsx` — modificados — abas de unidade, categorias e itens arrastáveis, ações rápidas, lote, sugestões
+  - `src/lib/gateway/cat3.ts`, `cat3.server.ts`, `gateway-cat3.functions.ts` — modificados — rotas do contrato, membro só esgota e repõe
+  - `src/components/luxtia/AtendimentosConversa.tsx`, `Conversas.tsx` — modificados — atendimento atual, histórico, filtro de mensagens, encerrar e reabrir
+  - `src/lib/gateway/enc1.ts`, `enc1.server.ts` — modificados — rótulos do contrato e 409 de encerrar/reabrir
+  - `src/lib/gateway/cat3-enc1.test.ts`, `tests/visual/cat3/` — modificados — testes e prints
+  - `README.md`, `instrucoes.md`, `docs/worklog.md` — modificados — registro
+- **Resumo das mudanças:** A tela de cardápio passa a ser por unidade e categoria, com ordem arrastável, esgotado do dia, painel do item com alcance do prato, lote com prévia e sugestões de ligação. A conversa mostra o atendimento atual e o histórico, com mensagens filtradas e os botões Encerrar e Reabrir.
+- **Decisões e justificativas:** Contratos só de leitura (`ESPEC_CAT3.md` §13 e `ESPEC_ENC1A.md` §7). Preço rápido e “Disponível” valem só nesta unidade; “em todas” aparece ao salvar o painel. Reabrir só o último. Gateway não foi editado e nada foi publicado.
+- **Comandos executados:** `bun test` → 143 OK, 6 ignorados; `tsc --noEmit` → OK; ESLint dos arquivos → OK; Playwright pt-BR → 8 prints, zero erros de JavaScript.
+- **Erros e resoluções:** O 409 de encerrar lia a variável `d` fora do `try` (ReferenceError). A ação passou a ficar fora do `try`. Categorias arquivadas vinham duplicadas porque `arquivadas=true` inclui as ativas; a lista agora junta por id.
+- **Pendências / TODO:** revisão do Marco; sem commit e sem publicação.
+- **Próximos passos:** publicar só o painel depois da revisão dos prints.
+
+## [2026-10-20 10:35] — Gateway: clique de botão no iPhone (ButtonsResponseMessage)
+- **Autor:** Auto (Composer)
+- **Objetivo:** Fazer o gateway ler o toque em botão de resposta quando o uazapi manda `ButtonsResponseMessage` (aparelhos Apple).
+- **Arquivos alterados:**
+  - `gateway/app/canais/uazapi.py` — modificado — reconhece `ButtonsResponseMessage`; título/`id` Apple
+  - `gateway/tests/fixtures/uazapi/clique_botao_apple.json` — criado — payload real 16/10 mascarado
+  - `gateway/tests/test_botoes.py` — modificado — teste do clique Apple
+  - `gateway/docs/ESPEC_BOTOES.md`, `gateway/PROGRESS.md` — modificados — registro
+- **Resumo das mudanças:** O mesmo caminho do clique Android agora aceita o formato Apple. Publicado no gateway com tag de volta.
+- **Decisões e justificativas:** Observação do Marco + payload real do dia 16; sem mudar o contrato do pacote ao agente.
+- **Comandos executados:** `SUITE_ALVO=tests/test_botoes.py` → 4 OK; build/up gateway+worker+agendador → health OK; normalize no container → Entrega/`entrega`.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** commit do gateway (ainda não pedido)
+- **Próximos passos:** validar com um toque real em iPhone; se ok, commit.
+
+## [2026-10-16 16:48] — Pedidos: filtro origem + contador só reais
+- **Autor:** Auto (Composer)
+- **Objetivo:** Na tela de Pedidos, usar origem/canal do gateway (1e7c6b6): filtro Reais padrão, etiquetas e contador do menu só reais.
+- **Arquivos alterados:**
+  - `src/lib/gateway/pedidos.ts` — modificado — ORIGENS/CANAIS, schema `origem` e `so_reais`
+  - `src/lib/gateway/pedidos.server.ts` — modificado — query `origem`; contagem `so_reais` via lista
+  - `src/lib/gateway/pedidos.test.ts` — modificado — origem na lista; teste so_reais
+  - `src/components/luxtia/Pedidos.tsx` — modificado — filtro origem, EtiquetaOrigemCanal
+  - `src/components/luxtia/ContadorPedidos.tsx` — modificado — `so_reais: true`
+  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados — registro
+- **Resumo das mudanças:** Lista e detalhe passam a filtrar/exibir origem e canal. Padrão da tela é só reais. Menu conta apenas aguardando_loja reais (workaround sem filtro em `/contagem`).
+- **Decisões e justificativas:** Etiqueta só quando origem ≠ real ou canal ≠ whatsapp, para não poluir o caso comum. Contador não usa `/contagem` bruto porque ainda não aceita origem.
+- **Comandos executados:** `bun test` → 133 OK, 6 skip; `tsc --noEmit` → OK; ESLint (arquivos alterados) → OK (prettier --fix).
+- **Erros e resoluções:** TS2375 `exactOptionalPropertyTypes` em `EtiquetaOrigemCanal` — normalizado com `?? null`. gestao.test já usava `chamadaUnidade`.
+- **Pendências / TODO:** revisão do Marco; sem commit/publicação.
+- **Próximos passos:** validar na UI autenticada; publicar após aprovação.
+
+## [2026-10-15 19:44] — Acesso cesar.almeida@luxtia.ia.br
+- **Autor:** Auto (Composer)
+- **Objetivo:** Criar usuário admin no painel com e-mail cesar.almeida@luxtia.ia.br.
+- **Arquivos alterados:**
+  - `instrucoes.md` — modificado — registro da fase
+  - `docs/worklog.md` — modificado — esta entrada
+- **Resumo das mudanças:** Conta criada no GoTrue (e-mail confirmado) e papel `super_admin` em `user_roles`. Sem vínculo com cliente, porque o pedido foi de perfil admin do sistema (mesmo padrão de marco.santos).
+- **Decisões e justificativas:** Papel `super_admin` para acesso de plataforma; e-mail `@luxtia.ia.br` indica usuário da Luxtia, não admin de um tenant específico.
+- **Comandos executados:** POST `/auth/v1/admin/users` → OK (id `7e9e6751-5e2f-4de7-b8dc-d6beebb888f9`). INSERT em `user_roles` → OK. login em `/auth/v1/token` → 200.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** nenhuma
+- **Próximos passos:** entrar em https://painel.luxbrain.com.br/ com o e-mail informado
+
+## [2026-10-15 16:04] — MULTI1-a: telas de Modelos de agente e Módulos do agente
+- **Autor:** Claude Opus 4.6
+- **Objetivo:** Implementar as peças de UI do MULTI1-a: tela de modelos de agente (plataforma), módulos do agente (aba no detalhe), tipos estendidos e filtro de modelos ativos.
+- **Arquivos alterados:**
+  - `src/lib/gateway/tipos.ts` — modificado — `ModeloAgenteCompleto` com todos os campos §10.2 (segmento, ativo, skyone_ref, modulos_permitidos/padrao, motivos_transferencia, tipos_solicitacao, tipo, etc.) e `ItemRotulado`
+  - `src/lib/gateway-modelos.functions.ts` — criado — listarModelosAgente (GET com filtros), obterModeloAgente, criarModeloAgente (POST), editarModeloAgente (PATCH = nova versão); tudo via sessao.plataforma()
+  - `src/routes/_authenticated/ia/modelos.tsx` — criado — lista com filtro ativo/inativo, detalhe com módulos/motivos/tipos, criar e editar com aviso claro de nova versão
+  - `src/components/luxtia/agente/ModulosDoAgente.tsx` — criado — mostra GET …/agentes/{id}/modulos (permitidos, da_empresa, ligados_no_agente); admin/plataforma altera módulos ligados ou "padrão do modelo" (null); plataforma altera módulo da empresa com aviso que vale para toda a empresa
+  - `src/routes/_authenticated/ia/agentes.$agenteId.tsx` — modificado — nova aba "Módulos" para admin/plataforma
+  - `src/lib/gateway-agentes.functions.ts` — modificado — listarModelos agora passa ativo=true ao gateway
+  - `src/lib/gateway-modulos.functions.ts` — modificado — retorno tipado em alterarModuloEmpresa e alterarModulosAgente
+  - `src/routeTree.gen.ts` — modificado — rota /ia/modelos registrada
+- **Resumo das mudanças:** Tela completa de Modelos de agente (só plataforma): lista com filtro, detalhe com cartões de módulos/motivos/tipos, criar modelo (v1) e editar (nova versão com aviso explícito). Aba Módulos no detalhe do agente para admin/plataforma. Listagem de modelos para criação de agente agora filtra ativo=true.
+- **Decisões e justificativas:** Edição de motivos e tipos no formato id:rótulo[:converte] por linha, simples e sem inventar componente complexo. O aviso de "nova versão" aparece no título, na descrição e num banner amarelo. A lista de modelos para criação de agente passa ativo=true direto na query ao gateway (não só filtro client-side) para garantir que modelos inativos não apareçam. Módulos do agente: "padrão do modelo" = null, como no contrato.
+- **Comandos executados:** `tsc --noEmit` → OK; ESLint → 0 erros (17 formatações corrigidas com --fix). Testes não rodados (bun indisponível no host).
+- **Erros e resoluções:** (1) TSC TS2345 em ultimas.set(m, m) — chave deveria ser m.id, não m; corrigido e removido código duplicado. (2) TSC TS2339 no cast do editar — trocado para chamada direta tipada. (3) TSC serialization em alterarModuloEmpresa/alterarModulosAgente — retorno trocado para `{ ok: true }` em vez de `unknown`.
+- **Pendências / TODO:** testes unitários (bun indisponível), build Docker e publicação. Não commitado.
+- **Próximos passos:** build e publicação após validação; conferência visual autenticada como plataforma.
+
+## [2026-10-13 00:20] — CAT2 publicado, com confirmação da própria tela
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Trocar o confirm() do navegador ao salvar por uma janela da tela e publicar só o painel.
+- **Arquivos alterados:**
+  - `src/components/luxtia/cardapio/ItemCat2.tsx` — modificado — janela "Confirmar antes de salvar", com "Salvar mesmo assim" e "Voltar"
+  - `tests/visual/cardapio/capturar-cat2.cjs` — modificado — "Voltar" não grava; "Salvar mesmo assim" grava
+  - `README.md`, `instrucoes.md` — modificados
+- **Resumo das mudanças:** Preço vazio e categoria que deixa de existir, no painel e na edição rápida, abrem um AlertDialog com os mesmos textos dos avisos. Os dois avisos juntos vão na mesma janela. Confirmações de descartar rascunho continuam as que já existiam.
+- **Decisões e justificativas:** As três decisões aprovadas ficam: avisos junto do campo, histórico só para admin/plataforma, lote só com disponibilidade e `atualizado_em`.
+- **Comandos executados:** `bun test` → 127 OK, 6 ignorados; `tsc` e ESLint → OK; roteiro Playwright → OK (Voltar e Salvar mesmo assim). Tag `painel:volta-cat2-077a798d9a72` = `sha256:077a798d9a729c08672137909411eefa415cffc1774949c28cbd729ca0fa97d2` conferida antes do build. Build → imagem `painel:cat2-20261013` = `sha256:c1c1c96e2719c9182442f97dd5a2124d42881f501c7178fc2678a29548be7c1b`. `up -d --no-deps --no-build painel`. `verificar-chave-no-bundle.sh` → OK. HTTPS: `/` 200, `/ia/cardapio` 307 para `?unidade=&busca=&filtro=todos` e 200, `/gateway/health` 200, `/gateway/admin/v1/tenants` 404. Leitura GET: bykoji 888 itens, 193 com preço, 0 sem `disponivel_agora` (615 sem preço, 80 inativos). "a confirmar" ausente no frontend publicado. Logs sem a chave. Os outros containers não foram recriados.
+- **Erros e resoluções:** O roteiro visual comparou a categoria "Petiscos" com o painel aberto; o fundo fica oculto para o leitor de tela, então a contagem vinha 0. A conferência passou a olhar o aviso que continua no painel depois de "Voltar".
+- **Pendências / TODO:** nenhum item de produção foi alterado. Não commitado.
+- **Próximos passos:** volta, se precisar: `docker tag painel:volta-cat2-077a798d9a72 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-13 00:11] — CAT2: edição do item no Cardápio (não publicada)
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Atualizar o Cardápio para o contrato CAT2 do gateway (edição do item, preço rápido, 409, agora real, prévia, histórico, erros por campo).
+- **Arquivos alterados:**
+  - `src/lib/gateway/cardapio-cat2.ts` — modificado — reescrito: preço pt-BR, diferença dos campos, avisos, motivos em palavras, histórico em palavras e no horário de Brasília
+  - `src/lib/gateway/cardapio.server.ts` — modificado — leituras do CAT2 numa tabela por ação; histórico projetado
+  - `src/lib/gateway/cardapio-ux.ts` — modificado — `ResultadoItem` com `atual` do 409
+  - `src/components/luxtia/cardapio/ItemCat2.tsx` — modificado — reescrito: painel do item, preço rápido, conflito, prévia ao vivo, histórico
+  - `src/components/luxtia/cardapio/CardapioVista.tsx` — modificado — sem "A confirmar"; situação real; painel antigo virou só lote
+  - `src/components/luxtia/cardapio/DisponibilidadeEditor.tsx` — modificado — prop `previa`
+  - `src/components/luxtia/Cardapio.tsx` — modificado — `atualizarLocal`, 409 no lote
+  - `src/lib/gateway/cardapio-cat2.test.ts` — criado — 10 testes
+  - `src/lib/gateway/cardapio.test.ts`, `cardapio-ux.test.ts` — modificados — `atualizado_em` e `disponivel_agora`
+  - `tests/visual/cardapio/gateway-falso.ts` (criado), `capturar-cat2.cjs` (criado), `main.tsx` (modificado) — prints
+  - `README.md`, `instrucoes.md` — modificados
+- **Resumo das mudanças:** Outra sessão tinha começado o CAT2 nos mesmos arquivos (`ItemCat2.tsx`, `cardapio-cat2.ts`, ações no servidor e regras em `modulo.server.ts`/`erros.ts`). Com a autorização do Marco, assumi o trabalho, completei e reformatei. Regras de acesso e `itemAtual` em `erros.ts` mantidos como estavam.
+- **Decisões e justificativas:** Os avisos aparecem junto do campo e o salvar também pede confirmação. "Recarregar" também atualiza a lista; sem isso, o próximo salvamento cairia de novo em 409. Histórico só para admin/plataforma, porque `gestao/alteracoes` já era só de admin. A edição em lote continua só com disponibilidade, agora também com `atualizado_em`.
+- **Comandos executados:** `bun test` → 127 OK, 6 ignorados; `tsc --noEmit` → OK; ESLint dos arquivos → OK; Playwright (imagem `mcr.microsoft.com/playwright:v1.58.2-noble`, Vite local) → 7 prints e verificações OK, zero erros de JavaScript.
+- **Erros e resoluções:** (1) 3 testes antigos falhavam: `"campo": "atualizado_em", "mensagem": "Required"` e `disponivelAgora(item)` → `null`. Causa: o código já exigia o CAT2 e os testes não. Corrigido nos testes. (2) `tsc` TS2379/TS2345 (`exactOptionalPropertyTypes`): `atual?: ItemCardapio | undefined` e `query` omitida quando vazia. (3) Teste da plataforma: `AcessoNegado: Escolha a empresa.` Faltava `empresa` no teste.
+- **Pendências / TODO:** revisão do Marco; build Docker e publicação só depois. Não commitado. Prints autenticados de produção dependem de login.
+- **Próximos passos:** publicar do jeito de sempre (tag de volta da imagem `077a798d…`, build, troca só do painel) e conferir só com leitura.
+
+## Cardápio — revisão UX (13/10/2026, não publicada)
+
+- Nova lista por unidade/categoria, resumos e filtros, URL persistente, painel lateral de disponibilidade, atalhos/cópia e lote com progresso. Consulta do atendente sem controles de edição; PATCH segue exclusivo de admin/plataforma.
+- Prévia visual em Chromium pt-BR com dados fictícios: seis prints em `docs/prints-cardapio/`. Relatório e pendências de contrato em `docs/VALIDACAO_CARDAPIO_UX.md`.
+- 117 testes aprovados, 6 REST antigos ignorados, zero falhas; tsc, ESLint e build Vite aprovados. Nenhum item real alterado, nenhum serviço permanente recriado. Gateway somente leitura, sem commits. Aguardar revisão dos prints antes de publicar a nova versão.
+- O admin DISP1 não devolve disponibilidade avaliada agora/feriados: itens restritos aparecem “A confirmar”, sem classificação inventada. Edição de preço/nome/descrição/ativo/categoria e prévia operacional continuam pendências explícitas do gateway.
+
+## [2026-10-12 22:30] — DISP1: tela Cardápio publicada
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Publicar a tela aprovada pelo Marco e conferir só com leitura.
+- **Arquivos alterados:**
+  - `README.md` — modificado — seção Cardápio
+- **Resumo das mudanças:** Publicação do bloco da entrada abaixo, sem mudança de código. Regras aprovadas pelo Marco: sete dias viram lista vazia; com a chave desligada, pelo menos um dia. "Turno" fica nos horários das unidades.
+- **Decisões e justificativas:** Conferência da lista feita pelo mesmo `GET` que a tela usa (100 por página, papel membro), de dentro do contêiner, porque a tela real exige login. Nenhum item alterado.
+- **Comandos executados:** tag `painel:cal1-20261012` (= `85b1c122…`) → OK; `docker compose build painel` + `up -d --no-deps painel` → OK, imagem `756361eb…`; `verificar-chave-no-bundle.sh` → OK; `/`, `/ia/cardapio`, `/ia/unidades` 200; `/gateway/admin/v1/tenants` 404; logs sem erro; leitura: 9 páginas, 888 itens (808 ativos), 4 com disponibilidade = os 4 "Almoço executivo" com resumo; navegador: título "Cardápio | Luxtia" e ida ao login sem sessão; `docker rmi zenika/alpine-chrome` (autorizado) → OK
+- **Erros e resoluções:** nenhum.
+- **Pendências / TODO:** conferência visual autenticada pelo Marco (e os prints do CAL1). Não commitado.
+- **Próximos passos:** volta: `docker tag painel:cal1-20261012 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-12 22:25] — DISP1: tela Cardápio com disponibilidade por item (não publicada)
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Mostrar e editar a disponibilidade do item (contrato DISP1 do gateway) e o resumo na lista.
+- **Arquivos alterados:**
+  - `src/lib/gateway/cardapio.ts` — criado — tipos, rascunho do formulário, corpo do PATCH, validação (reaproveita `problemaGrade`), schema da entrada
+  - `src/lib/gateway/cardapio.server.ts` — criado — listar (`GET catalogo/itens`, 100 por página) e `PATCH catalogo/itens/{id}`; projeção sem descrição/observação
+  - `src/lib/gateway-cardapio.functions.ts` — criado — função de servidor
+  - `src/lib/gateway/modulo.server.ts` — modificado — regras: GET para admin e atendente; PATCH só admin e só com a chave `disponibilidade`
+  - `src/lib/gateway/erros.ts` — modificado — ajuda para erro no campo `disponibilidade`
+  - `src/components/luxtia/Cardapio.tsx`, `src/routes/_authenticated/ia/cardapio.tsx`, `src/routeTree.gen.ts`, `src/lib/nav.ts` — criados/modificados — tela, rota e menu "Cardápio"
+  - `src/components/luxtia/gestao-base.tsx` — modificado — `EditorFaixas` aceita `nome` (padrão "turno"; no cardápio "faixa")
+  - `src/lib/gateway/cardapio.test.ts` — criado — 8 testes
+- **Resumo das mudanças:** O painel não tinha tela de cardápio; foi criada uma mínima: busca, filtro por unidade, "Carregar mais", etiqueta com o resumo do gateway e "Inativo". Admin/plataforma veem o botão "Disponibilidade" (diálogo com "Sempre disponível", dias, "Exceto feriados" e faixas); atendente só lê.
+- **Decisões e justificativas:** "Sempre disponível" envia `null`. Os sete dias marcados vão como lista vazia (o gateway trata igual: sem restrição de dia); desligado sem nenhum dia é recusado no painel. O resumo exibido é sempre o do gateway, nunca montado no painel. A pré-visualização foi feita com dados de exemplo renderizando os componentes reais, porque a tela real exige login e chamaria o gateway de produção.
+- **Comandos executados:** `bun test` → 108 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; ESLint → 0 erros (avisos antigos de fast refresh); prints da pré-visualização com Chromium headless (`zenika/alpine-chrome`) → OK. **Sem build e sem publicação.**
+- **Erros e resoluções:** TS2353 em `Cardapio.tsx` (`item_id` não existe em `Omit<PedidoCardapio,"empresa">`: `Omit` sobre união só mantém chaves comuns) → `SemEmpresa<T>` distributivo.
+- **Pendências / TODO:** aprovação do Marco; depois: tag de volta, build, troca do `painel`, conferência só leitura. Não commitado.
+- **Próximos passos:** publicar após aprovação. Imagem em uso hoje: a do CAL1 (`85b1c122…`); volta do CAL1 continua `painel:cfg1a-20261011`.
+
+## [2026-10-12 20:40] — CAL1: Cidade e UF no cadastro de unidades
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Editar `cidade`/`uf` da unidade (contrato admin do gateway CAL1) e avisar quando a unidade está sem cidade.
+- **Arquivos alterados:**
+  - `src/lib/gateway/gestao.ts` — modificado — `UFS` (27), `cidadeUf`, tipo `Unidade` com `cidade`/`uf`, schema de escrita, `alertasUnidade.semCidade`
+  - `src/lib/gateway/gestao.server.ts` — modificado — `cidade` e `uf` na projeção da unidade
+  - `src/components/luxtia/GestaoUnidades.tsx` — modificado — campos Cidade e UF com ajuda no formulário; Cidade/UF no cartão e no detalhe; etiqueta "Sem cidade…"
+  - `src/lib/gateway/gestao.test.ts` — modificado — teste CAL1 e expectativa de `alertasUnidade`
+  - `instrucoes.md`, `README.md` — modificados
+- **Resumo das mudanças:** Formulário ganha Cidade (até 80) e UF (select das 27, "—" = sem UF); vazio grava `null`. Lista e detalhe mostram "Cidade/UF" em texto pequeno; unidade ativa sem cidade mostra o aviso, junto dos de horário e WhatsApp.
+- **Decisões e justificativas:** A escrita no gateway é `PATCH` (não `PUT`), como as demais edições de unidade. A lista é de cartões, então "coluna discreta" virou uma linha discreta no cartão. A lista fechada de UFs fica no painel porque o gateway só confere o formato (duas maiúsculas). O aviso vale só para unidade ativa, como os outros alertas. `cidade`/`uf` vão para todos os papéis (não são dados sensíveis); escrever continua só admin/plataforma.
+- **Comandos executados:** `bun test` → 100 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; ESLint nos 4 arquivos → OK (1 aviso antigo de fast refresh); tag `painel:cfg1a-20261011` da imagem em uso → OK; `docker compose build painel` + `up -d --no-deps painel` → OK; `verificar-chave-no-bundle.sh` → OK; `/` e `/ia/unidades` 200, `/gateway/admin/v1/tenants` 404, logs sem erro
+- **Erros e resoluções:** no teste novo, esperei exceção para dado inválido, mas `executarGestao` devolve `{ok:false}` (`expect…rejects` → "Received promise that resolved"); corrigida a expectativa, código sem mudança. ESLint acusou só formatação do Prettier nas linhas novas → `prettier --write`.
+- **Pendências / TODO:** prints da tela dependem de login do Marco no navegador do Cursor; nenhuma unidade real foi salva. Não commitado (regra do painel).
+- **Próximos passos:** prints (lista, formulário aberto sem salvar). Volta: `docker tag painel:cfg1a-20261011 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-11 16:46] — Proxy: liberar /gateway/health/ops (OPS1)
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Deixar o UptimeRobot ler `/gateway/health/ops` por fora, só com `ok` (200/503), sem motivos.
+- **Arquivos alterados:**
+  - `docker/Caddyfile` — modificado — `/gateway/health/ops` incluído no `@publico` do bloco `gateway_https`
+- **Resumo das mudanças:** Uma linha no proxy. A resposta pública já sai sem `motivos`: o Caddy envia `X-Forwarded-For` e o gateway trata a chamada como externa. Os motivos ficam só em `http://127.0.0.1:8100/health/ops`.
+- **Decisões e justificativas:** Configuração conferida com `caddy validate` numa cópia dentro do contêiner antes de tocar no arquivo. Arquivo reescrito no lugar (mesmo inode, o bind mount é de arquivo único) e `caddy reload`, sem recriar o contêiner. Nada no gateway mudou.
+- **Comandos executados:** `caddy validate` → OK; `caddy reload` → OK; por fora: `/gateway/health/ops` 503 `{"ok":false}` (esperado até o B2 estar no `.env`), `/gateway/health` 200, `/gateway/admin/v1/tenants` 404, `/gateway/api/v1/unidades` sem chave 401, `/gateway/health/opsx` 404, `/` 200; proxy "Up 3 days"
+- **Erros e resoluções:** nenhum. O aviso "Unnecessary header_up X-Forwarded-For" no reload já existia e não muda nada.
+- **Pendências / TODO:** não commitado (regra do painel). Backup do arquivo anterior em `/home/twadmin/backups/painel/pre-healthops-20261011T194613Z/Caddyfile`.
+- **Próximos passos:** depois das credenciais do B2 e do Telegram no `.env`, conferir `{"ok":true}` 200 por fora e apontar o UptimeRobot. Volta: `cat <backup>/Caddyfile > docker/Caddyfile` + `docker exec painel_koji-proxy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+
+## [2026-10-11 12:49] — CFG1-a no painel: tela "Comportamento do agente"
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Implementar a tela de `docs/ESPEC_TELAS_CFG1.md` sobre o contrato `gateway/docs/ESPEC_CFG1.md` §13.
+- **Arquivos alterados:**
+  - `src/lib/gateway/atendimento.ts` — criado — schema de entrada, tipos do contrato, rótulos, origem/Personalizado por campo, corpo do rascunho, trechos
+  - `src/lib/gateway/atendimento.server.ts` — criado — ler, salvar, descartar, publicar, versões, restaurar, prévia; tradução de erros
+  - `src/lib/gateway-atendimento.functions.ts` — criado — função de servidor
+  - `src/lib/gateway/modulo.server.ts` — modificado — `regrasAtendimento` (empresa e agente)
+  - `src/components/luxtia/comportamento/{ComportamentoAgente,CampoAtendimento,HistoricoVersoes,PreviaAtendimento}.tsx` — criados
+  - `src/routes/_authenticated/ia/configuracoes.comportamento.tsx`, `src/routeTree.gen.ts`, `src/lib/nav.ts` — criado/modificados — rota e menu
+  - `src/lib/gateway/atendimento.test.ts` — criado; `modulo.test.ts` — modificado
+  - `instrucoes.md`, `README.md` — modificados
+- **Resumo das mudanças:** Escopo empresa ou agente. Abas Personalidade, Comportamentos (com Operação só leitura), Publicar, Prévia e Histórico. Cada campo mostra o valor em uso, a origem, "Personalizado" e "Voltar ao padrão" (null). Barra fixa de rascunho; publicação com nota, bloqueios e avisos; histórico com antes/depois e Restaurar com confirmação; atalho "Testar no Simular".
+- **Decisões e justificativas:** Tipo, limites, opções e `editavel`/`disponivel` vêm só do esquema; no painel ficam apenas os textos (rótulo desconhecido vira a chave legível). Membro é barrado nas escritas antes de chamar o gateway, e o gateway também recusa. Rascunho desatualizado é rebaseado com PUT só de `baseado_em`. O Simular testa o publicado; a tela avisa isso. Nome do segmento por mapa local, porque não há rota global para empresa.
+- **Comandos executados:** ESLint → OK; `bun test` → 99 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; build + `up -d --no-deps painel` → OK; `verificar-chave-no-bundle.sh` → OK; rotas 200 e `/gateway/admin/v1/tenants` 404; logs sem segredos; leitura no gateway real como membro (atendimento empresa e agente, versões, prévia) → 200, `pode_editar` false
+- **Erros e resoluções:** `tsc` TS2322 em `situacaoCampo` (`valor` podia ser `undefined`) → `?? null` no valor final. TS2345 na rota nova → entrada adicionada em `routeTree.gen.ts`, como no Pedidos. A primeira leitura de conferência deu 404 porque o script repetia `/admin/v1` (já faz parte de `GATEWAY_ADMIN_URL`). Nela foi mandado um PUT como membro, que voltou 404 sem gravar nada; a segunda leitura foi só GET e prévia.
+- **Pendências / TODO:** escritas (rascunho, publicar, restaurar) não exercitadas em produção, só nos testes; conferência visual autenticada como admin pelo Marco; atalho na aba do agente não feito.
+- **Próximos passos:** validação do Marco; volta: `docker tag painel:ped1c-20261011 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-11 12:32] — PED1-c no painel: nome de exibição, estado único, filtros e "Editar nome"
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Usar o contrato PED1-c (`gateway/docs/ESPEC_PED1.md` §14) em Conversas e Pedidos e permitir editar o nome de cadastro do contato.
+- **Arquivos alterados:**
+  - `src/lib/gateway/conversas.ts` — modificado — tipos PED1-c (`nome_exibicao`, `nome_origem`, `nomes`, `canal_info`, `estado`, `ultima`, `unidade_preferida(_nome)`, `pedido_aberto`, `ContatoPainel`); `estadoConversa` prefere o estado do gateway; selo de origem; `resumoUltima` (autor e tipo); `canalDaConversa`; `validarNomeCadastro` (mesma regra do gateway) e `nomeSemCadastro`; `ordenarConversas` com opção de manter a ordem do servidor
+  - `src/lib/gateway-conversas.functions.ts` — modificado — `estado` (lista) e `ordem` em `listarConversas`; nova `editarNomeContato` (conversa visível + contato da própria conversa, PATCH só `{nome}`, motivos traduzidos, 409 anonimizado)
+  - `src/lib/gateway/modulo.server.ts` — modificado — regra `PATCH contatos/*` para admin e membro, corpo só com `nome` (texto ou null)
+  - `src/lib/gateway/pedidos.server.ts`, `src/lib/gateway/pedidos.ts` — modificados — nome atual da conversa juntado ao pedido (lista e detalhe) e `nomeClientePedido`
+  - `src/components/luxtia/Conversas.tsx` — modificado — filtros Estado (inclui Encerrada) e Ordenar; busca pelos três nomes; selos de origem e "teste"; última com autor/tipo; unidade preferida; atalho do pedido aberto; "Editar nome" no cabeçalho
+  - `src/components/luxtia/Pedidos.tsx`, `src/routes/_authenticated/ia/pedidos.tsx` — modificados — mesmo nome no cartão, na lista e no detalhe; `?pedido=` abre o detalhe
+  - `src/lib/gateway/{conversas,pedidos,modulo}.test.ts` — modificados — testes PED1-c
+- **Resumo das mudanças:** Conversas mostram o nome de exibição com selo discreto (cadastro, informado, perfil, telefone), telefone formatado, canal do `canal_info` com selo "teste", estado único, última mensagem com autor e tipo, unidade preferida e o pedido aberto (atalho no cabeçalho). Filtro de estado e ordem por atividade recente (padrão). Qualquer papel edita o nome de cadastro; vazio apaga e volta ao próximo da prioridade. Pedidos exibem o mesmo nome da conversa.
+- **Decisões e justificativas:** O gateway grava `cliente.nome` no fechamento e não atualiza; para mostrar o mesmo nome, o servidor do painel junta o `nome_exibicao` da conversa (uma leitura `ordem=recentes` em cache de 30 s por empresa, até 5 buscas pelo telefone para o que faltar; falha não quebra, fica o nome do pedido; cache limpo ao editar nome). A edição confere que o contato é o da conversa visível, para o ID não servir de atalho a contatos de agentes ocultos. "Só aguardando" virou a opção "Aguardando atendente" do filtro de estado (mesma fila global). Selo "telefone" em vez de esconder, para o atendente saber que falta nome.
+- **Comandos executados:** `bun test` → 94 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; ESLint nos arquivos alterados → OK; `docker compose build painel` + `up -d --no-deps painel` → OK; `verificar-chave-no-bundle.sh` → OK; rotas públicas 200, `/gateway/admin/v1/tenants` 404; logs sem segredos; leitura de conferência no gateway real (campos PED1-c, `ordem=recentes`, `estado=encerrada`, estado inválido 400) → OK
+- **Erros e resoluções:** `tsc` TS2379 em `editarNomeContato` (`mensagem: string | undefined` com `exactOptionalPropertyTypes`, índice de `MOTIVO_NOME`) → fallback "Nome inválido." e checagem antes do uso.
+- **Pendências / TODO:** PATCH de nome não exercitado em produção (escrita; coberto por testes); conferência visual autenticada pelo Marco. Tela própria de Contatos não existe no painel (edição só no cabeçalho da conversa).
+- **Próximos passos:** validação do Marco; volta: `docker tag painel:9afa7b3 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
+
+## [2026-10-11 10:55] — Especificação da tela "Comportamento do agente" (CFG1)
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Especificar, sem implementar, as telas de Personalidade, Comportamentos, Base de conhecimento, Publicar e Histórico a partir de `gateway/docs/ESPEC_CFG1.md`.
+- **Arquivos alterados:**
+  - `docs/ESPEC_TELAS_CFG1.md` — criado — cinco telas, permissões, selos de origem, "em breve", motivos travados, bloqueio das regras da casa e 19 pendências do contrato
+  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Página única com escopo empresa ou agente e cinco abas. Cada campo mostra "Padrão do segmento" ou "Personalizado", com "voltar ao padrão" (campo `null` no rascunho). Itens `disponivel=false` ficam desabilitados com selo "em breve". `pediu_humano` e `reclamacao` ficam ligados e travados. Regras da casa com contador de caracteres e de quebras de linha, bloqueio destacando o trecho e confirmação nos casos duvidosos.
+- **Decisões e justificativas:** Nenhum campo ou rota inventado; o que falta virou pendência P1–P19. "Testar no Simular" avisa que testa a versão publicada (não existe simulação de rascunho) e fica desabilitado com envio real. Base de conhecimento só depois do CFG1-b, conforme a ordem do Marco. Piloto e operação continuam fora da versão.
+- **Comandos executados:** leitura de `ESPEC_CFG1.md`, da aba Comportamento do agente, do Simular e das permissões → especificação escrita
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** aprovação do Marco; pendências P1–P19 dependem do gateway (CFG1-a ainda não implementado)
+- **Próximos passos:** aguardar aprovação; implementar telas 1, 2, 4 e 5 só depois do CFG1-a publicado no gateway
+
 ## PED1-b — avisos de pedido (11/10/2026)
 
 - Publicado `painel:6027ea7`: X-Role da sessão em todas as chamadas administrativas; Configurações → Avisos de pedido por status/modalidade, prévia e padrão; reenvio na linha do tempo com confirmação e tratamento de entrega incerta. Contador existente preservado.
@@ -109,183 +368,4 @@
 - **Pendências / TODO:** conferência visual autenticada; a sessão de revisão caiu na tela de acesso
 - **Próximos passos:** Marco revisar pausa, grade, exceção e o filtro de histórico numa unidade real, só em leitura se não houver unidade de teste
 
-## 2026-10-10 — Gestão G1 do painel
-
-Unidades, grade/agenda, pausa/reabertura, exceções e histórico publicados. Atendente lê unidades/agenda e pausa/reabre; gestão restante só plataforma/admin, por regra no servidor. X-Actor da sessão. 72 testes aprovados, TypeScript e build OK, lint sem erros. Validação autenticada de quatro unidades/agendas e histórico somente em leitura; zero escritas de produção. Backup/tag de volta preservados; só painel recriado; gateway intocado e zero segredos no bundle/logs. Relatório e descrição das telas: `docs/VALIDACAO_G1_PAINEL.md`. Aguardar revisão visual do Marco; sem outros blocos.
-
-## 2026-10-10 — Limites de capacidade exclusivos da plataforma
-
-- Empresa (Editar → Avançado) e agente (aba Avançado): 1–100, reset null, valor efetivo do gateway, ajuda e erro junto ao campo.
-- Funções do servidor exigem plataforma nas leituras/escritas; nenhum segredo no navegador e nenhuma alteração no repositório gateway.
-- 60 testes aprovados, seis integrações REST antigas ignoradas; TypeScript/lint/build aprovados. Publicação com imagem de volta `painel:4f0eaea` e backup validado `pre-capacidade-20261010T014040Z`.
-- Apenas painel recriado, saúde OK, admin público 404, zero segredos no bundle/logs. HTTP autenticado confirmou valores efetivos (30/30 By Koji) e recusou 101 nos dois campos sem gravar. Nenhuma configuração alterada. Detalhes e volta em `instrucoes.md`; revisão visual pendente do Marco.
-
-# Worklog
-
-Registro de desenvolvimento do Painel Koji. Entradas mais recentes no topo.
-
-## [2026-10-10] — Aguardando atendente no painel
-
-- Selo com tempo e motivo, filtro no servidor, prioridade pela espera mais antiga e aviso discreto por evento visível. Sem botão para limpar; reflete o estado do gateway após atendimento.
-- Fallback com exemplo, mínimo de 15 caracteres e letra, vazio herdado, erro de campo seguro; papéis conferidos no servidor.
-- 57 testes aprovados, TypeScript/lint/build verdes. Publicação apenas do painel, imagem anterior `painel:ed9de0c`, backup validado; chave ausente do front/logs. HTTP autenticado conferido sem alterar dados do gateway. Detalhes e checklist em `instrucoes.md`.
-
-## [2026-10-09 15:52] — Publicação do cursor oficial
-- **Autor:** Auto (Cursor)
-- **Objetivo:** Publicar só o painel, com imagem de volta e backup, para validação de `/ia/conversas`.
-- **Arquivos alterados:**
-  - `instrucoes.md` — modificado — volta, backup e conferências
-  - `docs/worklog.md` — modificado — esta entrada
-- **Resumo das mudanças:** A imagem em uso foi marcada `painel:24c8436` antes do build. O painel novo é `painel:ed9de0c`. Banco, gateway e demais containers não foram recriados.
-- **Decisões e justificativas:** A volta é o commit que a imagem anterior contém (`24c8436`), não o código novo. Sem mudança de schema, o dump não deve ser restaurado numa volta.
-- **Comandos executados:** tag conferida → OK; `pg_restore --list` → OK; `docker compose build painel` → OK; verificação da chave no bundle → OK; `up -d --no-deps --no-build painel` → OK; páginas 200 e admin do gateway 404; segredos nos logs → 0.
-- **Erros e resoluções:** `pg_restore` não existe no host; a lista do dump foi conferida com a imagem `postgres:16-alpine`.
-- **Pendências / TODO:** validação visual de `/ia/conversas` pelo Marco
-- **Próximos passos:** nenhuma continuação até essa validação
-
-## [2026-10-09 15:44] — Cursor oficial no acompanhamento das conversas
-- **Autor:** Auto (Cursor)
-- **Objetivo:** Trocar a varredura provisória pelo `GET /eventos/cursor` do gateway.
-- **Arquivos alterados:**
-  - `src/lib/gateway-conversas.functions.ts` — modificado — lê `ultimo_id` antes da lista
-  - `src/lib/gateway/conversas.ts` — modificado — `desde` parte desse id
-  - `src/lib/gateway/modulo.server.ts` — modificado — admin da empresa e membro podem ler o cursor
-  - `src/components/luxtia/Conversas.tsx` — modificado — lista e polling só depois do cursor
-  - `src/lib/gateway/conversas.test.ts`, `src/lib/gateway/modulo.test.ts` — modificados
-  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
-- **Resumo das mudanças:** Ao abrir Conversas, o painel pede `{"ultimo_id": N}` e só então carrega a lista. O polling usa esse N como `desde` e não pede o cursor de novo. Páginas de eventos só alcançam o que chegou depois.
-- **Decisões e justificativas:** O contrato pede o cursor antes da carga para não perder o que for confirmado enquanto a lista carrega. A varredura desde zero deixou de ser o ponto de partida.
-- **Comandos executados:** `bun test` → 52 pass, 6 skip; `tsc --noEmit` e eslint dos arquivos alterados → OK. Sem build nem publicação.
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** validação do Marco antes de publicar o painel
-- **Próximos passos:** depois da validação, imagem de volta, backup e recriar só o painel
-
-## [2026-10-09] — Conversas e conexão Skyone em simulação
-
-- Implementadas lista/filtros, histórico paginado, atendimento humano, polling limitado no servidor e novidades locais por usuário/empresa. Destaque de transferência preparado para a Fase 3.
-- Teste real pelo painel: HTTP 200 em 6.762 ms; Bench segundo agente permanece mock/dry.
-- 51 testes aprovados, TypeScript/lint/build verdes. Somente painel recriado com imagem de volta e backup; funções HTTP autenticadas e proteções verificadas após publicação.
-- Procedimento, backup, limitações e resultados completos em `instrucoes.md`. Aguardando validação do Marco; nenhuma continuação da Fase 0.6.
-
-## [2026-10-07 23:54] — Visual do painel mais moderno
-- **Autor:** Grok 4.7
-- **Objetivo:** Melhorar a experiência do painel sem sair das cores do designer.
-- **Arquivos alterados:**
-  - `src/components/luxtia/Superficie.tsx` — criado — cabeçalho, métricas, cartão, vazio e iniciais
-  - `src/components/luxtia/AppShell.tsx` — modificado — monograma, barra superior e fundo creme
-  - `src/routes/_authenticated/admin/index.tsx` — modificado — resumo, busca e lista
-  - `src/routes/_authenticated/admin/$tenantId.tsx` — modificado — cartões de conexão e acessos
-  - `src/routes/_authenticated/equipe.tsx` — modificado — mesmo padrão visual
-  - `src/routes/index.tsx` — modificado — formulário de login em cartão
-  - `instrucoes.md`, `docs/worklog.md` — modificados
-- **Resumo das mudanças:** O fundo ficou no creme da marca e os blocos brancos se separam com borda e sombra leve. A lista de clientes mostra totais, busca e a situação de cada um.
-- **Decisões e justificativas:** Ouro continua só no traço e no L do menu, como o teto da paleta. Verde de sucesso, já definido no tema, marca conexão ativa.
-- **Comandos executados:** docker compose build painel && up -d → OK. Busca, lista e ficha do cliente conferidas no navegador, inclusive em 390px.
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** nenhuma
-- **Próximos passos:** repetir o mesmo padrão se novas telas entrarem no menu
-
-## [2026-10-07 23:26] — Menu sem Integrações, Diagnóstico e Auditoria
-- **Autor:** Grok 4.7
-- **Objetivo:** Remover do menu Integrações, Debug iFood, Debug 99Food e Auditoria.
-- **Arquivos alterados:**
-  - `src/lib/nav.ts` — modificado — menus reduzidos a Clientes e Equipe
-  - `src/components/luxtia/AppShell.tsx` — modificado — ícones que não entram mais no menu
-  - `src/routes/_authenticated/admin/$tenantId.tsx` — modificado — atalhos para as telas removidas
-  - `src/routes/_authenticated/painel.tsx` — modificado — cliente entra em Equipe
-  - `instrucoes.md`, `docs/worklog.md` — modificados
-- **Resumo das mudanças:** O menu do super admin mostra só Clientes. O do cliente mostra só Equipe. Os grupos Diagnóstico e Governança deixaram de aparecer.
-- **Decisões e justificativas:** As rotas continuam no código para não quebrar endereços antigos, mas não há mais entrada no menu nem atalho na ficha do cliente.
-- **Comandos executados:** docker compose build painel && up -d → OK. Menu em /admin conferido no navegador: só Clientes.
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** nenhuma
-- **Próximos passos:** se essas telas não forem mais usadas, apagar as rotas correspondentes
-
-## [2026-10-07 23:12] — Menu lateral organizado
-- **Autor:** Grok 4.7
-- **Objetivo:** Deixar o painel mais organizado, com menu lateral agrupado.
-- **Arquivos alterados:**
-  - `src/components/luxtia/AppShell.tsx` — modificado — barra superior virou menu lateral
-  - `src/lib/nav.ts` — modificado — grupos Operação, Diagnóstico e Governança
-  - `instrucoes.md`, `docs/worklog.md` — modificados
-- **Resumo das mudanças:** A marca e o contexto ficam no topo do menu. Cada página tem ícone e o item ativo leva a faixa dourada. No celular o menu entra pela esquerda e some ao navegar.
-- **Decisões e justificativas:** As páginas já passavam a lista de navegação para o AppShell, então o agrupamento ficou só na definição do menu, sem alterar cada rota.
-- **Comandos executados:** docker compose build painel && docker compose up -d painel → OK. Navegação no navegador em /admin, /integracoes e /auditoria, em 1440px e 390px → OK.
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** nenhuma
-- **Próximos passos:** se surgirem novas telas, incluí-las no grupo correspondente em `src/lib/nav.ts`
-
-## [2026-10-07 23:06] — Acesso de Marco Santos
-- **Autor:** Grok 4.7
-- **Objetivo:** Criar o usuário marco.santos@ticway.com.br no painel.
-- **Arquivos alterados:**
-  - `instrucoes.md` — modificado — registro da fase
-  - `docs/worklog.md` — modificado — esta entrada
-- **Resumo das mudanças:** Conta criada no GoTrue (e-mail confirmado) e papel `super_admin` em `user_roles`. Sem vínculo com cliente, porque o pedido foi de usuário do sistema.
-- **Decisões e justificativas:** Sem o papel de super admin o login cairia na tela sem cliente. O acesso `admin@luxtia.local` foi mantido.
-- **Comandos executados:** POST no admin do GoTrue → OK. INSERT em user_roles → OK. login em `/auth/v1/token` → 200.
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** nenhuma
-- **Próximos passos:** entrar em http://painel.luxbrain.com.br/ com o e-mail informado
-
-## [2026-10-07 23:02] — Remoção da marca Lovable
-- **Autor:** Grok 4.7
-- **Objetivo:** Tirar do painel publicado tudo que ainda identificava o Lovable, inclusive ícone e favicon.
-- **Arquivos alterados:**
-  - `public/favicon.ico` — modificado — coração substituído pelo monograma Luxtia
-  - `public/favicon.svg` — criado — mesmo monograma em SVG
-  - `src/routes/__root.tsx` — modificado — links do ícone e remoção da telemetria
-  - `src/lib/lovable-error-reporting.ts` — removido
-  - `src/integrations/supabase/previewAuthStorage.ts` — removido
-  - `src/integrations/supabase/client.ts`, `client.server.ts`, `auth-middleware.ts`, `cron-auth.ts` — modificados — sessão local e textos sem a plataforma antiga
-  - `vite.config.ts`, `package.json`, `bun.lock`, `bunfig.toml` — modificados — build próprio, sem o pacote `@lovable.dev`
-  - `README.md`, `AGENTS.md`, `instrucoes.md` — modificados
-- **Resumo das mudanças:** A aba deixa de mostrar o coração e passa a usar o L roxo e dourado. O JavaScript publicado não cita mais a plataforma. O Vite usa TanStack Start e Nitro direto.
-- **Decisões e justificativas:** O pacote de configuração só existia para o editor antigo. A sessão no domínio próprio já caía no localStorage; o atalho do editor foi removido sem mudar o login.
-- **Comandos executados:** docker compose build painel → OK. docker compose up -d painel → OK. curl da página, do favicon e busca no bundle → sem ocorrências.
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** nenhuma desta tarefa
-- **Próximos passos:** se a aba ainda mostrar o coração, forçar atualização (o navegador guarda favicon antigo)
-
-## [2026-10-07 18:30] — Stack no ar nesta máquina
-- **Autor:** Grok 4.7
-- **Objetivo:** Subir o painel em Docker com PostgreSQL para responder em painel.luxbrain.com.br.
-- **Arquivos alterados:**
-  - `docker/inicializar-banco.sh` — modificado — shebang compatível com a imagem Alpine
-- **Resumo das mudanças:** Compose subiu Postgres, GoTrue, PostgREST, o painel e o Caddy nas portas 80 e 443. Migrations aplicadas. Login do super admin testado com sucesso em localhost.
-- **Decisões e justificativas:** O DNS de painel.luxbrain.com.br aponta para 177.67.71.227, que é o firewall. As portas 80/443 desse IP ainda caem no Apache/nginx de outro servidor, então o Let's Encrypt não validou e a URL pública continua na página antiga.
-- **Comandos executados:** docker compose up -d --build → OK. curl local do painel, /auth/v1/health e login → OK.
-- **Erros e resoluções:** desafio ACME em 177.67.71.227 respondeu 404 do Apache, não deste Caddy.
-- **Pendências / TODO:** no pfSense, encaminhar TCP 80 e 443 de 177.67.71.227 para 10.0.0.211.
-- **Próximos passos:** repetir o teste da URL pública depois do ajuste do NAT.
-
-## [2026-10-07 16:20] — Deploy Docker e PostgreSQL
-- **Autor:** Grok 4.7
-- **Objetivo:** Clonar o painel e deixá-lo no ar em painel.luxbrain.com.br com Docker e Postgres.
-- **Arquivos alterados:**
-  - `Dockerfile`, `docker-compose.yml`, `docker/*`, `.dockerignore`, `.env.example` — criados — stack de produção
-  - `.env` — criado — senha do Postgres e chaves JWT (não versionado)
-  - `vite.config.ts` — modificado — preset Nitro `node-server`
-  - `src/integrations/supabase/client.ts` — modificado — URL da API igual à origem da página
-  - `README.md`, `instrucoes.md` — modificados — fase de deploy
-- **Resumo das mudanças:** Repositório clonado para `/home/twadmin/painel_koji`. Compose sobe Postgres, autenticação, PostgREST, o painel e o Caddy nas portas 80/443.
-- **Decisões e justificativas:** O app fala com a API no estilo Supabase (JWT, RLS e `auth.uid()`). Postgres sozinho não atende o login; GoTrue e PostgREST ficam na mesma origem do domínio. `/opt` é root e o Docker do host ainda não estava instalado.
-- **Comandos executados:** git clone; python3 docker/gerar-segredos.py → OK. Instalação do Docker via sudo → senha exigida.
-- **Erros e resoluções:** `sudo` pede senha; instalação do Docker ainda não concluiu.
-- **Pendências / TODO:** instalar Docker, `docker compose up -d --build`, apontar o DNS de painel.luxbrain.com.br para o IP público desta máquina (177.126.168.114).
-- **Próximos passos:** subir a stack e conferir login em http://painel.luxbrain.com.br
-
-## [2026-10-07 15:55] — Publicação no GitHub
-- **Autor:** Grok 4.7
-- **Objetivo:** Enviar o código local para o repositório GitHub `painel_koji`.
-- **Arquivos alterados:**
-  - `.gitignore` — modificado — passa a ignorar `.env` e variantes
-  - `README.md` — modificado — link do repositório
-  - `instrucoes.md` — criado — fase de publicação
-  - `docs/worklog.md` — criado — este registro
-- **Resumo das mudanças:** Repositório remoto `marcoasp3030/painel_koji` já existia e estava vazio. O projeto local ainda não era um repositório Git. O código-fonte foi commitado na branch `main` e enviado para o GitHub.
-- **Decisões e justificativas:** O `.env` ficou de fora porque o repositório é público e contém chaves do Supabase. O `gh` não estava autenticado no terminal; o envio usou a autenticação já configurada do GitHub no Cursor.
-- **Comandos executados:** git init, git add, git commit, git push → ver resultado na mesma sessão
-- **Erros e resoluções:** nenhum até o envio
-- **Pendências / TODO:** conferir no GitHub se todos os arquivos subiram
-- **Próximos passos:** conectar o Lovable a este repositório, se ainda não estiver ligado
+Entradas anteriores (até 10/10/2026) estão em `docs/worklog-arquivo/2026-10.md`.

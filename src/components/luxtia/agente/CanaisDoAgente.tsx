@@ -132,8 +132,15 @@ export function CanaisDoAgente({
           agentes={[{ id: agente.id, nome: agente.nome }]}
           agenteFixo={agente.id}
           onFechar={() => onCriando(false)}
-          onCriado={(webhookUrl) => {
+          onCriado={(webhookUrl, uazapi) => {
             setUrl(webhookUrl);
+            if (uazapi) {
+              toast.message(
+                uazapi.registrado
+                  ? "Webhook cadastrado na uazapi."
+                  : `Webhook na uazapi: ${uazapi.motivo ?? "não cadastrado"}`,
+              );
+            }
             void recarregar();
           }}
         />

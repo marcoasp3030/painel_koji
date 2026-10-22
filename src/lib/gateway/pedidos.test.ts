@@ -1,8 +1,14 @@
 import { expect, test } from "bun:test";
 import { criarClienteGateway } from "./cliente.server";
 import { criarModuloGateway } from "./modulo.server";
-import { executarPedidos } from "./pedidos.server";
-import { acoesPedido, tempoDesde, whatsappPedido } from "./pedidos";
+import { esquecerNomesRecentes, executarPedidos } from "./pedidos.server";
+import {
+  acoesPedido,
+  nomeClientePedido,
+  tempoDesde,
+  whatsappPedido,
+  type PedidoLista,
+} from "./pedidos";
 
 async function montar(papel = "admin", respostas: Response[] = []) {
   const chamadas: {
@@ -92,14 +98,42 @@ test("PED1-a membro muda o status e lê pedidos da própria empresa", async () =
     acao: "listar",
     status: ["pronto_retirada", "saiu_entrega"],
     modalidade: "delivery",
+    origem: ["real", "piloto"],
     busca: "Marco",
   });
   const url = new URL(lista.chamadas[0]!.url);
   expect(url.pathname).toBe("/admin/v1/tenants/bykoji/pedidos");
   expect(url.searchParams.get("status")).toBe("pronto_retirada,saiu_entrega");
   expect(url.searchParams.get("modalidade")).toBe("delivery");
+  expect(url.searchParams.get("origem")).toBe("real,piloto");
   expect(url.searchParams.get("busca")).toBe("Marco");
   expect(url.searchParams.get("limite")).toBe("50");
+});
+
+test("LGPD1 contagem so_reais lista pedidos com origem=real", async () => {
+  const c = await montar("admin", [
+    Response.json({
+      itens: [
+        { numero: "1", criado_em: "2026-10-16T12:00:00-03:00" },
+        { numero: "2", criado_em: "2026-10-16T11:00:00-03:00" },
+      ],
+      proximo_cursor: null,
+    }),
+  ]);
+  const r = await executarPedidos(c.sessao, { acao: "contagem", so_reais: true });
+  expect(r.ok).toBe(true);
+  if (r.ok) {
+    const d = r.dados as {
+      aguardando_loja: { total: number; mais_antigo_em: string | null };
+    };
+    expect(d.aguardando_loja.total).toBe(2);
+    expect(d.aguardando_loja.mais_antigo_em).toBe("2026-10-16T11:00:00-03:00");
+  }
+  const url = new URL(c.chamadas[0]!.url);
+  expect(url.pathname).toBe("/admin/v1/tenants/bykoji/pedidos");
+  expect(url.searchParams.get("status")).toBe("aguardando_loja");
+  expect(url.searchParams.get("origem")).toBe("real");
+  expect(url.searchParams.get("limite")).toBe("100");
 });
 
 test("PED1-a cancelar sem motivo e previsão inválida não chamam o gateway", async () => {
@@ -173,4 +207,84 @@ test("PED1-a 409 recarrega a frase e guarda o status atual", async () => {
     });
     expect(c.chamadas[0]?.body).toEqual({ status: "confirmado", previsao_min: 40 });
   }
+});
+
+const pedidoBase = {
+  numero: "59859",
+  status: "em_preparo",
+  conversation_id: "bykoji:can_1:5511947281513",
+  cliente: { nome: "Marquinho", telefone: "+5511947281513", canal: null },
+};
+
+test("PED1-c cartão e detalhe usam o nome_exibicao atual da conversa", async () => {
+  esquecerNomesRecentes("bykoji");
+  const c = await montar("membro", [
+    Response.json({ itens: [pedidoBase, { ...pedidoBase, numero: "2", conversation_id: null }] }),
+    Response.json({
+      itens: [
+        {
+          conversation_id: pedidoBase.conversation_id,
+          nome_exibicao: "Marco Silva",
+          nome_origem: "cadastro",
+        },
+      ],
+      proximo_cursor: null,
+    }),
+  ]);
+  const r = await executarPedidos(c.sessao, { acao: "listar" });
+  expect(r.ok).toBe(true);
+  const itens = (r as { dados: { itens: PedidoLista[] } }).dados.itens;
+  expect(itens[0]?.cliente).toMatchObject({ nome: "Marquinho", nome_exibicao: "Marco Silva" });
+  expect(nomeClientePedido(itens[0]?.cliente).nome).toBe("Marco Silva");
+  expect(nomeClientePedido(itens[0]?.cliente).origem).toBe("cadastro");
+  expect(itens[1]?.cliente).not.toHaveProperty("nome_exibicao");
+  const conversas = new URL(c.chamadas[1]!.url);
+  expect(conversas.pathname).toBe("/admin/v1/tenants/bykoji/conversas");
+  expect(conversas.searchParams.get("ordem")).toBe("recentes");
+  expect(c.chamadas).toHaveLength(2);
+
+  // Detalhe: aproveita os nomes recentes e não repete a leitura.
+  c.chamadas.length = 0;
+  const d = await montar("membro", [Response.json(pedidoBase)]);
+  const det = await executarPedidos(d.sessao, { acao: "detalhe", numero: "59859" });
+  expect((det as { dados: PedidoLista }).dados.cliente.nome_exibicao).toBe("Marco Silva");
+  expect(d.chamadas).toHaveLength(1);
+});
+
+test("PED1-c conversa fora das recentes: busca pelo telefone; falha mantém o nome do pedido", async () => {
+  esquecerNomesRecentes("bykoji");
+  const c = await montar("admin", [
+    Response.json(pedidoBase),
+    Response.json({ itens: [], proximo_cursor: null }),
+    Response.json({
+      itens: [
+        {
+          conversation_id: pedidoBase.conversation_id,
+          nome_exibicao: "+55 11 94728-1513",
+          nome_origem: "telefone",
+        },
+      ],
+    }),
+  ]);
+  const r = await executarPedidos(c.sessao, { acao: "detalhe", numero: "59859" });
+  const cliente = (r as { dados: PedidoLista }).dados.cliente;
+  expect(new URL(c.chamadas[2]!.url).searchParams.get("busca")).toBe("5511947281513");
+  // Cadastro apagado e sem outro nome: segue a conversa (telefone), não o nome antigo do pedido.
+  expect(nomeClientePedido(cliente)).toMatchObject({
+    nome: "+55 11 94728-1513",
+    temNome: false,
+    origem: null,
+  });
+
+  esquecerNomesRecentes("bykoji");
+  const falha = await montar("admin", [
+    Response.json(pedidoBase),
+    Response.json({ erro: { codigo: "UNAVAILABLE" } }, { status: 503 }),
+  ]);
+  const f = await executarPedidos(falha.sessao, { acao: "detalhe", numero: "59859" });
+  expect(f.ok).toBe(true);
+  expect(nomeClientePedido((f as { dados: PedidoLista }).dados.cliente).nome).toBe("Marquinho");
+  expect(nomeClientePedido({ nome: null, telefone: null, canal: null }).nome).toBe(
+    "Cliente sem nome",
+  );
 });

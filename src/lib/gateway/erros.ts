@@ -31,6 +31,7 @@ const MENSAGEM_PADRAO: Record<CodigoGateway, string> = {
 const CODIGOS = new Set(Object.keys(MENSAGEM_PADRAO));
 
 export class GatewayErro extends Error {
+  readonly itemAtual: unknown;
   readonly codigo: CodigoGateway;
   readonly status: number;
   readonly detalhes: Record<string, unknown>;
@@ -38,6 +39,7 @@ export class GatewayErro extends Error {
   readonly tentarApos: number | null;
 
   constructor(opcoes: {
+    itemAtual?: unknown;
     codigo: CodigoGateway;
     status: number;
     mensagem?: string | null;
@@ -46,6 +48,7 @@ export class GatewayErro extends Error {
   }) {
     super(opcoes.mensagem || MENSAGEM_PADRAO[opcoes.codigo]);
     this.name = "GatewayErro";
+    this.itemAtual = opcoes.itemAtual;
     this.codigo = opcoes.codigo;
     this.status = opcoes.status;
     this.detalhes = opcoes.detalhes ?? {};
@@ -93,7 +96,14 @@ export function interpretarErro(
       typeof e["mensagem"] === "string" && !/^[A-Z0-9_]+$/.test(e["mensagem"])
         ? e["mensagem"]
         : null;
-    return new GatewayErro({ codigo, status, mensagem, detalhes, tentarApos });
+    return new GatewayErro({
+      codigo,
+      status,
+      mensagem,
+      detalhes,
+      tentarApos,
+      itemAtual: status === 409 ? objeto?.["item"] : undefined,
+    });
   }
 
   const detalhes: Record<string, unknown> = {};
@@ -108,6 +118,8 @@ export function interpretarErro(
 
 /** O que fazer quando o gateway aponta um campo (detalhes.campo) sem explicar. */
 const AJUDA_POR_CAMPO: Record<string, string> = {
+  disponibilidade:
+    "Confira a disponibilidade: dias da semana e faixas de horário em HH:MM, sem sobreposição.",
   fallback:
     "Escreva pelo menos 15 caracteres, incluindo uma letra, ou deixe vazio para usar o padrão.",
   skyone_webhook_url:

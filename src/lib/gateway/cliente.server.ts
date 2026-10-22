@@ -14,6 +14,11 @@ export type RequisicaoGateway = {
   /** Usuário logado no painel, enviado em X-Actor. */
   ator: string;
   papel: "plataforma" | "admin" | "membro";
+  /**
+   * Empresa da sessão (MULTI1-a). Obrigatório para quem não é plataforma.
+   * Vem de resolverTenant — nunca do texto cru enviado pelo navegador.
+   */
+  escopoEmpresa?: string;
   query?: Record<string, string | number | boolean | null | undefined>;
   corpo?: unknown;
   /** Tempo máximo em ms; /testar do agente pode levar mais que o padrão. */
@@ -97,6 +102,8 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
         "X-Role": ["plataforma", "admin", "membro"].includes(req.papel) ? req.papel : "membro",
         Accept: "application/json",
       };
+      // Escopo da sessão: o gateway confere a empresa; plataforma pode omitir.
+      if (req.escopoEmpresa) cabecalhos["X-Tenant-Scope"] = req.escopoEmpresa;
       if (req.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
       // Para log: só método e caminho, sem query (busca pode ter telefone).
       const rotulo = `${req.metodo} ${url.pathname}`;

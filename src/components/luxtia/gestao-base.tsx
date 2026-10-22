@@ -55,10 +55,13 @@ export function EditorFaixas({
   faixas,
   onChange,
   disabled = false,
+  nome = "turno",
 }: {
   faixas: [string, string][];
   onChange: (v: [string, string][]) => void;
   disabled?: boolean;
+  /** Como cada faixa é chamada nos rótulos ("turno" na grade, "faixa" no cardápio). */
+  nome?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -66,7 +69,7 @@ export function EditorFaixas({
         <div key={i} className="flex flex-wrap items-center gap-2">
           <Input
             className="min-h-11 w-32"
-            aria-label={`Início do turno ${i + 1}`}
+            aria-label={`Início do ${nome} ${i + 1}`}
             type="time"
             value={a}
             disabled={disabled}
@@ -75,7 +78,7 @@ export function EditorFaixas({
           <span>até</span>
           <Input
             className="min-h-11 w-32"
-            aria-label={`Fim do turno ${i + 1}`}
+            aria-label={`Fim do ${nome} ${i + 1}`}
             type="time"
             value={b}
             disabled={disabled}
@@ -100,7 +103,7 @@ export function EditorFaixas({
         disabled={disabled || faixas.length >= 12}
         onClick={() => onChange([...faixas, ["12:00", "15:00"]])}
       >
-        Adicionar turno
+        Adicionar {nome}
       </Button>
     </div>
   );

@@ -29,6 +29,14 @@ export type Unidade = {
   ativo: boolean;
   fuso: string | null;
   fuso_efetivo: string;
+  cidade?: string | null;
+  uf?: string | null;
+  /** Só com o módulo de pedidos em uso (MULTI1-a). */
+  taxa_entrega?: number | null;
+  pedido_minimo?: number | null;
+  area_entrega?: string | null;
+  aceita_retirada?: boolean | null;
+  formas_pagamento?: string | null;
   horarios?: Grade;
   situacao: Situacao;
   pausa_motivo?: string | null;
@@ -139,6 +147,40 @@ const fuso = z
     }
   }, "Fuso inválido.")
   .nullable();
+/** As 27 UFs. O gateway só confere duas letras maiúsculas; a lista fechada fica no painel. */
+export const UFS = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+] as const;
+export function cidadeUf(u: { cidade?: string | null; uf?: string | null }) {
+  if (!u.cidade) return null;
+  return u.uf ? `${u.cidade}/${u.uf}` : u.cidade;
+}
 const faixa = z.tuple([z.string(), z.string()]);
 export const gradeSchema = z
   .object(Object.fromEntries(DIAS.map((d) => [d, z.array(faixa).max(12).optional()])))
@@ -154,6 +196,7 @@ const alvo = {
     .nullish(),
 };
 const uid = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
+const dinheiro = z.number().nonnegative().max(999999).nullable().optional();
 const dadosUnidade = z
   .object({
     nome: z.string().trim().min(1).max(200).optional(),
@@ -163,6 +206,14 @@ const dadosUnidade = z
     whatsapp_pedidos: telefone.optional(),
     ativo: z.boolean().optional(),
     fuso: fuso.optional(),
+    cidade: z.string().trim().min(1).max(80).nullable().optional(),
+    uf: z.enum(UFS).nullable().optional(),
+    // Entrega/pagamento: o servidor só encaminha com pedidos em uso.
+    taxa_entrega: dinheiro,
+    pedido_minimo: dinheiro,
+    area_entrega: z.string().trim().max(2000).nullable().optional(),
+    aceita_retirada: z.boolean().nullable().optional(),
+    formas_pagamento: z.string().trim().max(500).nullable().optional(),
   })
   .strict();
 const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -400,13 +451,19 @@ export function feriadosNacionais(ano: number): Feriado[] {
   return lista.sort((a, b) => a.data.localeCompare(b.data));
 }
 export function alertasUnidade(
-  u: { ativo: boolean; situacao: Situacao; whatsapp_pedidos?: string | null },
+  u: {
+    ativo: boolean;
+    situacao: Situacao;
+    whatsapp_pedidos?: string | null;
+    cidade?: string | null;
+  },
   verWhatsapp: boolean,
 ) {
   return {
     semHorario:
       u.ativo && (u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario"),
     semWhatsapp: verWhatsapp && u.ativo && !u.whatsapp_pedidos,
+    semCidade: u.ativo && !u.cidade,
   };
 }
 export function gradeCopiada(origem: Grade | undefined): Grade {

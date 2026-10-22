@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { empresa } from "./esquemas";
-import { telefoneExibicao } from "./conversas";
+import { telefoneExibicao, type OrigemNome } from "./conversas";
 
 export const STATUS_PEDIDO = [
   "aguardando_loja",
@@ -87,6 +87,37 @@ export function textoAviso(status: string | null | undefined) {
   return ROTULO_AVISO[status] ?? "Aviso não informado";
 }
 
+/** Em que condição o pedido nasceu (LGPD1 / AN1 §11). */
+export const ORIGENS_PEDIDO = ["real", "piloto", "simulado", "teste"] as const;
+export type OrigemPedido = (typeof ORIGENS_PEDIDO)[number];
+export const ROTULO_ORIGEM_PEDIDO: Record<OrigemPedido, string> = {
+  real: "Real",
+  piloto: "Piloto",
+  simulado: "Simulado",
+  teste: "Teste",
+};
+/** Rótulo do filtro (plural só em "Reais"). */
+export const ROTULO_FILTRO_ORIGEM: Record<OrigemPedido, string> = {
+  real: "Reais",
+  piloto: "Piloto",
+  simulado: "Simulados",
+  teste: "Teste",
+};
+export const CANAIS_PEDIDO = ["whatsapp", "api"] as const;
+export type CanalPedido = (typeof CANAIS_PEDIDO)[number];
+export const ROTULO_CANAL_PEDIDO: Record<CanalPedido, string> = {
+  whatsapp: "WhatsApp",
+  api: "API",
+};
+export function rotuloOrigemPedido(origem: string | null | undefined) {
+  if (!origem) return null;
+  return ROTULO_ORIGEM_PEDIDO[origem as OrigemPedido] ?? origem;
+}
+export function rotuloCanalPedido(canal: string | null | undefined) {
+  if (!canal) return null;
+  return ROTULO_CANAL_PEDIDO[canal as CanalPedido] ?? canal;
+}
+
 export function tempoDesde(iso: string | null | undefined, agora = Date.now()) {
   if (!iso) return "horário não informado";
   const t = Date.parse(iso);
@@ -106,6 +137,23 @@ export function whatsappPedido(telefone: string | null | undefined) {
   return telefone;
 }
 
+/**
+ * Nome do cliente igual ao da conversa: `nome_exibicao` atual, senão o gravado no pedido,
+ * senão o telefone. `temNome` é falso quando o que aparece é só o telefone.
+ */
+export function nomeClientePedido(cliente: PedidoLista["cliente"] | null | undefined) {
+  const fone = whatsappPedido(cliente?.telefone);
+  const atual = cliente?.nome_exibicao?.trim();
+  const origem = atual ? (cliente?.nome_origem ?? null) : null;
+  const semNome = origem === "telefone" || origem === "identificador";
+  const nome = atual ? (semNome ? null : atual) : cliente?.nome?.trim() || null;
+  return {
+    nome: nome || fone || "Cliente sem nome",
+    temNome: Boolean(nome),
+    origem: nome ? origem : null,
+    fone,
+  };
+}
 export function reais(valor: number | null | undefined) {
   if (typeof valor !== "number" || !Number.isFinite(valor)) return "Total não informado";
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -120,6 +168,7 @@ export const pedidoSchema = z.discriminatedUnion("acao", [
       ...alvo,
       acao: z.literal("listar"),
       status: z.array(z.enum(STATUS_PEDIDO)).max(8).optional(),
+      origem: z.array(z.enum(ORIGENS_PEDIDO)).max(4).optional(),
       unidade: z.string().max(80).optional(),
       modalidade: z.enum(["delivery", "retirada"]).optional(),
       desde: comFuso.optional(),
@@ -129,7 +178,14 @@ export const pedidoSchema = z.discriminatedUnion("acao", [
       limite: z.number().int().min(1).max(100).optional(),
     })
     .strict(),
-  z.object({ ...alvo, acao: z.literal("contagem") }).strict(),
+  z
+    .object({
+      ...alvo,
+      acao: z.literal("contagem"),
+      /** Contagem do menu: só pedidos reais aguardando a loja (via listagem filtrada). */
+      so_reais: z.boolean().optional(),
+    })
+    .strict(),
   z.object({ ...alvo, acao: z.literal("detalhe"), numero }).strict(),
   z
     .object({
@@ -167,10 +223,17 @@ export type PedidoLista = {
   modalidade: "delivery" | "retirada" | null;
   unidade: string | null;
   unidade_nome: string | null;
+  /** Condição de nascimento do pedido (real / piloto / simulado / teste). */
+  origem?: OrigemPedido | string | null;
+  /** Canal de entrada do pedido (whatsapp / api). */
+  canal?: CanalPedido | string | null;
   cliente: {
     nome: string | null;
     telefone: string | null;
     canal: { id: string; tipo: string; nome: string; icone: string } | null;
+    /** Nome atual da conversa, juntado pelo painel (o gateway não atualiza `nome`). */
+    nome_exibicao?: string | null;
+    nome_origem?: OrigemNome | null;
   };
   conversation_id: string | null;
   numero_itens: number;

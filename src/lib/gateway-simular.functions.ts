@@ -45,6 +45,10 @@ export const historicoConversa = createServerFn({ method: "POST" })
       .object({
         empresa,
         conversa: z.string().min(3).max(300),
+        atendimento: z
+          .string()
+          .regex(/^at_[a-z0-9]+$/)
+          .optional(),
         antes: z.number().int().positive().nullish(),
         limite: z.number().int().min(1).max(100).nullish(),
       })
@@ -58,7 +62,7 @@ export const historicoConversa = createServerFn({ method: "POST" })
       const { dados } = await t.chamar<{ itens: MensagemGateway[]; tem_mais: boolean }>(
         "GET",
         ["conversas", data.conversa, "mensagens"],
-        { query: { antes: data.antes, limite: data.limite ?? 50 } },
+        { query: { antes: data.antes, limite: data.limite ?? 50, atendimento: data.atendimento } },
       );
       return dados;
     });

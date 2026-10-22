@@ -86,6 +86,9 @@ const ROTAS_DO_TENANT: Op[] = [
   ["GET", ["conversas"]],
   ["GET", ["conversas", "bykoji:can_1:marco", "mensagens"]],
   ["POST", ["conversas", "bykoji:can_1:marco", "assumir"], { minutos: 60 }],
+  ["PATCH", ["contatos", "ct_1"], { nome: "Ana" }],
+  ["GET", ["atendimento"]],
+  ["PUT", ["agentes", "ag_1", "atendimento", "rascunho"], { baseado_em: 0 }],
   ["GET", ["pedidos"]],
   ["GET", ["pedidos", "contagem"]],
   ["GET", ["pedidos", "59859"]],
@@ -292,6 +295,11 @@ describe("papéis", () => {
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
       ["GET", ["eventos"]],
       ["GET", ["eventos", "cursor"]],
+      ["GET", ["modulos"]],
+      ["GET", ["agentes", "ag_1", "modulos"]],
+      ["PATCH", ["agentes", "ag_1"], { modulos_ligados: ["catalogo", "pedidos"] }],
+      ["PATCH", ["agentes", "ag_1"], { modulos_ligados: null }],
+      ["POST", ["canais", "can_1", "webhook"]],
       ["GET", ["pedidos"]],
       ["GET", ["pedidos", "contagem"]],
       ["GET", ["pedidos", "59859"]],
@@ -337,14 +345,72 @@ describe("papéis", () => {
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
       ["GET", ["eventos"]],
       ["GET", ["eventos", "cursor"]],
+      ["GET", ["modulos"]],
+      ["GET", ["agentes", "ag_1", "modulos"]],
       ["GET", ["pedidos"]],
       ["GET", ["pedidos", "contagem"]],
       ["POST", ["pedidos", "59859", "status"], { status: "em_preparo", previsao_min: 40 }],
+      ["PATCH", ["contatos", "ct_1"], { nome: "Ana Paula" }],
+      ["PATCH", ["contatos", "ct_1"], { nome: null }],
+      ["GET", ["atendimento"]],
+      ["GET", ["agentes", "ag_1", "atendimento", "versoes", "2"]],
+      ["POST", ["atendimento", "previa"], { fonte: "rascunho" }],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
     }
     expect(rede.chamadas).toHaveLength(permitidas.length);
+  });
+
+  test("comportamento do agente: só admin escreve, com as chaves do contrato", async () => {
+    const escritas: Op[] = [
+      ["PUT", ["atendimento", "rascunho"], { baseado_em: 0, perfil: { tom: "formal" } }],
+      ["DELETE", ["agentes", "ag_1", "atendimento", "rascunho"]],
+      ["POST", ["atendimento", "publicar"], { baseado_em: 0, nota: "n", confirmar_avisos: true }],
+      ["POST", ["agentes", "ag_1", "atendimento", "versoes", "2", "restaurar"], { nota: "n" }],
+    ];
+    const membro = await tenantDe("membroA");
+    for (const op of escritas)
+      expect({ op, recusada: Boolean(await recusada(membro.t, op)) }).toEqual({
+        op,
+        recusada: true,
+      });
+    expect(membro.rede.chamadas).toHaveLength(0);
+    const admin = await tenantDe("adminA");
+    for (const op of escritas)
+      expect({ op, recusada: Boolean(await recusada(admin.t, op)) }).toEqual({
+        op,
+        recusada: false,
+      });
+    const extras: Op[] = [
+      ["PUT", ["atendimento", "rascunho"], { baseado_em: 0, instrucoes_agente: "x" }],
+      ["POST", ["atendimento", "publicar"], { baseado_em: 0, forcar: true }],
+      ["POST", ["atendimento", "previa"], { fonte: "rascunho", extra: 1 }],
+    ];
+    for (const op of extras)
+      expect({ op, recusada: Boolean(await recusada(admin.t, op)) }).toEqual({
+        op,
+        recusada: true,
+      });
+  });
+
+  test("nome do contato: só a chave nome, texto ou null", async () => {
+    for (const papel of ["adminA", "membroA"]) {
+      const { t, rede } = await tenantDe(papel);
+      const recusadas: Op[] = [
+        ["PATCH", ["contatos", "ct_1"]],
+        ["PATCH", ["contatos", "ct_1"], {}],
+        ["PATCH", ["contatos", "ct_1"], { nome: 5 }],
+        ["PATCH", ["contatos", "ct_1"], { nome: "Ana", telefone: "1" }],
+        ["PATCH", ["contatos", "ct_1"], { email: "a@b.c" }],
+        ["GET", ["contatos"]],
+        ["POST", ["contatos", "ct_1", "anonimizar"], { confirmacao: "x" }],
+      ];
+      for (const op of recusadas) {
+        expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
+      }
+      expect(rede.chamadas).toHaveLength(0);
+    }
   });
 });
 
@@ -359,9 +425,26 @@ describe("cliente HTTP", () => {
     const cab = init.headers as Record<string, string>;
     expect(cab["Authorization"]).toBe(`Bearer ${CHAVE}`);
     expect(cab["X-Actor"]).toBe("admin@luxtia.local");
+    expect(cab["X-Tenant-Scope"]).toBeUndefined();
     expect(url.pathname).toBe(
       "/admin/v1/tenants/bykoji/conversas/bykoji%3Acan_1%3Aa%2Fb/mensagens",
     );
+  });
+
+  test("MULTI1-a: admin e membro enviam X-Tenant-Scope da sessão, nunca de outra empresa", async () => {
+    for (const papel of ["adminA", "membroA"] as const) {
+      const { t, rede, bloqueios } = await tenantDe(papel);
+      await t.chamar("GET", ["conversas"]);
+      const cab = rede.chamadas[0]!.init.headers as Record<string, string>;
+      expect(cab["X-Tenant-Scope"]).toBe("bykoji");
+      expect(cab["X-Role"]).toBe(papel === "adminA" ? "admin" : "membro");
+      expect(bloqueios).toHaveLength(0);
+    }
+    const { modulo, rede, bloqueios } = montar();
+    const sessao = await modulo.sessao({ userId: "adminA", email: null });
+    await expect(sessao.tenant("outra")).rejects.toThrow(/outra empresa/);
+    expect(rede.chamadas).toHaveLength(0);
+    expect(bloqueios.some((b) => b.solicitado === "outra")).toBe(true);
   });
 
   test("interpreta o envelope {erro}", async () => {

@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Factory,
   KeyRound,
+  Layers,
   LogOut,
   MessagesSquare,
   RadioTower,
@@ -20,7 +21,14 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoGateway } from "@/lib/gateway.functions";
-import { agruparMenu, filtrarMenu, type IconeMenu, type ItemMenu } from "@/lib/nav";
+import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
+import {
+  agruparMenu,
+  filtrarMenu,
+  filtrarMenuPorTelas,
+  type IconeMenu,
+  type ItemMenu,
+} from "@/lib/nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LuxtiaWordmark } from "./Brand";
 import { ContadorPedidos } from "./ContadorPedidos";
@@ -35,7 +43,10 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   simular: MessagesSquare,
   conversas: MessagesSquare,
   pedidos: ClipboardList,
+  modelos: Layers,
 };
+
+const CHAVE_EMPRESA = "luxtia:gateway-empresa";
 
 function itemAtivo(caminho: string, destino: string) {
   return caminho === destino || caminho.startsWith(`${destino}/`);
@@ -85,13 +96,39 @@ export function AppShell({
   }, [menuAberto]);
 
   const buscarAcesso = useServerFn(obterAcessoGateway);
+  const buscarModulos = useServerFn(obterModulosEmpresa);
   const acesso = useQuery({
     queryKey: ["gateway", "acesso"],
     queryFn: () => buscarAcesso(),
     staleTime: 60_000,
     retry: false,
   });
-  const itens = filtrarMenu(nav, acesso.data?.papel);
+  const plataforma = acesso.data?.papel === "plataforma";
+  const [empresaMenu, setEmpresaMenu] = useState<string | null>(null);
+  useEffect(() => {
+    function ler() {
+      try {
+        setEmpresaMenu(localStorage.getItem(CHAVE_EMPRESA));
+      } catch {
+        setEmpresaMenu(null);
+      }
+    }
+    ler();
+    window.addEventListener("luxtia:empresa", ler);
+    return () => window.removeEventListener("luxtia:empresa", ler);
+  }, []);
+  const modulos = useQuery({
+    queryKey: ["gateway", "modulos-menu", plataforma ? empresaMenu : "sessao"],
+    queryFn: () => buscarModulos({ data: { empresa: plataforma ? empresaMenu : null } }),
+    enabled: Boolean(acesso.data?.papel) && (!plataforma || Boolean(empresaMenu)),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const itens = filtrarMenuPorTelas(
+    filtrarMenu(nav, acesso.data?.papel),
+    // Sem resposta ainda: esconde telas de módulo para não mostrar Cardápio/Pedidos à toa.
+    modulos.data?.telas ?? (modulos.isFetched ? [] : undefined),
+  );
   const grupos = agruparMenu(itens);
   const atual = itens.find((item) => itemAtivo(pathname, item.to));
 
