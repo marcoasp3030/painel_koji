@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Lock, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
   type Parte,
   type Trecho,
 } from "@/lib/gateway/atendimento";
+import { gradeJanela, lerJanela } from "@/lib/gateway/followup";
 import type { Json } from "@/lib/gateway/tipos";
 
 export type Situacao = {
@@ -272,6 +273,19 @@ function Entrada({
         />
       );
     case "horarios":
+      if (campo === "follow_up_janela") {
+        try {
+          return (
+            <JanelaFollowUp id={id} valor={valor} desabilitado={desabilitado} mudar={mudar} />
+          );
+        } catch {
+          return (
+            <p id={id} className="text-sm text-ink-500">
+              A janela de follow-up não pôde ser exibida. O restante da configuração segue disponível.
+            </p>
+          );
+        }
+      }
       return (
         <p id={id} className="whitespace-pre-wrap break-words text-sm text-ink-700">
           {textoValor(valor)}
@@ -498,6 +512,74 @@ function ListaAssuntos({
       {Number.isFinite(max) ? (
         <p className="text-[11px] text-ink-500">
           {valor.length} de {max}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Das / até, o mesmo horário em todos os dias — o formato da janela de follow-up. */
+function JanelaFollowUp({
+  id,
+  valor,
+  desabilitado,
+  mudar,
+}: {
+  id: string;
+  valor: Json;
+  desabilitado: boolean;
+  mudar: (v: Json) => void;
+}) {
+  const atual = lerJanela(valor);
+  const [inicio, setInicio] = useState(atual.inicio);
+  const [fim, setFim] = useState(atual.fim);
+  const chave = JSON.stringify(valor);
+  useEffect(() => {
+    const lido = lerJanela(valor);
+    setInicio(lido.inicio);
+    setFim(lido.fim);
+  }, [chave]); // eslint-disable-line react-hooks/exhaustive-deps
+  const aplicar = (proxInicio: string, proxFim: string) => {
+    setInicio(proxInicio);
+    setFim(proxFim);
+    const grade = gradeJanela(proxInicio, proxFim);
+    if (grade) mudar(grade);
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-xs text-ink-500" htmlFor={`${id}-inicio`}>
+          Das
+          <Input
+            id={`${id}-inicio`}
+            type="time"
+            className="mt-1 w-32"
+            value={inicio}
+            disabled={desabilitado}
+            onChange={(e) => aplicar(e.target.value, fim)}
+          />
+        </label>
+        <label className="text-xs text-ink-500" htmlFor={`${id}-fim`}>
+          Até
+          <Input
+            id={`${id}-fim`}
+            type="time"
+            className="mt-1 w-32"
+            value={fim}
+            disabled={desabilitado}
+            onChange={(e) => aplicar(inicio, e.target.value)}
+          />
+        </label>
+      </div>
+      {inicio === fim ? (
+        <p role="alert" className="text-xs text-destructive">
+          O horário de início e o de fim precisam ser diferentes.
+        </p>
+      ) : null}
+      {!atual.uniforme ? (
+        <p className="text-xs text-ink-500">
+          Os dias estão com horários diferentes. Ao escolher das e até, o mesmo horário passa a
+          valer todos os dias.
         </p>
       ) : null}
     </div>

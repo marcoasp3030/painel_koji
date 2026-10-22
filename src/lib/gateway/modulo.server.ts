@@ -262,6 +262,16 @@ const REGRAS: Regra[] = [
     papeis: ADMIN,
     corpo: semCorpo,
   },
+  // FUP1-a: ver e cancelar, admin e membro. Reativar o contato, só admin.
+  { metodo: "GET", caminho: ["conversas", "*", "follow-ups"], papeis: AMBOS },
+  {
+    metodo: "POST",
+    caminho: ["conversas", "*", "follow-ups", "cancelar"],
+    papeis: AMBOS,
+    corpo: soChaves(["motivo"], "Campos de cancelamento inválidos."),
+  },
+  { metodo: "GET", caminho: ["contatos", "*", "opt-out-follow-up"], papeis: AMBOS },
+  { metodo: "DELETE", caminho: ["contatos", "*", "opt-out-follow-up"], papeis: ADMIN },
   // MULTI1-a: módulos da empresa e do agente; webhook uazapi.
   { metodo: "GET", caminho: ["modulos"], papeis: AMBOS },
   { metodo: "GET", caminho: ["agentes", "*", "modulos"], papeis: AMBOS },

@@ -1,5 +1,11 @@
 import { gerirAtendimentos } from "@/lib/gateway-enc1.functions";
+import {
+  cancelarFollowUps,
+  listarFollowUps,
+  reativarOptOut,
+} from "@/lib/gateway-followup.functions";
 import { AtendimentosConversa, ResumoAtendimento } from "./AtendimentosConversa";
+import { BlocoFollowUp, SeloOptOut } from "./FollowUpConversa";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -422,6 +428,9 @@ export function Conversas({
               >
                 <div className="flex items-center gap-2">
                   <strong className="min-w-0 truncate">{nomeContato(c)}</strong>
+                  {c.follow_up?.estado === "agendado" ? (
+                    <Etiqueta tom="roxo">Follow-up</Etiqueta>
+                  ) : null}
                   <SeloOrigemNome origem={c.nome_origem} />
                   {leitura && temNovidade(c, leitura) ? (
                     <span
@@ -601,6 +610,9 @@ function Atendimento({
   marcar: (c: Conversa) => void;
 }) {
   const enc = useServerFn(gerirAtendimentos);
+  const listarFollow = useServerFn(listarFollowUps);
+  const cancelarFollowFn = useServerFn(cancelarFollowUps);
+  const reativarFn = useServerFn(reativarOptOut);
   const [atendimentoId, setAtendimentoId] = useState("");
   const lerAtendimentos = useCallback(
     (cursor?: number) =>
@@ -676,6 +688,39 @@ function Atendimento({
     },
     retry: false,
   });
+  const followUps = useQuery({
+    queryKey: ["follow-ups", ctx.empresa, conversa.conversation_id],
+    queryFn: () =>
+      listarFollow({
+        data: { empresa: ctx.empresa, acao: "listar", conversa: conversa.conversation_id },
+      }),
+  });
+  const reativar = useMutation({
+    mutationFn: () =>
+      reativarFn({
+        data: { empresa: ctx.empresa, acao: "reativar", contato: conversa.contato_id },
+      }),
+    onSuccess: () => {
+      toast.success("Follow-up reativado para este contato.");
+      void cache.invalidateQueries({
+        queryKey: ["follow-ups", ctx.empresa, conversa.conversation_id],
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const cancelarFollow = useMutation({
+    mutationFn: () =>
+      cancelarFollowFn({
+        data: { empresa: ctx.empresa, acao: "cancelar", conversa: conversa.conversation_id },
+      }),
+    onSuccess: (r) => {
+      toast.success(r.cancelados ? "Follow-up cancelado." : "Não havia follow-up agendado.");
+      void cache.invalidateQueries({
+        queryKey: ["follow-ups", ctx.empresa, conversa.conversation_id],
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const titulo = nomeContato(conversa);
   const fone = telefoneVisivel(conversa);
   const estado = estadoConversa(conversa, agora);
@@ -687,6 +732,13 @@ function Atendimento({
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="min-w-0 truncate font-display text-xl">{titulo}</h2>
           <SeloOrigemNome origem={conversa.nome_origem} />
+          {conversa.contato_id ? (
+            <SeloOptOut
+              optOut={followUps.data?.opt_out}
+              podeReativar={ctx.papel === "plataforma" || ctx.papel === "admin"}
+              onReativar={() => reativar.mutate()}
+            />
+          ) : null}
           {podeEditarNome && !editando ? (
             <Button
               variant="ghost"
@@ -756,6 +808,15 @@ function Atendimento({
           </Button>
         </div>
       </div>
+      <BlocoFollowUp
+        itens={followUps.data?.itens ?? []}
+        carregando={followUps.isLoading}
+        indisponivel={followUps.data?.indisponivel === true}
+        erro={followUps.error instanceof Error ? followUps.error.message : undefined}
+        podeCancelar
+        cancelando={cancelarFollow.isPending}
+        onCancelar={() => cancelarFollow.mutate()}
+      />
       <AtendimentosConversa
         atual={conversa.atendimento}
         selecionado={atendimentoId}

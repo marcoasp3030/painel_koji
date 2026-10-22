@@ -110,6 +110,8 @@ test("CFG1-a tela pelo esquema: campos novos aparecem sozinhos, na ordem do gate
   expect(rotuloCampo("nome_empresa")).toBe("Nome da empresa");
   expect(rotuloCampo("descricao_negocio")).toBe("Descrição do negócio");
   expect(rotuloCampo("campo_que_ainda_nao_existe")).toBe("Campo que ainda nao existe");
+  expect(rotuloCampo("follow_up_ativo")).toBe("Follow-up");
+  expect(rotuloCampo("follow_up_limite_dia")).toBe("Máximo por dia");
   expect(rotuloCaminho("perfil.assuntos_proibidos[2]")).toBe("Assuntos proibidos (item 3)");
   expect(rotuloCaminho("comportamentos.debounce_s")).toBe("Espera por mais mensagens (s)");
 });

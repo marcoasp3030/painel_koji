@@ -179,6 +179,14 @@ export const ROTULO_CAMPO: Record<string, string> = {
   max_msgs_por_minuto_contato: "Mensagens por minuto por contato",
   skyone_dominios_permitidos: "Domínios do Skyone",
   alerta_telefone: "Telefone de alerta (antigo)",
+  follow_up_ativo: "Follow-up",
+  follow_up_escopo: "Quando vale",
+  follow_up_maximo: "Quantos por pendência",
+  follow_up_primeiro_min: "1º follow-up (minutos)",
+  follow_up_segundo_min: "2º follow-up (minutos)",
+  follow_up_janela: "Janela de horário",
+  follow_up_fora_unidade: "Fora do horário da unidade",
+  follow_up_limite_dia: "Máximo por dia",
 };
 export const AJUDA_CAMPO: Record<string, string> = {
   nome_atendente: "Vazio: o agente não diz um nome.",
@@ -198,6 +206,19 @@ export const AJUDA_CAMPO: Record<string, string> = {
   botoes_interativos:
     "Até 3 opções viram botões; de 4 a 10, lista. Desligado: opções numeradas em texto.",
   aviso_demora: "Vazio: sem aviso.",
+  follow_up_ativo: "Ligado, o gateway anota o que enviaria. Ainda não manda mensagem ao cliente.",
+  follow_up_escopo:
+    "Pedido em andamento: só enquanto o pedido não fechou. Pergunta pendente: também uma dúvida aberta.",
+  follow_up_maximo: "0 desliga. No máximo 2: o primeiro e, depois que ele sair, o segundo.",
+  follow_up_primeiro_min: "Minutos depois da resposta do agente. De 5 a 1440.",
+  follow_up_segundo_min:
+    "Minutos depois do primeiro follow-up enviado. De 5 a 1440. No ensaio o segundo ainda não nasce.",
+  follow_up_janela:
+    "Horário em que o follow-up pode sair, todos os dias. Fora dele, o gateway cancela. O horário da unidade também vale.",
+  follow_up_fora_unidade:
+    "Cancelar: não sai se a unidade estiver fechada. Adiar: espera a próxima abertura, no máximo 24 horas.",
+  follow_up_limite_dia:
+    "Quantos follow-ups o mesmo contato pode receber no dia, somando os agentes da empresa. De 0 a 5.",
 };
 export const ROTULO_OPCAO: Record<string, string> = {
   formal: "Formal",
@@ -229,6 +250,10 @@ export const ROTULO_OPCAO: Record<string, string> = {
   dry: "Teste (nada sai)",
   live: "Real",
   mock: "Simulado",
+  pedido_em_andamento: "Pedido em andamento",
+  pergunta_pendente: "Pergunta pendente",
+  cancelar: "Cancelar",
+  adiar_abertura: "Adiar até abrir",
 };
 export const ROTULO_GRUPO: Record<string, string> = {
   ritmo: "Espera e ritmo",
@@ -239,6 +264,7 @@ export const ROTULO_GRUPO: Record<string, string> = {
   fora_do_horario: "Fora do horário",
   transbordo: "Transbordo para a equipe",
   operacao: "Operação",
+  follow_up: "Follow-up",
 };
 export const ROTULO_ORIGEM: Record<string, string> = {
   plataforma: "Padrão da plataforma",

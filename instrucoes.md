@@ -1,3 +1,9 @@
+## Follow-up (FUP1-a) — telas no painel, não publicadas (21/10/2026)
+
+- Em Comportamento do agente: ligar, 1º e 2º em minutos, máximo por dia e janela. Na conversa: bloco com agendado, cancelado e ensaio, e Cancelar. No contato: selo “não quer follow-up” e Reativar (admin e plataforma).
+- Rota ausente (404): a conversa mostra “Follow-up ainda não está disponível.” e continua. A janela da configuração, se falhar, avisa e o resto do formulário permanece.
+- Sem publicação.
+
 ## Documentos (ARQ1-a1) — telas no painel, não publicadas (21/10/2026)
 
 - Escopo `documentos:enviar` na chave da empresa. `/ia/chaves-formulario` mostra a chave uma vez, com Copiar. `/ia/documentos` lista, detalha, baixa e apaga. `/ia/webhooks-saida` inclui os eventos de documento, resposta e follow-up.

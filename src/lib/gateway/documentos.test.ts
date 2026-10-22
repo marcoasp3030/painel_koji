@@ -7,6 +7,9 @@ import {
   origensDoTexto,
   type DocumentoResumo,
 } from "./documentos";
+import { gradeJanela, lerJanela, MENSAGEM_FOLLOWUP_AUSENTE } from "./followup";
+import { executarFollowUp } from "./followup.server";
+import { GatewayErro } from "./erros";
 import { EVENTOS_SAIDA } from "./webhooks";
 
 const doc = (parcial: Partial<DocumentoResumo>): DocumentoResumo => ({
@@ -59,6 +62,37 @@ test("filtros de documento: tipo e dia de Brasília; estado fica para o gateway"
   expect(noDia.map((d) => d.id)).toEqual(["b"]);
   const boletos = filtrarDocumentos(itens, { estado: "", tipo: "boleto", desde: "", ate: "" });
   expect(boletos.map((d) => d.id)).toEqual(["a"]);
+});
+
+test("janela de follow-up vira a mesma faixa em todos os dias", () => {
+  const grade = gradeJanela("09:00", "22:00");
+  expect(grade?.["dom"]).toEqual([["09:00", "22:00"]]);
+  expect(gradeJanela("10:00", "10:00")).toBeNull();
+  expect(lerJanela(grade).uniforme).toBe(true);
+  expect(lerJanela({ seg: [["09:00", "18:00"]], ter: [["10:00", "18:00"]] }).uniforme).toBe(false);
+});
+
+test("follow-up ausente (404) não derruba a conversa", async () => {
+  const sessao = {
+    tenant: async () => ({
+      chamar: async () => {
+        throw new GatewayErro({ codigo: "NOT_FOUND", status: 404 });
+      },
+    }),
+  };
+  const lista = await executarFollowUp(sessao as never, {
+    empresa: "bykoji",
+    acao: "listar",
+    conversa: "conv_1",
+  });
+  expect(lista).toMatchObject({ itens: [], indisponivel: true });
+  await expect(
+    executarFollowUp(sessao as never, {
+      empresa: "bykoji",
+      acao: "cancelar",
+      conversa: "conv_1",
+    }),
+  ).rejects.toThrow(MENSAGEM_FOLLOWUP_AUSENTE);
 });
 
 test("webhooks de saída incluem documentos, resposta e follow-up", () => {

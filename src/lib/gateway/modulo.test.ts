@@ -96,6 +96,10 @@ const ROTAS_DO_TENANT: Op[] = [
   ],
   ["PATCH", ["webhooks-saida", "wh_1"], { ativo: false }],
   ["DELETE", ["webhooks-saida", "wh_1"]],
+  ["GET", ["conversas", "c", "follow-ups"]],
+  ["POST", ["conversas", "c", "follow-ups", "cancelar"], { motivo: "painel" }],
+  ["GET", ["contatos", "ct_1", "opt-out-follow-up"]],
+  ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
   ["GET", ["consumo"]],
   ["GET", ["unidades"]],
   ["POST", ["unidades"], { nome: "Loja" }],
@@ -343,6 +347,9 @@ describe("papéis", () => {
           ativo: true,
         },
       ],
+      ["GET", ["conversas", "c", "follow-ups"]],
+      ["POST", ["conversas", "c", "follow-ups", "cancelar"], { motivo: "painel" }],
+      ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
@@ -370,6 +377,7 @@ describe("papéis", () => {
         ["webhooks-saida"],
         { url: "https://x.example/h", eventos: ["pedido.criado"], ativo: true },
       ],
+      ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
       ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
     ];
     for (const op of proibidas) {
@@ -406,6 +414,9 @@ describe("papéis", () => {
       ["GET", ["anexos"]],
       ["GET", ["anexos", "anx_1", "original"]],
       ["GET", ["chaves-formulario"]],
+      ["GET", ["conversas", "c", "follow-ups"]],
+      ["POST", ["conversas", "c", "follow-ups", "cancelar"], {}],
+      ["GET", ["contatos", "ct_1", "opt-out-follow-up"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });

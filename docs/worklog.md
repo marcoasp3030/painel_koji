@@ -1,3 +1,18 @@
+## [2026-10-21 22:55] — Telas de follow-up (não publicadas)
+- **Autor:** Grok 4.7
+- **Objetivo:** Configuração, bloco na conversa e opt-out, com a rota 404 sem derrubar a página.
+- **Arquivos alterados:**
+  - `src/components/luxtia/FollowUpConversa.tsx` — criado
+  - `src/components/luxtia/Conversas.tsx`, `comportamento/CampoAtendimento.tsx` — modificados
+  - `src/lib/gateway/followup.ts`, `followup.server.ts`, `gateway-followup.functions.ts` — criados
+  - `src/lib/gateway/modulo.server.ts`, `atendimento.ts`, `conversas.ts` — modificados — permissão e rótulos
+- **Resumo das mudanças:** O agente liga o follow-up, os minutos, o máximo do dia e a janela. A conversa lista agendado, cancelado e ensaio, com Cancelar. O contato mostra “não quer follow-up” e Reativar só para admin e plataforma. Se o gateway responder 404, a conversa mostra “Follow-up ainda não está disponível.” e o restante da tela segue.
+- **Decisões e justificativas:** A listagem 404 vira lista vazia com aviso. Cancelar e reativar 404 viram a mesma frase, no toast, sem desmontar a conversa. A janela na configuração fica num try/catch próprio.
+- **Comandos executados:** `bun test` documentos, módulo e atendimento → 39 OK
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** não publicado; esperar o FUP1-a no gateway e a revisão dos prints
+- **Próximos passos:** publicar só depois dessa confirmação
+
 ## [2026-10-21 22:45] — Telas de documentos (não publicadas)
 - **Autor:** Grok 4.7
 - **Objetivo:** Chaves de formulário, documentos e webhooks de saída no painel, no padrão do cardápio.

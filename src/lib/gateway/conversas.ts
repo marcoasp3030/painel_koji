@@ -56,6 +56,7 @@ export type Conversa = {
   ultima?: UltimaMensagem | null;
   pedido_aberto?: { numero: string; status: string } | null;
   /** FUP1-a: presente quando há follow-up agendado. */
+  follow_up?: { estado: string; previsto_em: string | null } | null;
   status: "ativa" | "pausada";
   bot_pausado_ate: string | null;
   ultima_mensagem: string | null;
