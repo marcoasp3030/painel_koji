@@ -1,7 +1,13 @@
+## Rotas do gateway no painel — ainda não publicado (22/10/2026)
+
+- Reativar envia `motivo` (3 a 300). No contato, depois da reativação, aparecem quem reativou e o motivo.
+- Lista de documentos filtra no gateway (`tipo_documento`, `de`, `ate`). “Conta de consumo” e “Cobrança Pix” são os rótulos.
+- “Gerar novo segredo” aparece para admin e plataforma. A confirmação avisa que o segredo antigo vale mais 24 h. O novo sai uma vez. A lista mostra “Segredo anterior válido até dd/mm hh:mm”.
+- Sem publicação.
+
 ## Ajustes depois da revisão 693249e — ainda não publicado (22/10/2026)
 
-- “Gerar novo segredo” fica escondido (`ROTACAO_SEGREDO_LIBERADA = false`), mesmo com `POST …/rotacionar-segredo` já no gateway. Liga quando for liberado.
-- Tipo e período da lista de documentos vão em `GET …/anexos` (`tipo_documento`, `de`, `ate`, dia de Brasília). O aviso de filtro só na página carregada saiu.
+- Tipo e período da lista de documentos vão em `GET …/anexos`. O aviso de filtro só na página carregada saiu.
 - Reativar follow-up exige motivo (3 a 300 caracteres) e envia no corpo do `DELETE …/opt-out-follow-up`.
 - Sem publicação.
 

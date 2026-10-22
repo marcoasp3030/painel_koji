@@ -319,6 +319,7 @@ function Webhooks() {
             url: "https://sistema.exemplo.com.br/luxtia",
             eventos: ["documento.pronto", "conversa.resposta", "follow_up.agendado"],
             ativo: true,
+            segredo_anterior_ate: "2026-10-23T17:32:00Z",
           },
         ]}
         carregando={false}
@@ -329,6 +330,7 @@ function Webhooks() {
         onDesativar={() => undefined}
         onTestar={() => undefined}
         onEntregas={() => undefined}
+        podeGerarSegredo
         onGerarSegredo={() => setSegredo("whsec_exemplo_nao_usar")}
         segredo={segredo}
         onFecharSegredo={() => setSegredo(null)}
@@ -447,6 +449,7 @@ function Conversa() {
               actor: null,
               removido_em: null,
               removido_por: null,
+              removido_motivo: null,
             }}
             podeReativar
             onReativar={() => undefined}

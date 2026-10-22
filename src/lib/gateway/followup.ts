@@ -76,6 +76,7 @@ export type OptOutFollowUp = {
   actor: string | null;
   removido_em: string | null;
   removido_por: string | null;
+  removido_motivo: string | null;
 };
 
 export type ListaFollowUp = {

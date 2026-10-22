@@ -84,6 +84,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
     onSuccess: (r) => {
       if (r.segredo) setSegredo(r.segredo);
       else toast.error("O gateway não devolveu o segredo novo.");
+      void recarregar();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -111,6 +112,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
       onDesativar={(w) => desativar.mutate(w.id)}
       onTestar={(w) => testar.mutate(w.id)}
       onEntregas={(w) => verEntregas.mutate(w.id)}
+      podeGerarSegredo={ctx.papel === "admin" || ctx.papel === "plataforma"}
       onGerarSegredo={(w) => rotacionar.mutate(w.id)}
       segredo={segredo}
       onFecharSegredo={() => setSegredo(null)}

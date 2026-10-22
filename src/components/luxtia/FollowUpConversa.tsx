@@ -42,7 +42,16 @@ export function SeloOptOut({
 }) {
   const [aberto, setAberto] = useState(false);
   const [motivo, setMotivo] = useState("");
-  if (!optOut?.ativo) return null;
+  if (!optOut) return null;
+  if (!optOut.ativo) {
+    if (!optOut.removido_por && !optOut.removido_motivo) return null;
+    return (
+      <span className="text-xs text-ink-500">
+        {optOut.removido_por ? `Reativado por ${optOut.removido_por}` : "Reativado"}
+        {optOut.removido_motivo ? `. Motivo: ${optOut.removido_motivo}` : ""}
+      </span>
+    );
+  }
   const origem = optOut.origem ? ROTULO_ORIGEM_OPTOUT[optOut.origem] : null;
   return (
     <span className="inline-flex flex-wrap items-center gap-2">

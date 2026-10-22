@@ -77,8 +77,11 @@ const assert = require("node:assert/strict");
   await foto("12-documento-pix.png", pix);
 
   await abrir("/?tela=webhooks", "sistema.exemplo.com.br");
-  assert.equal(await page.getByRole("button", { name: "Gerar novo segredo" }).count(), 0);
-  await foto("07-webhooks-lista.png");
+  await page.getByText("Segredo anterior válido até 23/10 14:32").waitFor();
+  await page.getByRole("button", { name: "Gerar novo segredo" }).click();
+  const gerar = page.getByRole("alertdialog");
+  await gerar.getByText("continua valendo por mais 24 horas").waitFor();
+  await foto("16-gerar-segredo.png", gerar);
 
   await abrir("/?tela=webhooks", "sistema.exemplo.com.br");
   await page.getByRole("button", { name: "Novo webhook" }).click();

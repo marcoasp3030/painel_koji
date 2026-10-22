@@ -27,8 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { dataHoraBrasilia } from "@/lib/gateway/documentos";
 import {
-  ROTACAO_SEGREDO_LIBERADA,
   gruposDeEventos,
+  textoSegredoAnterior,
   type EntregaWebhook,
   type WebhookSaida,
 } from "@/lib/gateway/webhooks";
@@ -45,6 +45,7 @@ export function WebhooksSaidaTela({
   onTestar,
   onEntregas,
   onGerarSegredo,
+  podeGerarSegredo,
   segredo,
   onFecharSegredo,
 }: {
@@ -59,6 +60,7 @@ export function WebhooksSaidaTela({
   onTestar: (w: WebhookSaida) => void;
   onEntregas: (w: WebhookSaida) => void;
   onGerarSegredo: (w: WebhookSaida) => void;
+  podeGerarSegredo: boolean;
   segredo: string | null;
   onFecharSegredo: () => void;
 }) {
@@ -105,6 +107,11 @@ export function WebhooksSaidaTela({
                     </Etiqueta>
                   ))}
                 </div>
+                {textoSegredoAnterior(w.segredo_anterior_ate) ? (
+                  <p className="text-xs text-ink-500">
+                    {textoSegredoAnterior(w.segredo_anterior_ate)}
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={() => setAberto(w)}>
                     Editar
@@ -120,7 +127,7 @@ export function WebhooksSaidaTela({
                   <Button variant="ghost" size="sm" onClick={() => onEntregas(w)}>
                     Entregas
                   </Button>
-                  {ROTACAO_SEGREDO_LIBERADA ? (
+                  {podeGerarSegredo ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" disabled={salvando}>
@@ -131,8 +138,8 @@ export function WebhooksSaidaTela({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Gerar um segredo novo?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            O segredo atual deixa de valer na hora. O novo aparece só desta vez —
-                            copie antes de fechar.
+                            O segredo antigo continua valendo por mais 24 horas. O novo aparece só
+                            desta vez — copie antes de fechar.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

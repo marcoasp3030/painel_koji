@@ -37,12 +37,12 @@ export const ROTULO_FORMATO: Record<string, string> = {
 
 export const ROTULO_TIPO_DOCUMENTO: Record<string, string> = {
   boleto: "Boleto",
-  boleto_concessionaria: "Boleto de concessionária",
+  boleto_concessionaria: "Conta de consumo",
   nfe: "NF-e",
   nfce: "NFC-e",
   nfse: "NFS-e",
   pix: "PIX",
-  pix_cobranca: "Cobrança PIX",
+  pix_cobranca: "Cobrança Pix",
   comprovante: "Comprovante",
   comprovante_pix: "Comprovante PIX",
   outro: "Outro",

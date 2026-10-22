@@ -108,7 +108,30 @@ export type WebhookSaida = {
   eventos: string[];
   ativo: boolean;
   segredo?: string;
+  segredo_anterior_ate?: string | null;
 };
+
+/** "Segredo anterior válido até dd/mm hh:mm" em Brasília, ou vazio se não houver prazo. */
+export function textoSegredoAnterior(iso: string | null | undefined) {
+  if (!iso) return "";
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return "";
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(data);
+  const ler = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? "";
+  const dia = ler("day");
+  const mes = ler("month");
+  const hora = ler("hour");
+  const minuto = ler("minute");
+  if (!dia || !mes || !hora || !minuto) return "";
+  return `Segredo anterior válido até ${dia}/${mes} ${hora}:${minuto}`;
+}
 
 export type EntregaWebhook = {
   id: number;
@@ -118,12 +141,6 @@ export type EntregaWebhook = {
   http_status: number | null;
   criado_em: string;
 };
-
-/**
- * A rota POST …/rotacionar-segredo já responde no gateway.
- * O botão fica escondido até a liberação explícita.
- */
-export const ROTACAO_SEGREDO_LIBERADA = false;
 
 export const webhookSchema = z.discriminatedUnion("acao", [
   z.object({ empresa, acao: z.literal("listar") }).strict(),

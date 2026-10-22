@@ -1,3 +1,18 @@
+## [2026-10-22 13:33] — Rotas do gateway no painel (não publicado)
+- **Autor:** Grok 4.7
+- **Objetivo:** Mostrar a reativação no contato, os rótulos novos e o botão de segredo com a janela de 24 h.
+- **Arquivos alterados:**
+  - `src/lib/gateway/followup.ts`, `src/components/luxtia/FollowUpConversa.tsx` — modificados — depois de reativar, o contato mostra quem fez e o motivo
+  - `src/lib/gateway/documentos.ts` — modificado — “Conta de consumo” e “Cobrança Pix”
+  - `src/lib/gateway/webhooks.ts`, `WebhooksSaida.tsx`, `ia/webhooks-saida.tsx` — modificados — botão para admin e plataforma, confirmação de 24 h, prazo do segredo anterior
+  - `docs/prints-arq-fup/15`, `16` e `05` — modificados — prints da reativação, do segredo novo e da lista
+- **Resumo das mudanças:** O motivo já ia no DELETE. Agora o retorno fica visível no contato. O botão de segredo novo saiu do esconderijo, com o aviso de que o antigo vale mais 24 horas.
+- **Decisões e justificativas:** Plataforma também vê o botão: a tela de webhooks já é só desses dois papéis e o servidor do painel deixa a plataforma chamar a rota. Membro não abre a tela.
+- **Comandos executados:** `bun test` documentos e módulo → 35 OK; `tsc --noEmit` → OK; ESLint → OK (avisos antigos da prévia); prints Playwright → OK
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** não publicado
+- **Próximos passos:** publicar só com liberação
+
 ## [2026-10-22 12:27] — Ajustes pós-revisão 693249e (não publicado)
 - **Autor:** Grok 4.7
 - **Objetivo:** Esconder a rotação do segredo, filtrar documentos no gateway e enviar o motivo ao reativar.

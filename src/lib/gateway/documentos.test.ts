@@ -11,6 +11,7 @@ import {
   origensDoTexto,
   parametrosListaDocumentos,
   rotuloCampoDocumento,
+  rotuloTipo,
   textoExpira,
 } from "./documentos";
 import { executarDocumentos } from "./documentos.server";
@@ -18,7 +19,7 @@ import { executarWebhook } from "./webhooks.server";
 import { gradeJanela, lerJanela, MENSAGEM_FOLLOWUP_AUSENTE } from "./followup";
 import { executarFollowUp } from "./followup.server";
 import { GatewayErro } from "./erros";
-import { EVENTOS_SAIDA } from "./webhooks";
+import { EVENTOS_SAIDA, textoSegredoAnterior } from "./webhooks";
 
 test("escopo documentos:enviar entra na criação da chave da empresa", () => {
   expect(ESCOPOS).toContain("documentos:enviar");
@@ -156,6 +157,15 @@ test("detalhe do documento usa rótulo, real e data — nunca a chave", () => {
   expect(dataBrParaIso("21/10/2026")).toBe("2026-10-21");
   expect(dataBrParaIso("31/02/2026")).toBe("");
   expect(isoParaDataBr("2026-10-21")).toBe("21/10/2026");
+});
+
+test("rótulos de conta de consumo e cobrança Pix", () => {
+  expect(rotuloTipo("boleto_concessionaria")).toBe("Conta de consumo");
+  expect(rotuloTipo("pix_cobranca")).toBe("Cobrança Pix");
+  expect(textoSegredoAnterior("2026-10-23T17:32:00Z")).toBe(
+    "Segredo anterior válido até 23/10 14:32",
+  );
+  expect(textoSegredoAnterior(null)).toBe("");
 });
 
 test("ensaio do follow-up avisa que só o primeiro é registrado", () => {
