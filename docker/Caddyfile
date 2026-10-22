@@ -15,26 +15,39 @@
 	}
 }
 
+# Proxy do gateway. O corpo de 11MiB vale só no envio de documentos;
+# o restante de /gateway/api/* continua em 2MiB.
+(proxy_gateway) {
+	uri strip_prefix /gateway
+	reverse_proxy luxbrain-gateway:8000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 30s
+		}
+	}
+}
+
 (gateway_https) {
 	@gateway path /gateway /gateway/*
 	handle @gateway {
 		route {
 			@inicio path /gateway /gateway/
 			redir @inicio /gateway/health 308
-			@publico path /gateway/health /gateway/webhooks/* /gateway/api/*
+			@documentos path /gateway/api/v1/documentos /gateway/api/v1/documentos/*
+			handle @documentos {
+				request_body {
+					max_size 11MiB
+				}
+				import proxy_gateway
+			}
+			@publico path /gateway/health /gateway/health/ops /gateway/webhooks/* /gateway/api/*
 			handle @publico {
 				request_body {
 					max_size 2MiB
 				}
-				uri strip_prefix /gateway
-				reverse_proxy luxbrain-gateway:8000 {
-					header_up X-Real-IP {remote_host}
-					header_up X-Forwarded-For {remote_host}
-					transport http {
-						dial_timeout 5s
-						response_header_timeout 30s
-					}
-				}
+				import proxy_gateway
 			}
 			handle {
 				respond 404

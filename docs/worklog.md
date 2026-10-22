@@ -1,3 +1,15 @@
+## [2026-10-21 22:40] — Caddy: 11 MiB só em documentos
+- **Autor:** Grok 4.7
+- **Objetivo:** Aceitar o PDF do formulário sem abrir o limite no resto da API.
+- **Arquivos alterados:**
+  - `docker/Caddyfile` — modificado — 11 MiB em `/gateway/api/v1/documentos` e subcaminhos; 2 MiB no restante
+- **Resumo das mudanças:** O proxy usa um trecho único e aplica o corpo maior só na rota de documentos. `/gateway/health/ops` continua público, como já estava no ar.
+- **Decisões e justificativas:** Recarregar o Caddy, sem reiniciar. O arquivo não entra na imagem do painel.
+- **Comandos executados:** `caddy validate` → OK; `caddy reload` → OK
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** painel das telas novas ainda não publicado
+- **Próximos passos:** revisar os prints antes de publicar
+
 ## [2026-10-20 17:57] — Pedidos voltaram a aparecer (publicado)
 - **Autor:** Grok 4.7
 - **Objetivo:** O quadro de Pedidos, em Agentes, estava vazio. Analisar e corrigir.
