@@ -73,18 +73,21 @@ export function SeloOptOut({
                   id="motivo-reativar"
                   className="mt-1"
                   required
+                  minLength={3}
+                  maxLength={300}
                   rows={3}
                   value={motivo}
                   placeholder="Por que este contato pediu para voltar a receber"
                   onChange={(e) => setMotivo(e.target.value)}
                 />
+                <span className="mt-1 block text-xs text-ink-500">Mínimo de 3 caracteres.</span>
               </label>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAberto(false)}>
                   Cancelar
                 </Button>
                 <Button
-                  disabled={!motivo.trim()}
+                  disabled={motivo.trim().length < 3}
                   onClick={() => {
                     onReativar(motivo.trim());
                     setAberto(false);

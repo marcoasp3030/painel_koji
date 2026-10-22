@@ -23,7 +23,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  AVISO_FILTRO_LOCAL,
   AVISO_PIX,
   CAMPOS_COPIAR,
   ESTADOS_DOCUMENTO,
@@ -31,13 +30,13 @@ import {
   ROTULO_ESTADO_DOCUMENTO,
   ROTULO_FORMATO,
   ROTULO_MOTIVO_DOCUMENTO,
-  ROTULO_TIPO_DOCUMENTO,
   SELO_CONFIANCA,
+  TIPOS_FILTRO_DOCUMENTO,
   apresentarCampo,
   dataHoraBrasilia,
   ehComprovantePix,
-  filtrarDocumentos,
   itensNota,
+  periodoDocumentosValido,
   reaisDocumento,
   rotuloCampoDocumento,
   rotuloTipo,
@@ -87,10 +86,7 @@ export function DocumentosTela({
   onBaixar: (id: string) => void;
   onApagar: (id: string) => void;
 }) {
-  const visiveis = filtrarDocumentos(itens, filtro);
-  const tipos = [
-    ...new Set(itens.map((i) => i.tipo_documento).filter((t): t is string => Boolean(t))),
-  ];
+  const periodoInvalido = !periodoDocumentosValido(filtro);
   return (
     <>
       <div className="mt-6 flex flex-wrap items-end gap-3">
@@ -119,18 +115,11 @@ export function DocumentosTela({
             onChange={(e) => onFiltro({ ...filtro, tipo: e.target.value })}
           >
             <option value="">Todos</option>
-            {tipos.map((t) => (
+            {TIPOS_FILTRO_DOCUMENTO.map((t) => (
               <option key={t} value={t}>
                 {rotuloTipo(t)}
               </option>
             ))}
-            {Object.keys(ROTULO_TIPO_DOCUMENTO)
-              .filter((t) => !tipos.includes(t))
-              .map((t) => (
-                <option key={t} value={t}>
-                  {rotuloTipo(t)}
-                </option>
-              ))}
           </select>
         </label>
         <label className="text-xs text-ink-500">
@@ -155,20 +144,24 @@ export function DocumentosTela({
           </Button>
         ) : null}
       </div>
-      <p className="mt-2 text-xs text-ink-500">{AVISO_FILTRO_LOCAL}</p>
+      {periodoInvalido ? (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          A data inicial é posterior à final.
+        </p>
+      ) : null}
       <Cartao className="mt-4">
         {carregando ? (
           <p className="px-5 py-8 text-ink-500">Carregando…</p>
         ) : erro ? (
           <EstadoVazio titulo="Não foi possível carregar" texto={erro} />
-        ) : visiveis.length === 0 ? (
+        ) : itens.length === 0 ? (
           <Vazio
             titulo="Nenhum documento"
             texto="Quando um formulário ou o n8n enviar um arquivo, ele aparece aqui."
           />
         ) : (
           <ul>
-            {visiveis.map((d) => {
+            {itens.map((d) => {
               const estado = ROTULO_ESTADO_DOCUMENTO[d.estado] ?? {
                 rotulo: d.estado,
                 tom: "neutro" as const,

@@ -119,6 +119,12 @@ export type EntregaWebhook = {
   criado_em: string;
 };
 
+/**
+ * A rota POST …/rotacionar-segredo já responde no gateway.
+ * O botão fica escondido até a liberação explícita.
+ */
+export const ROTACAO_SEGREDO_LIBERADA = false;
+
 export const webhookSchema = z.discriminatedUnion("acao", [
   z.object({ empresa, acao: z.literal("listar") }).strict(),
   z

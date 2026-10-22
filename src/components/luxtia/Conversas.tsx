@@ -696,9 +696,9 @@ function Atendimento({
       }),
   });
   const reativar = useMutation({
-    mutationFn: () =>
+    mutationFn: (motivo: string) =>
       reativarFn({
-        data: { empresa: ctx.empresa, acao: "reativar", contato: conversa.contato_id },
+        data: { empresa: ctx.empresa, acao: "reativar", contato: conversa.contato_id, motivo },
       }),
     onSuccess: () => {
       toast.success("Follow-up reativado para este contato.");
@@ -736,8 +736,7 @@ function Atendimento({
             <SeloOptOut
               optOut={followUps.data?.opt_out}
               podeReativar={ctx.papel === "plataforma" || ctx.papel === "admin"}
-              // O DELETE de opt-out não lê corpo: o motivo fica só na confirmação.
-              onReativar={() => reativar.mutate()}
+              onReativar={(motivo) => reativar.mutate(motivo)}
             />
           ) : null}
           {podeEditarNome && !editando ? (

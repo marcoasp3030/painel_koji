@@ -349,7 +349,7 @@ describe("papéis", () => {
       ],
       ["GET", ["conversas", "c", "follow-ups"]],
       ["POST", ["conversas", "c", "follow-ups", "cancelar"], { motivo: "painel" }],
-      ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
+      ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"], { motivo: "Pedido do cliente" }],
       ["POST", ["webhooks-saida", "wh_1", "rotacionar-segredo"]],
     ];
     for (const op of permitidas) {

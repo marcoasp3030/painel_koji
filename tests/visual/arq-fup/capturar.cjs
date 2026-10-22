@@ -44,7 +44,10 @@ const assert = require("node:assert/strict");
 
   await abrir("/?tela=documentos", "boleto-outubro.pdf");
   await page.getByPlaceholder("dd/mm/aaaa").first().waitFor();
-  await page.getByText("Tipo e data filtram só os documentos já carregados nesta lista.").waitFor();
+  assert.equal(
+    await page.getByText("Tipo e data filtram só os documentos já carregados nesta lista.").count(),
+    0,
+  );
   await foto("05-documentos-lista.png");
 
   await abrir("/?tela=documentos&detalhe=boleto", "Linha digitável");
@@ -74,10 +77,8 @@ const assert = require("node:assert/strict");
   await foto("12-documento-pix.png", pix);
 
   await abrir("/?tela=webhooks", "sistema.exemplo.com.br");
-  await page.getByRole("button", { name: "Gerar novo segredo" }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Gerar novo segredo" }).count(), 0);
   await foto("07-webhooks-lista.png");
-  await page.getByRole("button", { name: "Gerar novo segredo" }).click();
-  await foto("16-gerar-segredo.png", page.getByRole("alertdialog"));
 
   await abrir("/?tela=webhooks", "sistema.exemplo.com.br");
   await page.getByRole("button", { name: "Novo webhook" }).click();

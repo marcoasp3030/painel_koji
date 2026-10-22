@@ -277,7 +277,12 @@ const REGRAS: Regra[] = [
     corpo: soChaves(["motivo"], "Campos de cancelamento inválidos."),
   },
   { metodo: "GET", caminho: ["contatos", "*", "opt-out-follow-up"], papeis: AMBOS },
-  { metodo: "DELETE", caminho: ["contatos", "*", "opt-out-follow-up"], papeis: ADMIN },
+  {
+    metodo: "DELETE",
+    caminho: ["contatos", "*", "opt-out-follow-up"],
+    papeis: ADMIN,
+    corpo: soChaves(["motivo"], "Campos de reativação inválidos."),
+  },
   // MULTI1-a: módulos da empresa e do agente; webhook uazapi.
   { metodo: "GET", caminho: ["modulos"], papeis: AMBOS },
   { metodo: "GET", caminho: ["agentes", "*", "modulos"], papeis: AMBOS },

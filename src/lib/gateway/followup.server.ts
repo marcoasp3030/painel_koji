@@ -49,11 +49,11 @@ export async function executarFollowUp(s: Sessao, entrada: unknown) {
         return dados;
       }
       case "reativar": {
-        const { dados } = await t.chamar<OptOutFollowUp>("DELETE", [
-          "contatos",
-          d.contato,
-          "opt-out-follow-up",
-        ]);
+        const { dados } = await t.chamar<OptOutFollowUp>(
+          "DELETE",
+          ["contatos", d.contato, "opt-out-follow-up"],
+          { corpo: { motivo: d.motivo } },
+        );
         return dados;
       }
     }

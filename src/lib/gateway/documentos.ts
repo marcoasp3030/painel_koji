@@ -109,8 +109,17 @@ export const CAMPOS_COPIAR = [
 
 export const AVISO_PIX = "Pagamento não verificado: confira no extrato antes de dar baixa";
 
-/** O gateway lista por estado. Tipo e data ainda não entram na rota. */
-export const AVISO_FILTRO_LOCAL = "Tipo e data filtram só os documentos já carregados nesta lista.";
+/** Valores que GET /anexos aceita em tipo_documento. "outro" inclui documento sem tipo. */
+export const TIPOS_FILTRO_DOCUMENTO = [
+  "boleto",
+  "boleto_concessionaria",
+  "nfe",
+  "nfce",
+  "nfse",
+  "comprovante_pix",
+  "pix_cobranca",
+  "outro",
+] as const;
 
 /** Confiança do campo, como o gateway marca (ARQ1-a3). */
 export const SELO_CONFIANCA: Record<
@@ -260,18 +269,21 @@ export function dataHoraBrasilia(iso: string | null | undefined) {
   });
 }
 
-/**
- * Estado vai ao gateway. Tipo e período filtram só a página já carregada,
- * pelo dia de Brasília: a rota de anexos não aceita tipo nem data.
- */
-export function filtrarDocumentos(itens: DocumentoResumo[], filtro: FiltroDocumentos) {
-  return itens.filter((item) => {
-    if (filtro.tipo && (item.tipo_documento ?? "") !== filtro.tipo) return false;
-    const dia = diaBrasilia(item.criado_em);
-    if (filtro.desde && (!dia || dia < filtro.desde)) return false;
-    if (filtro.ate && (!dia || dia > filtro.ate)) return false;
-    return true;
-  });
+/** `de` e `ate` são inclusivos. A rota recusa quando o início passa do fim. */
+export function periodoDocumentosValido(filtro: FiltroDocumentos) {
+  return !(filtro.desde && filtro.ate && filtro.desde > filtro.ate);
+}
+
+/** Query de GET /anexos: estado, tipo_documento, de e ate (AAAA-MM-DD, dia de Brasília). */
+export function parametrosListaDocumentos(filtro: FiltroDocumentos, cursor?: string | null) {
+  return {
+    limite: 50,
+    ...(filtro.estado ? { estado: filtro.estado } : {}),
+    ...(filtro.tipo ? { tipo_documento: filtro.tipo } : {}),
+    ...(filtro.desde ? { de: filtro.desde } : {}),
+    ...(filtro.ate ? { ate: filtro.ate } : {}),
+    ...(cursor ? { cursor } : {}),
+  };
 }
 
 export function rotuloTipo(tipo: string | null | undefined) {
@@ -407,6 +419,15 @@ export const documentosSchema = z.discriminatedUnion("acao", [
       ...alvo,
       acao: z.literal("listar"),
       estado: z.string().max(40).optional(),
+      tipo: z.enum(TIPOS_FILTRO_DOCUMENTO).optional(),
+      desde: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+      ate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
       cursor: z.string().max(80).nullish(),
     })
     .strict(),

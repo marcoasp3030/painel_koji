@@ -14,6 +14,7 @@ import {
 } from "@/lib/gateway-documentos.functions";
 import {
   FILTRO_DOCUMENTOS_VAZIO,
+  periodoDocumentosValido,
   type DocumentoResumo,
   type FiltroDocumentos,
   type TextoPagina,
@@ -58,12 +59,20 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
   const [aberto, setAberto] = useState<string | null>(null);
   const [pagina, setPagina] = useState<TextoPagina | null>(null);
   const podeApagar = ctx.papel === "plataforma" || ctx.papel === "admin";
+  const periodoOk = periodoDocumentosValido(filtro);
+  const consulta = {
+    empresa: ctx.empresa,
+    acao: "listar" as const,
+    ...(filtro.estado ? { estado: filtro.estado } : {}),
+    ...(filtro.tipo ? { tipo: filtro.tipo } : {}),
+    ...(filtro.desde ? { desde: filtro.desde } : {}),
+    ...(filtro.ate ? { ate: filtro.ate } : {}),
+  };
   const lista = useQuery({
-    queryKey: ["documentos", ctx.empresa, filtro.estado],
+    queryKey: ["documentos", ctx.empresa, filtro],
+    enabled: periodoOk,
     queryFn: async () => {
-      const r = await listar({
-        data: { empresa: ctx.empresa, acao: "listar", estado: filtro.estado || undefined },
-      });
+      const r = await listar({ data: consulta });
       setExtras([]);
       setCursor(r.proximo_cursor);
       setTemMais(Boolean(r.proximo_cursor));
@@ -85,15 +94,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
     },
   });
   const mais = useMutation({
-    mutationFn: () =>
-      listar({
-        data: {
-          empresa: ctx.empresa,
-          acao: "listar",
-          estado: filtro.estado || undefined,
-          cursor,
-        },
-      }),
+    mutationFn: () => listar({ data: { ...consulta, cursor } }),
     onSuccess: (r) => {
       setExtras((a) => [...a, ...r.itens]);
       setCursor(r.proximo_cursor);
@@ -122,7 +123,9 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
       filtro={filtro}
       onFiltro={(f) => {
         setFiltro(f);
-        if (f.estado !== filtro.estado) setExtras([]);
+        setExtras([]);
+        setCursor(null);
+        setTemMais(false);
       }}
       carregando={lista.isLoading}
       erro={lista.error instanceof Error ? lista.error.message : undefined}

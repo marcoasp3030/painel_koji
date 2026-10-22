@@ -26,7 +26,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { dataHoraBrasilia } from "@/lib/gateway/documentos";
-import { gruposDeEventos, type EntregaWebhook, type WebhookSaida } from "@/lib/gateway/webhooks";
+import {
+  ROTACAO_SEGREDO_LIBERADA,
+  gruposDeEventos,
+  type EntregaWebhook,
+  type WebhookSaida,
+} from "@/lib/gateway/webhooks";
 
 export function WebhooksSaidaTela({
   itens,
@@ -115,28 +120,30 @@ export function WebhooksSaidaTela({
                   <Button variant="ghost" size="sm" onClick={() => onEntregas(w)}>
                     Entregas
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" disabled={salvando}>
-                        Gerar novo segredo
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Gerar um segredo novo?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          O segredo atual deixa de valer na hora. O novo aparece só desta vez —
-                          copie antes de fechar.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => onGerarSegredo(w)}>
+                  {ROTACAO_SEGREDO_LIBERADA ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={salvando}>
                           Gerar novo segredo
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Gerar um segredo novo?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            O segredo atual deixa de valer na hora. O novo aparece só desta vez —
+                            copie antes de fechar.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onGerarSegredo(w)}>
+                            Gerar novo segredo
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : null}
                   {w.ativo ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

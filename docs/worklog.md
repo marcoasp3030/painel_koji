@@ -1,3 +1,18 @@
+## [2026-10-22 12:27] — Ajustes pós-revisão 693249e (não publicado)
+- **Autor:** Grok 4.7
+- **Objetivo:** Esconder a rotação do segredo, filtrar documentos no gateway e enviar o motivo ao reativar.
+- **Arquivos alterados:**
+  - `src/lib/gateway/webhooks.ts`, `src/components/luxtia/WebhooksSaida.tsx` — modificados — botão “Gerar novo segredo” atrás de `ROTACAO_SEGREDO_LIBERADA = false`
+  - `src/lib/gateway/documentos.ts`, `documentos.server.ts`, `src/routes/_authenticated/ia/documentos.tsx`, `src/components/luxtia/documentos/Documentos.tsx` — modificados — tipo e período vão em `GET /anexos`
+  - `src/lib/gateway/followup.ts`, `followup.server.ts`, `modulo.server.ts`, `FollowUpConversa.tsx`, `Conversas.tsx` — modificados — motivo obrigatório (3 a 300) no DELETE de opt-out
+  - `README.md`, `instrucoes.md`, `tests/visual/arq-fup/capturar.cjs` — modificados — registro e a prévia deixa de procurar o botão e o aviso local
+- **Resumo das mudanças:** O filtro de tipo e data sai da página carregada e entra na consulta. Reativar manda o motivo. O botão de segredo novo não aparece.
+- **Decisões e justificativas:** O gateway em execução já aceita `tipo_documento`, `de` e `ate`, e o DELETE de opt-out exige `motivo`. A rotação do segredo também existe, mas o botão fica escondido até a liberação explícita.
+- **Comandos executados:** `bun test` documentos e módulo → 34 OK; `tsc --noEmit` → OK; ESLint dos arquivos → OK
+- **Erros e resoluções:** `superRefine` no objeto da união quebrava o schema do Zod (`type.shape` indefinido). A ordem das datas passou a ser conferida na chamada de listar.
+- **Pendências / TODO:** não publicado. `ROTACAO_SEGREDO_LIBERADA` continua falso.
+- **Próximos passos:** publicar só com liberação. Ligar o botão de segredo quando pedirem.
+
 ## [2026-10-22 11:40] — Revisão dos prints ARQ/FUP (não publicado)
 - **Autor:** Grok 4.7
 - **Objetivo:** Corrigir datas, segredo, detalhe do documento e textos antes de publicar.

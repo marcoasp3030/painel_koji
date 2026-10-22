@@ -4,6 +4,7 @@ import type { ModuloGateway } from "./modulo.server";
 import {
   chaveFormularioSchema,
   documentosSchema,
+  parametrosListaDocumentos,
   type ChaveFormulario,
   type DocumentoDetalhe,
   type DocumentoResumo,
@@ -32,8 +33,18 @@ export async function executarDocumentos(s: Sessao, entrada: unknown) {
     const t = await s.tenant(d.empresa);
     switch (d.acao) {
       case "listar": {
+        if (d.desde && d.ate && d.desde > d.ate) {
+          throw new GatewayErro({
+            codigo: "VALIDATION_ERROR",
+            status: 400,
+            mensagem: "A data inicial é posterior à final.",
+          });
+        }
         const { dados } = await t.chamar<Pagina<DocumentoResumo>>("GET", ["anexos"], {
-          query: { limite: 50, estado: d.estado || undefined, cursor: d.cursor ?? undefined },
+          query: parametrosListaDocumentos(
+            { estado: d.estado ?? "", tipo: d.tipo ?? "", desde: d.desde ?? "", ate: d.ate ?? "" },
+            d.cursor,
+          ),
         });
         return dados;
       }

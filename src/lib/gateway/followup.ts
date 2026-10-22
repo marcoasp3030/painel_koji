@@ -149,7 +149,14 @@ export const followUpSchema = z.discriminatedUnion("acao", [
     })
     .strict(),
   z.object({ empresa, acao: z.literal("ver_opt_out"), contato: idRecurso }).strict(),
-  z.object({ empresa, acao: z.literal("reativar"), contato: idRecurso }).strict(),
+  z
+    .object({
+      empresa,
+      acao: z.literal("reativar"),
+      contato: idRecurso,
+      motivo: z.string().trim().min(3, "Escreva o motivo.").max(300),
+    })
+    .strict(),
 ]);
 
 export type EntradaFollowUp = z.infer<typeof followUpSchema>;
