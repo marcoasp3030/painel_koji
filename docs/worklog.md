@@ -1,3 +1,20 @@
+## [2026-10-21 22:45] — Telas de documentos (não publicadas)
+- **Autor:** Grok 4.7
+- **Objetivo:** Chaves de formulário, documentos e webhooks de saída no painel, no padrão do cardápio.
+- **Arquivos alterados:**
+  - `src/routes/_authenticated/ia/documentos.tsx`, `chaves-formulario.tsx`, `webhooks-saida.tsx` — criados
+  - `src/components/luxtia/documentos/`, `WebhooksSaida.tsx` — criados
+  - `src/lib/gateway/documentos.ts`, `documentos.server.ts`, `webhooks.ts`, `webhooks.server.ts` — criados
+  - `src/lib/gateway-documentos.functions.ts`, `gateway-webhooks.functions.ts` — criados
+  - `src/lib/gateway/cliente.server.ts`, `modulo.server.ts`, `nav.ts`, `vocabulario.ts` — modificados — download, permissão, menu e escopo
+  - `docs/prints-arq-fup/01` a `08` — criados — prints com dados fictícios
+- **Resumo das mudanças:** A chave de formulário aparece uma vez. O documento mostra os selos de confiança, baixa o original e apaga com confirmação. Os webhooks incluem os eventos de documento e de follow-up.
+- **Decisões e justificativas:** Tipo e data filtram a página carregada; o estado vai ao gateway. Admin e plataforma apagam e revogam; o membro consulta.
+- **Comandos executados:** `bun test` documentos e módulo → OK
+- **Erros e resoluções:** nenhum neste commit
+- **Pendências / TODO:** não publicado
+- **Próximos passos:** telas de follow-up no commit seguinte
+
 ## [2026-10-21 22:40] — Caddy: 11 MiB só em documentos
 - **Autor:** Grok 4.7
 - **Objetivo:** Aceitar o PDF do formulário sem abrir o limite no resto da API.

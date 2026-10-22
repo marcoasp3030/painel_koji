@@ -9,6 +9,8 @@ export type IconeMenu =
   | "agentes"
   | "canais"
   | "chaves"
+  | "documentos"
+  | "webhooks"
   | "simular"
   | "conversas"
   | "pedidos"
@@ -114,6 +116,27 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     papeis: ["plataforma"],
   },
   {
+    to: "/ia/chaves-formulario",
+    label: "Chaves de formulário",
+    grupo: "Agentes",
+    icone: "chaves",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/documentos",
+    label: "Documentos",
+    grupo: "Agentes",
+    icone: "documentos",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/webhooks-saida",
+    label: "Webhooks de saída",
+    grupo: "Configurações",
+    icone: "webhooks",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/simular",
     label: "Simular conversa",
     grupo: "Agentes",
@@ -188,6 +211,27 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agentes",
     icone: "canais",
     papeis: ["admin", "membro"],
+  },
+  {
+    to: "/ia/chaves-formulario",
+    label: "Chaves de formulário",
+    grupo: "Agentes",
+    icone: "chaves",
+    papeis: ["admin", "membro"],
+  },
+  {
+    to: "/ia/documentos",
+    label: "Documentos",
+    grupo: "Agentes",
+    icone: "documentos",
+    papeis: ["admin", "membro"],
+  },
+  {
+    to: "/ia/webhooks-saida",
+    label: "Webhooks de saída",
+    grupo: "Configurações",
+    icone: "webhooks",
+    papeis: ["admin"],
   },
   {
     to: "/ia/simular",

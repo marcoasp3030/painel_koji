@@ -62,3 +62,17 @@ A lista e o detalhe mostram o atendimento atual (número, aberto, com humano ou 
 ## Comportamento do agente
 
 Configurações → Comportamento do agente edita o atendimento da empresa ou de um agente. O formulário é montado pelo `esquema` que o gateway devolve (tipos, limites, opções, padrão, `editavel`, `disponivel`), então um campo novo aparece sem mudar o painel. Cada campo mostra o valor em uso, a origem (plataforma, segmento, empresa ou agente), o selo "Personalizado" e a ação "Voltar ao padrão". As alterações viram rascunho e são publicadas com uma nota opcional. Quando o gateway pede confirmação, a tela mostra o trecho de cada aviso antes de reenviar. Abas: Personalidade, Comportamentos, Publicar, Prévia (rascunho ou publicado, como vai ao agente) e Histórico (antes/depois e Restaurar). Itens indisponíveis aparecem com o selo "em breve". "Pediu humano" e "Reclamação" ficam travados. Os campos de operação são só leitura. Admin e plataforma editam; o atendente só vê. Especificação em `docs/ESPEC_TELAS_CFG1.md`.
+
+## Documentos
+
+`/ia/documentos` lista os arquivos recebidos, com filtro de estado no gateway e filtros de tipo e data (dia de Brasília) na página carregada. O detalhe mostra estado, formato, páginas, campos com o selo validado, lido do texto ou a conferir, o texto de cada página, baixar o original e apagar com confirmação. Admin e plataforma apagam; o membro só consulta. `/ia/chaves-formulario` cria a chave presa a um agente, com sites permitidos e limite por minuto. O valor aparece uma vez, com Copiar. Revogar fica com admin e plataforma.
+
+Na chave de API da empresa, o escopo “Enviar documentos” (`documentos:enviar`) pode ser marcado na criação. Vale em servidor ou n8n.
+
+## Webhooks de saída
+
+`/ia/webhooks-saida`, para admin e plataforma, cria a URL e os eventos. Entram documento pronto, documento falhou, documento apagado, resposta do agente, follow-up agendado, follow-up cancelado e follow-up em ensaio, além dos eventos de pedido que já existiam. O segredo aparece uma vez. A tela testa o envio e mostra as últimas entregas.
+
+O proxy aceita até 11 MiB só em `/gateway/api/v1/documentos` e subcaminhos. O restante de `/gateway/api/*` continua em 2 MiB.
+
+Prints com dados fictícios: `docs/prints-arq-fup/`. As telas ainda não foram publicadas.

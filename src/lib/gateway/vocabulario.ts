@@ -53,6 +53,11 @@ export const ESCOPO: Record<string, { rotulo: string; ajuda: string }> = {
     ajuda: "Consulta ao catálogo, quando o módulo estiver ligado na empresa.",
   },
   callback: { rotulo: "Resposta assíncrona (em breve)", ajuda: "Ainda não disponível no gateway." },
+  "documentos:enviar": {
+    rotulo: "Enviar documentos",
+    ajuda:
+      "O sistema manda boleto, nota ou comprovante para leitura. Vale em servidor ou n8n — o navegador é recusado.",
+  },
 };
 
 /** De onde vem o valor herdado de um campo do agente (origem_config). */

@@ -11,6 +11,7 @@ export const ESCOPOS = [
   "notificar",
   "ferramentas:catalogo",
   "callback",
+  "documentos:enviar",
 ] as const;
 
 export const listarChaves = createServerFn({ method: "POST" })

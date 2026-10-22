@@ -23,11 +23,14 @@ import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
 import { Route as AuthenticatedIaCardapioRouteImport } from './routes/_authenticated/ia/cardapio'
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
+import { Route as AuthenticatedIaChavesFormularioRouteImport } from './routes/_authenticated/ia/chaves-formulario'
 import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenticated/ia/conversas'
+import { Route as AuthenticatedIaDocumentosRouteImport } from './routes/_authenticated/ia/documentos'
 import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authenticated/ia/modelos'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
+import { Route as AuthenticatedIaWebhooksSaidaRouteImport } from './routes/_authenticated/ia/webhooks-saida'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
 import { Route as AuthenticatedIaConfiguracoesAvisosRouteImport } from './routes/_authenticated/ia/configuracoes.avisos'
@@ -109,10 +112,22 @@ const AuthenticatedIaChavesRoute = AuthenticatedIaChavesRouteImport.update({
   path: '/ia/chaves',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaChavesFormularioRoute =
+  AuthenticatedIaChavesFormularioRouteImport.update({
+    id: '/ia/chaves-formulario',
+    path: '/ia/chaves-formulario',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaConversasRoute =
   AuthenticatedIaConversasRouteImport.update({
     id: '/ia/conversas',
     path: '/ia/conversas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIaDocumentosRoute =
+  AuthenticatedIaDocumentosRouteImport.update({
+    id: '/ia/documentos',
+    path: '/ia/documentos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedIaModelosRoute = AuthenticatedIaModelosRouteImport.update({
@@ -135,6 +150,12 @@ const AuthenticatedIaUnidadesRoute = AuthenticatedIaUnidadesRouteImport.update({
   path: '/ia/unidades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaWebhooksSaidaRoute =
+  AuthenticatedIaWebhooksSaidaRouteImport.update({
+    id: '/ia/webhooks-saida',
+    path: '/ia/webhooks-saida',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaAgentesIndexRoute =
   AuthenticatedIaAgentesIndexRouteImport.update({
     id: '/ia/agentes/',
@@ -196,11 +217,14 @@ export interface FileRoutesByFullPath {
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/ia/chaves-formulario': typeof AuthenticatedIaChavesFormularioRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
+  '/ia/documentos': typeof AuthenticatedIaDocumentosRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
+  '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
@@ -223,11 +247,14 @@ export interface FileRoutesByTo {
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/ia/chaves-formulario': typeof AuthenticatedIaChavesFormularioRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
+  '/ia/documentos': typeof AuthenticatedIaDocumentosRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
+  '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
@@ -253,11 +280,14 @@ export interface FileRoutesById {
   '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/_authenticated/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
+  '/_authenticated/ia/chaves-formulario': typeof AuthenticatedIaChavesFormularioRoute
   '/_authenticated/ia/conversas': typeof AuthenticatedIaConversasRoute
+  '/_authenticated/ia/documentos': typeof AuthenticatedIaDocumentosRoute
   '/_authenticated/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
+  '/_authenticated/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/_authenticated/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
@@ -283,11 +313,14 @@ export interface FileRouteTypes {
     | '/ia/canais'
     | '/ia/cardapio'
     | '/ia/chaves'
+    | '/ia/chaves-formulario'
     | '/ia/conversas'
+    | '/ia/documentos'
     | '/ia/modelos'
     | '/ia/pedidos'
     | '/ia/simular'
     | '/ia/unidades'
+    | '/ia/webhooks-saida'
     | '/admin/'
     | '/ia/agentes/$agenteId'
     | '/ia/configuracoes/avisos'
@@ -310,11 +343,14 @@ export interface FileRouteTypes {
     | '/ia/canais'
     | '/ia/cardapio'
     | '/ia/chaves'
+    | '/ia/chaves-formulario'
     | '/ia/conversas'
+    | '/ia/documentos'
     | '/ia/modelos'
     | '/ia/pedidos'
     | '/ia/simular'
     | '/ia/unidades'
+    | '/ia/webhooks-saida'
     | '/admin'
     | '/ia/agentes/$agenteId'
     | '/ia/configuracoes/avisos'
@@ -339,11 +375,14 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/canais'
     | '/_authenticated/ia/cardapio'
     | '/_authenticated/ia/chaves'
+    | '/_authenticated/ia/chaves-formulario'
     | '/_authenticated/ia/conversas'
+    | '/_authenticated/ia/documentos'
     | '/_authenticated/ia/modelos'
     | '/_authenticated/ia/pedidos'
     | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
+    | '/_authenticated/ia/webhooks-saida'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
     | '/_authenticated/ia/configuracoes/avisos'
@@ -461,11 +500,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaChavesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/chaves-formulario': {
+      id: '/_authenticated/ia/chaves-formulario'
+      path: '/ia/chaves-formulario'
+      fullPath: '/ia/chaves-formulario'
+      preLoaderRoute: typeof AuthenticatedIaChavesFormularioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/conversas': {
       id: '/_authenticated/ia/conversas'
       path: '/ia/conversas'
       fullPath: '/ia/conversas'
       preLoaderRoute: typeof AuthenticatedIaConversasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/documentos': {
+      id: '/_authenticated/ia/documentos'
+      path: '/ia/documentos'
+      fullPath: '/ia/documentos'
+      preLoaderRoute: typeof AuthenticatedIaDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/modelos': {
@@ -494,6 +547,13 @@ declare module '@tanstack/react-router' {
       path: '/ia/unidades'
       fullPath: '/ia/unidades'
       preLoaderRoute: typeof AuthenticatedIaUnidadesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/webhooks-saida': {
+      id: '/_authenticated/ia/webhooks-saida'
+      path: '/ia/webhooks-saida'
+      fullPath: '/ia/webhooks-saida'
+      preLoaderRoute: typeof AuthenticatedIaWebhooksSaidaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/agentes/': {
@@ -582,11 +642,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaCanaisRoute: typeof AuthenticatedIaCanaisRoute
   AuthenticatedIaCardapioRoute: typeof AuthenticatedIaCardapioRoute
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
+  AuthenticatedIaChavesFormularioRoute: typeof AuthenticatedIaChavesFormularioRoute
   AuthenticatedIaConversasRoute: typeof AuthenticatedIaConversasRoute
+  AuthenticatedIaDocumentosRoute: typeof AuthenticatedIaDocumentosRoute
   AuthenticatedIaModelosRoute: typeof AuthenticatedIaModelosRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
+  AuthenticatedIaWebhooksSaidaRoute: typeof AuthenticatedIaWebhooksSaidaRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
   AuthenticatedIaConfiguracoesAvisosRoute: typeof AuthenticatedIaConfiguracoesAvisosRoute
   AuthenticatedIaConfiguracoesComportamentoRoute: typeof AuthenticatedIaConfiguracoesComportamentoRoute
@@ -607,11 +670,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaCanaisRoute: AuthenticatedIaCanaisRoute,
   AuthenticatedIaCardapioRoute: AuthenticatedIaCardapioRoute,
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
+  AuthenticatedIaChavesFormularioRoute: AuthenticatedIaChavesFormularioRoute,
   AuthenticatedIaConversasRoute: AuthenticatedIaConversasRoute,
+  AuthenticatedIaDocumentosRoute: AuthenticatedIaDocumentosRoute,
   AuthenticatedIaModelosRoute: AuthenticatedIaModelosRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
+  AuthenticatedIaWebhooksSaidaRoute: AuthenticatedIaWebhooksSaidaRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
   AuthenticatedIaConfiguracoesAvisosRoute:
     AuthenticatedIaConfiguracoesAvisosRoute,

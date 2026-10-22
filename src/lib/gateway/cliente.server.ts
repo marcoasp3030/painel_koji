@@ -23,6 +23,11 @@ export type RequisicaoGateway = {
   corpo?: unknown;
   /** Tempo máximo em ms; /testar do agente pode levar mais que o padrão. */
   tempoLimiteMs?: number;
+  /**
+   * Resposta binária (download de documento). O navegador recebe nome, tipo
+   * e o arquivo em base64 — nunca vai para log.
+   */
+  arquivo?: boolean;
 };
 
 export type ClienteGateway = {
@@ -104,6 +109,7 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
       };
       // Escopo da sessão: o gateway confere a empresa; plataforma pode omitir.
       if (req.escopoEmpresa) cabecalhos["X-Tenant-Scope"] = req.escopoEmpresa;
+      if (req.arquivo) cabecalhos["Accept"] = "application/octet-stream";
       if (req.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
       // Para log: só método e caminho, sem query (busca pode ter telefone).
       const rotulo = `${req.metodo} ${url.pathname}`;
@@ -124,6 +130,28 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
           throw new GatewayErro({ codigo: "UNAVAILABLE", status: 503 });
         }
 
+        if (resposta.ok && req.arquivo) {
+          const bytes = new Uint8Array(await resposta.arrayBuffer());
+          // 12 MiB cobre o original (até 10 MiB) com folga, sem segurar um corpo absurdo.
+          if (bytes.byteLength > 12 * 1024 * 1024) {
+            throw new GatewayErro({
+              codigo: "VALIDATION_ERROR",
+              status: 413,
+              mensagem: "O arquivo passou do tamanho que o painel consegue baixar.",
+            });
+          }
+          const disp = resposta.headers.get("content-disposition") ?? "";
+          const bruto = /filename="([^"]+)"/.exec(disp)?.[1] ?? "documento";
+          const nome = bruto.replace(/[\\/]/g, "").slice(0, 180) || "documento";
+          return {
+            status: resposta.status,
+            dados: {
+              nome,
+              tipo: resposta.headers.get("content-type") ?? "application/octet-stream",
+              base64: Buffer.from(bytes).toString("base64"),
+            } as T,
+          };
+        }
         if (resposta.ok) {
           return { status: resposta.status, dados: (await lerCorpo(resposta)) as T };
         }

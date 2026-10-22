@@ -80,6 +80,22 @@ const ROTAS_DO_TENANT: Op[] = [
   ["GET", ["api-keys"]],
   ["POST", ["api-keys"], {}],
   ["DELETE", ["api-keys", "key_1"]],
+  ["GET", ["anexos"]],
+  ["GET", ["anexos", "anx_1"]],
+  ["GET", ["anexos", "anx_1", "texto"]],
+  ["GET", ["anexos", "anx_1", "original"]],
+  ["DELETE", ["anexos", "anx_1"]],
+  ["GET", ["chaves-formulario"]],
+  ["POST", ["chaves-formulario"], { nome: "Site", agente_id: "ag_1" }],
+  ["DELETE", ["chaves-formulario", "key_1"]],
+  ["GET", ["webhooks-saida"]],
+  [
+    "POST",
+    ["webhooks-saida"],
+    { url: "https://x.example/h", eventos: ["pedido.criado"], ativo: true },
+  ],
+  ["PATCH", ["webhooks-saida", "wh_1"], { ativo: false }],
+  ["DELETE", ["webhooks-saida", "wh_1"]],
   ["GET", ["consumo"]],
   ["GET", ["unidades"]],
   ["POST", ["unidades"], { nome: "Loja" }],
@@ -243,7 +259,7 @@ describe("papéis", () => {
       ["PATCH", [], { status: "suspenso" }],
       ["PUT", ["config"], { send_mode: "live" }],
       ["GET", ["contatos"]],
-      ["GET", ["webhooks-saida"]],
+      ["POST", ["chaves-formulario"], { nome: "Site", agente_id: "ag_1", outro: true }],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -304,6 +320,29 @@ describe("papéis", () => {
       ["GET", ["pedidos", "contagem"]],
       ["GET", ["pedidos", "59859"]],
       ["POST", ["pedidos", "59859", "status"], { status: "confirmado" }],
+      ["GET", ["anexos"]],
+      ["DELETE", ["anexos", "anx_1"]],
+      [
+        "POST",
+        ["chaves-formulario"],
+        {
+          nome: "Site",
+          agente_id: "ag_1",
+          limite_por_minuto: 10,
+          origens: ["https://loja.exemplo.com.br"],
+        },
+      ],
+      ["DELETE", ["chaves-formulario", "key_1"]],
+      ["GET", ["webhooks-saida"]],
+      [
+        "POST",
+        ["webhooks-saida"],
+        {
+          url: "https://hooks.exemplo.com.br/luxtia",
+          eventos: ["documento.pronto", "follow_up.agendado"],
+          ativo: true,
+        },
+      ],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
@@ -322,6 +361,15 @@ describe("papéis", () => {
       ["POST", ["unidades"], { nome: "Loja" }],
       ["POST", ["canais"], {}],
       ["GET", ["api-keys"]],
+      ["POST", ["chaves-formulario"], { nome: "Site", agente_id: "ag_1" }],
+      ["DELETE", ["chaves-formulario", "key_1"]],
+      ["DELETE", ["anexos", "anx_1"]],
+      ["GET", ["webhooks-saida"]],
+      [
+        "POST",
+        ["webhooks-saida"],
+        { url: "https://x.example/h", eventos: ["pedido.criado"], ativo: true },
+      ],
       ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
     ];
     for (const op of proibidas) {
@@ -355,6 +403,9 @@ describe("papéis", () => {
       ["GET", ["atendimento"]],
       ["GET", ["agentes", "ag_1", "atendimento", "versoes", "2"]],
       ["POST", ["atendimento", "previa"], { fonte: "rascunho" }],
+      ["GET", ["anexos"]],
+      ["GET", ["anexos", "anx_1", "original"]],
+      ["GET", ["chaves-formulario"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });

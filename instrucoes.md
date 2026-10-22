@@ -1,3 +1,8 @@
+## Documentos (ARQ1-a1) — telas no painel, não publicadas (21/10/2026)
+
+- Escopo `documentos:enviar` na chave da empresa. `/ia/chaves-formulario` mostra a chave uma vez, com Copiar. `/ia/documentos` lista, detalha, baixa e apaga. `/ia/webhooks-saida` inclui os eventos de documento, resposta e follow-up.
+- Prints 01 a 08 em `docs/prints-arq-fup/`. Sem publicação.
+
 ## Pedidos — quadro vazio corrigido e publicado (20/10/2026)
 
 - A tela de Pedidos abria só com origem **Reais**. No By Koji não há pedido real: 1 aguardando a loja é piloto, 12 antigos estão como teste (marcação da migração) e 1 piloto cancelado. O quadro e o aviso do menu ficavam vazios.
