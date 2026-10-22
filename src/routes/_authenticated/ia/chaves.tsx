@@ -220,7 +220,7 @@ function NovaChave({
 }) {
   const criar = useServerFn(criarChave);
   const [nome, setNome] = useState("");
-  const [escopos, setEscopos] = useState<(typeof ESCOPOS)[number][]>(["conversar"]);
+  const [escopos, setEscopos] = useState<(typeof ESCOPOS)[number][]>([]);
   const [agente, setAgente] = useState(SEM_AGENTE);
   const [expira, setExpira] = useState("");
   const [ips, setIps] = useState("");
@@ -243,6 +243,7 @@ function NovaChave({
       }),
     onSuccess: (resultado) => {
       setNome("");
+      setEscopos([]);
       setExpira("");
       setIps("");
       onFechar();
@@ -283,20 +284,27 @@ function NovaChave({
           </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">O que a chave pode fazer</legend>
-            {ESCOPOS.map((e) => (
-              <label key={e} className="flex items-start gap-3 text-sm">
-                <Checkbox
-                  checked={escopos.includes(e)}
-                  onCheckedChange={(marcado) =>
-                    setEscopos((atual) => (marcado ? [...atual, e] : atual.filter((x) => x !== e)))
-                  }
-                />
-                <span>
-                  <span>{ESCOPO[e]?.rotulo ?? e}</span>
-                  <span className="block text-xs text-ink-500">{ESCOPO[e]?.ajuda}</span>
-                </span>
-              </label>
-            ))}
+            {ESCOPOS.map((e) => {
+              const emBreve = e === "callback";
+              return (
+                <label key={e} className="flex items-start gap-3 text-sm">
+                  <Checkbox
+                    checked={emBreve ? false : escopos.includes(e)}
+                    disabled={emBreve}
+                    onCheckedChange={(marcado) => {
+                      if (emBreve) return;
+                      setEscopos((atual) =>
+                        marcado ? [...atual, e] : atual.filter((x) => x !== e),
+                      );
+                    }}
+                  />
+                  <span>
+                    <span>{ESCOPO[e]?.rotulo ?? e}</span>
+                    <span className="block text-xs text-ink-500">{ESCOPO[e]?.ajuda}</span>
+                  </span>
+                </label>
+              );
+            })}
           </fieldset>
           <div className="space-y-2">
             <RotuloCampo htmlFor="ch-agente" campo={CAMPO_CHAVE.agente} />

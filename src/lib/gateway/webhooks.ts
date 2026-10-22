@@ -141,6 +141,7 @@ export const webhookSchema = z.discriminatedUnion("acao", [
     })
     .strict(),
   z.object({ empresa, acao: z.literal("desativar"), id: idRecurso }).strict(),
+  z.object({ empresa, acao: z.literal("rotacionar"), id: idRecurso }).strict(),
   z.object({ empresa, acao: z.literal("testar"), id: idRecurso }).strict(),
   z.object({ empresa, acao: z.literal("entregas"), id: idRecurso }).strict(),
 ]);

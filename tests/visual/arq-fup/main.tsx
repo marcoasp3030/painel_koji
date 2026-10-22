@@ -76,20 +76,89 @@ const documentos = [
     apagado_em: null,
   },
 ];
-const detalhe = {
-  ...documentos[0]!,
-  verificacao_pagamento: { estado: "nao_verificado" },
-  conteudo: {
-    paginas: [],
-    avisos: [],
-    campos: {
-      valor: { valor: "152,30", confianca: "validado", fonte: "regra" },
-      beneficiario: { valor: "By Koji Ltda", confianca: "lido_do_texto", fonte: "texto" },
-      vencimento: { valor: "25/10/2026", confianca: "a_conferir", fonte: "texto" },
+const detalhes: Record<string, (typeof documentos)[number] & Record<string, unknown>> = {
+  boleto: {
+    ...documentos[0]!,
+    verificacao_pagamento: null,
+    conteudo: {
+      paginas: [],
+      avisos: [],
+      campos: {
+        linha_digitavel: {
+          valor: "34191.79001 01043.510047 91020.150008 1 12340000015230",
+          confianca: "validado",
+        },
+        codigo_barras: {
+          valor: "34191123400000152301790010104351004791020150",
+          confianca: "validado",
+        },
+        banco: { valor: "341 — Itaú", confianca: "validado" },
+        valor: { valor: "152.30", confianca: "validado" },
+        vencimento: { valor: "2026-10-25", confianca: "validado" },
+        beneficiario_nome: { valor: "By Koji Ltda", confianca: "lido_do_texto" },
+        beneficiario_documento: { valor: "11.222.333/0001-81", confianca: "validado" },
+      },
+    },
+  },
+  nfe: {
+    ...documentos[1]!,
+    verificacao_pagamento: null,
+    conteudo: {
+      paginas: [],
+      avisos: [],
+      campos: {
+        chave_acesso: {
+          valor: "3526 1022 1122 2333 0001 8155 001 000000123 1234567890",
+          confianca: "validado",
+        },
+        emitente_nome: { valor: "By Koji Ltda", confianca: "lido_do_texto" },
+        numero: { valor: "123", confianca: "validado" },
+        serie: { valor: "1", confianca: "validado" },
+        emissao: { valor: "2026-10-20", confianca: "lido_do_texto" },
+        valor_total: { valor: "1890.50", confianca: "lido_do_texto" },
+        itens: {
+          valor: [
+            {
+              descricao: "Temaki salmão",
+              quantidade: "2",
+              valor_unitario: "32.00",
+              valor_total: "64.00",
+            },
+            {
+              descricao: "Combo executivo",
+              quantidade: "1",
+              valor_unitario: "1826.50",
+              valor_total: "1826.50",
+            },
+          ],
+          confianca: "lido_do_texto",
+        },
+      },
+    },
+  },
+  pix: {
+    ...documentos[0]!,
+    id: "anx_pix",
+    nome: "comprovante-pix.pdf",
+    tipo_documento: "comprovante_pix",
+    paginas: 1,
+    expira_em: "2026-11-20T16:02:00Z",
+    verificacao_pagamento: { estado: "nao_verificado" },
+    conteudo: {
+      paginas: [],
+      avisos: [],
+      campos: {
+        valor: { valor: "89.90", confianca: "lido_do_texto" },
+        data_hora: { valor: "2026-10-21T14:32", confianca: "lido_do_texto" },
+        id_transacao: { valor: "E12345678202610211732AbCdEfGhIjK", confianca: "validado" },
+        chave_pix: { valor: "financeiro@bykoji.com.br", confianca: "lido_do_texto" },
+        pagador_nome: { valor: "Ana Souza", confianca: "lido_do_texto" },
+        recebedor_nome: { valor: "By Koji Ltda", confianca: "lido_do_texto" },
+      },
     },
   },
 };
-const pagina = {
+const paginaBoleto = {
   anexo_id: "anx_boleto",
   pagina: 1,
   origem: "texto",
@@ -103,6 +172,23 @@ const pagina = {
       ],
     },
   ],
+};
+const paginas: Record<string, typeof paginaBoleto> = {
+  boleto: paginaBoleto,
+  nfe: {
+    anexo_id: "anx_nota",
+    pagina: 1,
+    origem: "xml",
+    texto: "NF-e 123 · série 1\nEmitente: By Koji Ltda\nValor total: R$ 1.890,50",
+    tabelas: [],
+  },
+  pix: {
+    anexo_id: "anx_pix",
+    pagina: 1,
+    origem: "texto",
+    texto: "Comprovante Pix\nDe: Ana Souza\nPara: By Koji Ltda\nValor: R$ 89,90\n21/10/2026 14:32",
+    tabelas: [],
+  },
 };
 
 function Moldura({
@@ -131,7 +217,7 @@ function Escopos() {
     "callback",
     "documentos:enviar",
   ];
-  const [marcados, setMarcados] = useState(["conversar", "documentos:enviar"]);
+  const [marcados, setMarcados] = useState<string[]>([]);
   return (
     <Moldura
       titulo="Chaves de API"
@@ -139,20 +225,25 @@ function Escopos() {
     >
       <fieldset className="mt-6 max-w-xl space-y-2 rounded-xl border border-base-200 bg-card p-5">
         <legend className="px-1 text-sm font-medium">O que a chave pode fazer</legend>
-        {lista.map((e) => (
-          <label key={e} className="flex items-start gap-3 text-sm">
-            <Checkbox
-              checked={marcados.includes(e)}
-              onCheckedChange={(marcado) =>
-                setMarcados((atual) => (marcado ? [...atual, e] : atual.filter((x) => x !== e)))
-              }
-            />
-            <span>
-              <span>{ESCOPO[e]?.rotulo ?? e}</span>
-              <span className="block text-xs text-ink-500">{ESCOPO[e]?.ajuda}</span>
-            </span>
-          </label>
-        ))}
+        {lista.map((e) => {
+          const emBreve = e === "callback";
+          return (
+            <label key={e} className="flex items-start gap-3 text-sm">
+              <Checkbox
+                checked={emBreve ? false : marcados.includes(e)}
+                disabled={emBreve}
+                onCheckedChange={(marcado) => {
+                  if (emBreve) return;
+                  setMarcados((atual) => (marcado ? [...atual, e] : atual.filter((x) => x !== e)));
+                }}
+              />
+              <span>
+                <span>{ESCOPO[e]?.rotulo ?? e}</span>
+                <span className="block text-xs text-ink-500">{ESCOPO[e]?.ajuda}</span>
+              </span>
+            </label>
+          );
+        })}
       </fieldset>
     </Moldura>
   );
@@ -183,7 +274,8 @@ function Chaves() {
 }
 
 function Documentos() {
-  const aberto = new URLSearchParams(location.search).get("detalhe") === "1";
+  const qual = new URLSearchParams(location.search).get("detalhe");
+  const aberto = qual && qual in detalhes ? detalhes[qual] : null;
   return (
     <Moldura
       titulo="Documentos"
@@ -197,8 +289,8 @@ function Documentos() {
         temMais={false}
         carregandoMais={false}
         onMais={() => undefined}
-        detalhe={aberto ? detalhe : null}
-        pagina={aberto ? pagina : null}
+        detalhe={aberto as never}
+        pagina={qual && paginas[qual] ? paginas[qual] : null}
         carregandoDetalhe={false}
         podeApagar
         onAbrir={() => undefined}
@@ -212,6 +304,9 @@ function Documentos() {
 }
 
 function Webhooks() {
+  const [segredo, setSegredo] = useState<string | null>(
+    new URLSearchParams(location.search).get("segredo") ? "whsec_exemplo_nao_usar" : null,
+  );
   return (
     <Moldura
       titulo="Webhooks de saída"
@@ -234,8 +329,9 @@ function Webhooks() {
         onDesativar={() => undefined}
         onTestar={() => undefined}
         onEntregas={() => undefined}
-        segredo={null}
-        onFecharSegredo={() => undefined}
+        onGerarSegredo={() => setSegredo("whsec_exemplo_nao_usar")}
+        segredo={segredo}
+        onFecharSegredo={() => setSegredo(null)}
       />
     </Moldura>
   );
@@ -305,7 +401,8 @@ function FollowUpConfig() {
       titulo="Comportamento do agente"
       descricao="Follow-up deste agente. Ligado, o gateway só anota o que enviaria."
     >
-      <div className="mt-6 max-w-2xl space-y-3">
+      <p className="mt-6 font-display text-2xl text-ink-900">By Koji</p>
+      <div className="mt-4 max-w-2xl space-y-3">
         {Object.entries(DEFS).map(([campo, def]) => (
           <CampoAtendimento
             key={campo}

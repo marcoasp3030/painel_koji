@@ -736,6 +736,7 @@ function Atendimento({
             <SeloOptOut
               optOut={followUps.data?.opt_out}
               podeReativar={ctx.papel === "plataforma" || ctx.papel === "admin"}
+              // O DELETE de opt-out não lê corpo: o motivo fica só na confirmação.
               onReativar={() => reativar.mutate()}
             />
           ) : null}

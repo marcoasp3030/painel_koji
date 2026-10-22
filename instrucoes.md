@@ -1,3 +1,13 @@
+## Revisão dos prints ARQ/FUP — ainda não publicado (22/10/2026)
+
+- Datas dos filtros em dd/mm/aaaa e a janela do follow-up em 24h, sem depender do idioma do navegador. `lang="pt-BR"` na página.
+- Detalhe do documento com rótulos, R$, Copiar, itens da NF-e em tabela, aviso fixo no comprovante PIX e “Apagado automaticamente em”.
+- Webhook novo nasce ativo. O segredo HMAC aparece uma vez. “Gerar novo segredo” pede confirmação e chama `POST …/webhooks-saida/{id}/rotacionar-segredo`, rota que o gateway ainda não tem.
+- Reativar follow-up exige motivo na tela. O `DELETE …/opt-out-follow-up` não lê corpo, então o motivo não é enviado.
+- Tipo e data continuam filtrando só a página carregada: `GET …/anexos` aceita estado, não tipo nem data.
+- Chave de API nova sem escopo marcado; “Resposta assíncrona (em breve)” desabilitada. “Cancelar este” fica na linha do follow-up agendado. O nome do agente aparece no topo de Comportamento.
+- Prints novos em `docs/prints-arq-fup/`. Sem publicação.
+
 ## Follow-up (FUP1-a) — telas no painel, não publicadas (21/10/2026)
 
 - Em Comportamento do agente: ligar, 1º e 2º em minutos, máximo por dia e janela. Na conversa: bloco com agendado, cancelado e ensaio, e Cancelar. No contato: selo “não quer follow-up” e Reativar (admin e plataforma).

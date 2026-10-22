@@ -19,6 +19,7 @@ import {
   type Parte,
   type Trecho,
 } from "@/lib/gateway/atendimento";
+import { CampoHora } from "@/components/luxtia/DataHora";
 import { gradeJanela, lerJanela } from "@/lib/gateway/followup";
 import type { Json } from "@/lib/gateway/tipos";
 
@@ -275,13 +276,12 @@ function Entrada({
     case "horarios":
       if (campo === "follow_up_janela") {
         try {
-          return (
-            <JanelaFollowUp id={id} valor={valor} desabilitado={desabilitado} mudar={mudar} />
-          );
+          return <JanelaFollowUp id={id} valor={valor} desabilitado={desabilitado} mudar={mudar} />;
         } catch {
           return (
             <p id={id} className="text-sm text-ink-500">
-              A janela de follow-up não pôde ser exibida. O restante da configuração segue disponível.
+              A janela de follow-up não pôde ser exibida. O restante da configuração segue
+              disponível.
             </p>
           );
         }
@@ -550,24 +550,22 @@ function JanelaFollowUp({
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-xs text-ink-500" htmlFor={`${id}-inicio`}>
           Das
-          <Input
+          <CampoHora
             id={`${id}-inicio`}
-            type="time"
-            className="mt-1 w-32"
-            value={inicio}
+            className="mt-1"
+            valor={inicio}
             disabled={desabilitado}
-            onChange={(e) => aplicar(e.target.value, fim)}
+            onChange={(hora) => aplicar(hora, fim)}
           />
         </label>
         <label className="text-xs text-ink-500" htmlFor={`${id}-fim`}>
           Até
-          <Input
+          <CampoHora
             id={`${id}-fim`}
-            type="time"
-            className="mt-1 w-32"
-            value={fim}
+            className="mt-1"
+            valor={fim}
             disabled={desabilitado}
-            onChange={(e) => aplicar(inicio, e.target.value)}
+            onChange={(hora) => aplicar(inicio, hora)}
           />
         </label>
       </div>

@@ -31,6 +31,11 @@ export const desativarWebhook = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => d)
   .handler(({ data, context }) => webhook<WebhookSaida>(context, data));
 
+export const rotacionarSegredoWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => d)
+  .handler(({ data, context }) => webhook<WebhookSaida>(context, data));
+
 export const testarWebhook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => d)

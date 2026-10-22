@@ -1,5 +1,6 @@
 /** Lista e detalhe dos documentos recebidos. */
 import { useState } from "react";
+import { CampoData } from "@/components/luxtia/DataHora";
 import { Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
 import { Etiqueta, Vazio } from "@/components/luxtia/Gateway";
 import {
@@ -13,8 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -23,6 +23,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  AVISO_FILTRO_LOCAL,
+  AVISO_PIX,
+  CAMPOS_COPIAR,
   ESTADOS_DOCUMENTO,
   FILTRO_DOCUMENTOS_VAZIO,
   ROTULO_ESTADO_DOCUMENTO,
@@ -30,13 +33,20 @@ import {
   ROTULO_MOTIVO_DOCUMENTO,
   ROTULO_TIPO_DOCUMENTO,
   SELO_CONFIANCA,
+  apresentarCampo,
   dataHoraBrasilia,
+  ehComprovantePix,
   filtrarDocumentos,
+  itensNota,
+  reaisDocumento,
+  rotuloCampoDocumento,
   rotuloTipo,
-  textoValorCampo,
+  textoExpira,
+  type CampoDocumento,
   type DocumentoDetalhe,
   type DocumentoResumo,
   type FiltroDocumentos,
+  type ItemNota,
   type TextoPagina,
 } from "@/lib/gateway/documentos";
 
@@ -125,22 +135,18 @@ export function DocumentosTela({
         </label>
         <label className="text-xs text-ink-500">
           De
-          <Input
-            type="date"
-            className="mt-1 w-40"
-            aria-label="De"
-            value={filtro.desde}
-            onChange={(e) => onFiltro({ ...filtro, desde: e.target.value })}
+          <CampoData
+            className="mt-1"
+            valor={filtro.desde}
+            onChange={(desde) => onFiltro({ ...filtro, desde })}
           />
         </label>
         <label className="text-xs text-ink-500">
           Até
-          <Input
-            type="date"
-            className="mt-1 w-40"
-            aria-label="Até"
-            value={filtro.ate}
-            onChange={(e) => onFiltro({ ...filtro, ate: e.target.value })}
+          <CampoData
+            className="mt-1"
+            valor={filtro.ate}
+            onChange={(ate) => onFiltro({ ...filtro, ate })}
           />
         </label>
         {filtro.estado || filtro.tipo || filtro.desde || filtro.ate ? (
@@ -149,9 +155,7 @@ export function DocumentosTela({
           </Button>
         ) : null}
       </div>
-      <p className="mt-2 text-xs text-ink-500">
-        O estado é filtrado no gateway. Tipo e data usam o dia de Brasília nesta lista.
-      </p>
+      <p className="mt-2 text-xs text-ink-500">{AVISO_FILTRO_LOCAL}</p>
       <Cartao className="mt-4">
         {carregando ? (
           <p className="px-5 py-8 text-ink-500">Carregando…</p>
@@ -201,7 +205,7 @@ export function DocumentosTela({
         ) : null}
       </Cartao>
       <Sheet open={Boolean(detalhe) || carregandoDetalhe} onOpenChange={(v) => !v && onFechar()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>{detalhe?.nome || "Documento"}</SheetTitle>
             <SheetDescription>Leitura do arquivo, com a confiança de cada campo.</SheetDescription>
@@ -259,29 +263,26 @@ function Detalhe({
         </p>
       ) : null}
       <p className="text-xs text-ink-500">Recebido {dataHoraBrasilia(detalhe.criado_em)}</p>
+      {textoExpira(detalhe.expira_em) ? (
+        <p className="text-sm text-ink-700">{textoExpira(detalhe.expira_em)}</p>
+      ) : null}
+      {ehComprovantePix(detalhe.tipo_documento) ? (
+        <p
+          role="note"
+          className="rounded-lg border border-gold-500/60 bg-gold-300/20 px-3 py-2 text-sm text-ink-900"
+        >
+          {AVISO_PIX}
+        </p>
+      ) : null}
       <section>
         <h3 className="font-medium text-ink-900">Campos</h3>
         {campos.length === 0 ? (
           <p className="mt-2 text-sm text-ink-500">Nenhum campo lido ainda.</p>
         ) : (
           <ul className="mt-2 space-y-2">
-            {campos.map(([nome, campo]) => {
-              const selo = SELO_CONFIANCA[campo.confianca] ?? {
-                rotulo: campo.confianca,
-                tom: "neutro" as const,
-              };
-              return (
-                <li key={nome} className="rounded-lg border border-base-200 px-3 py-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-ink-500">{nome.replace(/_/g, " ")}</span>
-                    <Etiqueta tom={selo.tom}>{selo.rotulo}</Etiqueta>
-                  </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-ink-900">
-                    {textoValorCampo(campo.valor)}
-                  </p>
-                </li>
-              );
-            })}
+            {campos.map(([nome, campo]) => (
+              <CampoLido key={nome} nome={nome} campo={campo} />
+            ))}
           </ul>
         )}
       </section>
@@ -335,7 +336,7 @@ function Detalhe({
         {podeApagar && !detalhe.apagado_em ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline">Apagar</Button>
+              <Button variant="destructive">Apagar</Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -346,12 +347,99 @@ function Detalhe({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={onApagar}>Apagar</AlertDialogAction>
+                <AlertDialogAction
+                  className={buttonVariants({ variant: "destructive" })}
+                  onClick={onApagar}
+                >
+                  Apagar
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function CampoLido({ nome, campo }: { nome: string; campo: CampoDocumento }) {
+  const selo = SELO_CONFIANCA[campo.confianca] ?? {
+    rotulo: campo.confianca,
+    tom: "neutro" as const,
+  };
+  const itens = nome === "itens" ? itensNota(campo.valor) : null;
+  const copiavel =
+    (CAMPOS_COPIAR as readonly string[]).includes(nome) &&
+    (typeof campo.valor === "string" || typeof campo.valor === "number");
+  return (
+    <li className="rounded-lg border border-base-200 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-ink-500">{rotuloCampoDocumento(nome)}</span>
+        <Etiqueta tom={selo.tom}>{selo.rotulo}</Etiqueta>
+      </div>
+      {itens ? (
+        <TabelaItens itens={itens} />
+      ) : (
+        <div className="mt-1 flex items-start gap-2">
+          <p className="min-w-0 flex-1 whitespace-pre-wrap break-all text-sm text-ink-900">
+            {apresentarCampo(nome, campo.valor)}
+          </p>
+          {copiavel ? <BotaoCopiar valor={String(campo.valor)} /> : null}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function TabelaItens({ itens }: { itens: ItemNota[] }) {
+  return (
+    <div className="mt-2 overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="text-xs text-ink-500">
+            <th className="py-1 pr-2 font-medium">Descrição</th>
+            <th className="py-1 pr-2 font-medium">Quantidade</th>
+            <th className="py-1 pr-2 font-medium">Valor unitário</th>
+            <th className="py-1 font-medium">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {itens.map((item, i) => (
+            <tr key={`${item.descricao}-${i}`} className="border-t border-base-200">
+              <td className="py-1 pr-2">{item.descricao}</td>
+              <td className="py-1 pr-2">{item.quantidade ?? "—"}</td>
+              <td className="py-1 pr-2">
+                {item.valor_unitario
+                  ? (reaisDocumento(item.valor_unitario) ?? item.valor_unitario)
+                  : "—"}
+              </td>
+              <td className="py-1">
+                {item.valor_total ? (reaisDocumento(item.valor_total) ?? item.valor_total) : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function BotaoCopiar({ valor }: { valor: string }) {
+  const [copiado, setCopiado] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      onClick={() => {
+        void navigator.clipboard.writeText(valor).then(
+          () => setCopiado(true),
+          () => setCopiado(false),
+        );
+      }}
+    >
+      {copiado ? "Copiado" : "Copiar"}
+    </Button>
   );
 }

@@ -212,7 +212,7 @@ export const AJUDA_CAMPO: Record<string, string> = {
   follow_up_maximo: "0 desliga. No máximo 2: o primeiro e, depois que ele sair, o segundo.",
   follow_up_primeiro_min: "Minutos depois da resposta do agente. De 5 a 1440.",
   follow_up_segundo_min:
-    "Minutos depois do primeiro follow-up enviado. De 5 a 1440. No ensaio o segundo ainda não nasce.",
+    "Minutos depois do primeiro follow-up enviado. De 5 a 1440. Enquanto estiver em ensaio, só o 1º é registrado.",
   follow_up_janela:
     "Horário em que o follow-up pode sair, todos os dias. Fora dele, o gateway cancela. O horário da unidade também vale.",
   follow_up_fora_unidade:

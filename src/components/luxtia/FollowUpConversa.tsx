@@ -1,4 +1,5 @@
 /** Bloco de follow-up da conversa e o selo de opt-out do contato. */
+import { useState } from "react";
 import { Etiqueta, dataHora } from "@/components/luxtia/Gateway";
 import {
   AlertDialog,
@@ -12,6 +13,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ROTULO_ESTADO_FOLLOWUP,
   ROTULO_ORIGEM_OPTOUT,
@@ -28,8 +38,10 @@ export function SeloOptOut({
 }: {
   optOut: OptOutFollowUp | null | undefined;
   podeReativar: boolean;
-  onReativar: () => void;
+  onReativar: (motivo: string) => void;
 }) {
+  const [aberto, setAberto] = useState(false);
+  const [motivo, setMotivo] = useState("");
   if (!optOut?.ativo) return null;
   const origem = optOut.origem ? ROTULO_ORIGEM_OPTOUT[optOut.origem] : null;
   return (
@@ -37,25 +49,54 @@ export function SeloOptOut({
       <Etiqueta tom="alerta">não quer follow-up</Etiqueta>
       {origem ? <span className="text-xs text-ink-500">marcado {origem}</span> : null}
       {podeReativar ? (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
-              Reativar
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reativar o follow-up deste contato?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Só o painel reativa. Uma mensagem do cliente não desfaz este pedido.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={onReativar}>Reativar</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => setAberto(true)}>
+            Reativar
+          </Button>
+          <Dialog
+            open={aberto}
+            onOpenChange={(v) => {
+              setAberto(v);
+              if (!v) setMotivo("");
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reativar o follow-up deste contato?</DialogTitle>
+                <DialogDescription>
+                  Este contato pediu para não receber follow-up. Reativar só com o pedido dele.
+                </DialogDescription>
+              </DialogHeader>
+              <label className="block text-sm" htmlFor="motivo-reativar">
+                Motivo
+                <Textarea
+                  id="motivo-reativar"
+                  className="mt-1"
+                  required
+                  rows={3}
+                  value={motivo}
+                  placeholder="Por que este contato pediu para voltar a receber"
+                  onChange={(e) => setMotivo(e.target.value)}
+                />
+              </label>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAberto(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={!motivo.trim()}
+                  onClick={() => {
+                    onReativar(motivo.trim());
+                    setAberto(false);
+                    setMotivo("");
+                  }}
+                >
+                  Reativar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       ) : null}
     </span>
   );
@@ -78,34 +119,9 @@ export function BlocoFollowUp({
   cancelando: boolean;
   onCancelar: () => void;
 }) {
-  const temAgendado = itens.some((t) => t.estado === "agendado");
   return (
     <section className="space-y-3 border-b p-4" aria-label="Follow-up">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-medium text-ink-900">Follow-up</h3>
-        {podeCancelar && temAgendado ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={cancelando}>
-                Cancelar
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Cancelar o follow-up agendado?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  O que está marcado nesta conversa deixa de valer. O motivo fica como cancelado no
-                  painel.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Voltar</AlertDialogCancel>
-                <AlertDialogAction onClick={onCancelar}>Cancelar follow-up</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : null}
-      </div>
+      <h3 className="font-medium text-ink-900">Follow-up</h3>
       {carregando ? <p className="text-sm text-ink-500">Carregando follow-ups…</p> : null}
       {indisponivel ? (
         <p className="text-sm text-ink-500">Follow-up ainda não está disponível.</p>
@@ -131,6 +147,35 @@ export function BlocoFollowUp({
                   <Etiqueta tom={estado.tom}>{estado.rotulo}</Etiqueta>
                   <span className="text-sm text-ink-900">{rotuloTipoPendencia(t.tipo)}</span>
                   <span className="text-xs text-ink-500">{dataHora(t.previsto_em)}</span>
+                  {podeCancelar && t.estado === "agendado" ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto"
+                          disabled={cancelando}
+                        >
+                          Cancelar este
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancelar o follow-up agendado?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            O que está marcado nesta conversa deixa de valer. O motivo fica como
+                            cancelado no painel.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Voltar</AlertDialogCancel>
+                          <AlertDialogAction onClick={onCancelar}>
+                            Cancelar follow-up
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : null}
                 </div>
                 {t.motivo ? (
                   <p className="mt-1 text-xs text-ink-500">

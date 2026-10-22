@@ -30,5 +30,6 @@ export default defineConfig({
     ],
     dedupe: ["react", "react-dom"],
   },
+  cacheDir: "/tmp/vite-arq-fup",
   server: { fs: { allow: ["/home/twadmin/painel_koji"] } },
 });

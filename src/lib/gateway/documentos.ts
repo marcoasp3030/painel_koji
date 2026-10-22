@@ -3,6 +3,7 @@
  * Rótulos, filtros e o formato que a tela mostra. A chamada HTTP fica no servidor.
  */
 import { z } from "zod";
+import { isoParaDataBr } from "@/lib/data-hora";
 import { empresa, idRecurso } from "./esquemas";
 import type { Json } from "./tipos";
 
@@ -36,13 +37,80 @@ export const ROTULO_FORMATO: Record<string, string> = {
 
 export const ROTULO_TIPO_DOCUMENTO: Record<string, string> = {
   boleto: "Boleto",
+  boleto_concessionaria: "Boleto de concessionária",
   nfe: "NF-e",
   nfce: "NFC-e",
   nfse: "NFS-e",
   pix: "PIX",
+  pix_cobranca: "Cobrança PIX",
   comprovante: "Comprovante",
+  comprovante_pix: "Comprovante PIX",
   outro: "Outro",
 };
+
+/** Nome técnico do campo → o que a pessoa lê. Sem a chave crua. */
+export const ROTULO_CAMPO_DOCUMENTO: Record<string, string> = {
+  valor: "Valor",
+  vencimento: "Vencimento",
+  beneficiario: "Beneficiário",
+  beneficiario_nome: "Beneficiário",
+  beneficiario_documento: "CNPJ do beneficiário",
+  pagador: "Pagador",
+  pagador_nome: "Pagador",
+  pagador_documento: "Documento do pagador",
+  linha_digitavel: "Linha digitável",
+  codigo_barras: "Código de barras",
+  banco: "Banco",
+  chave_acesso: "Chave de acesso",
+  emitente: "Emitente",
+  emitente_nome: "Emitente",
+  emitente_cnpj: "CNPJ do emitente",
+  emitente_documento: "CNPJ do emitente",
+  numero: "Número",
+  serie: "Série",
+  valor_total: "Valor total",
+  itens: "Itens",
+  id_transacao: "ID da transação",
+  chave_pix: "Chave Pix",
+  recebedor: "Recebedor",
+  recebedor_nome: "Recebedor",
+  data_hora: "Data e hora",
+  destinatario_nome: "Destinatário",
+  destinatario_documento: "Documento do destinatário",
+  emissao: "Emissão",
+  protocolo: "Protocolo",
+  situacao: "Situação",
+  modelo: "Modelo",
+  ano_mes_emissao: "Ano e mês de emissão",
+  uf: "UF",
+  segmento: "Segmento",
+  valor_referencia: "Valor de referência",
+  instituicao_pagador: "Instituição do pagador",
+  prestador_documento: "Documento do prestador",
+  tomador_documento: "Documento do tomador",
+  pix_brcode_chave: "Chave Pix",
+  pix_brcode_valor: "Valor do Pix",
+  pix_brcode_nome: "Nome no Pix",
+  pix_brcode_cidade: "Cidade no Pix",
+  pix_brcode_txid: "Identificador do Pix",
+  brcode_chave: "Chave Pix",
+  brcode_valor: "Valor",
+  brcode_nome: "Nome",
+  brcode_cidade: "Cidade",
+  brcode_txid: "Identificador",
+};
+
+export const CAMPOS_COPIAR = [
+  "linha_digitavel",
+  "codigo_barras",
+  "chave_acesso",
+  "id_transacao",
+] as const;
+
+export const AVISO_PIX = "Pagamento não verificado: confira no extrato antes de dar baixa";
+
+/** O gateway lista por estado. Tipo e data ainda não entram na rota. */
+export const AVISO_FILTRO_LOCAL = "Tipo e data filtram só os documentos já carregados nesta lista.";
 
 /** Confiança do campo, como o gateway marca (ARQ1-a3). */
 export const SELO_CONFIANCA: Record<
@@ -192,7 +260,10 @@ export function dataHoraBrasilia(iso: string | null | undefined) {
   });
 }
 
-/** Estado vai ao gateway. Tipo e período filtram o que já chegou, pelo dia de Brasília. */
+/**
+ * Estado vai ao gateway. Tipo e período filtram só a página já carregada,
+ * pelo dia de Brasília: a rota de anexos não aceita tipo nem data.
+ */
 export function filtrarDocumentos(itens: DocumentoResumo[], filtro: FiltroDocumentos) {
   return itens.filter((item) => {
     if (filtro.tipo && (item.tipo_documento ?? "") !== filtro.tipo) return false;
@@ -206,6 +277,112 @@ export function filtrarDocumentos(itens: DocumentoResumo[], filtro: FiltroDocume
 export function rotuloTipo(tipo: string | null | undefined) {
   if (!tipo) return "Sem tipo";
   return ROTULO_TIPO_DOCUMENTO[tipo] ?? tipo;
+}
+
+export function rotuloCampoDocumento(nome: string) {
+  return ROTULO_CAMPO_DOCUMENTO[nome] ?? nome.replace(/_/g, " ");
+}
+
+export function ehComprovantePix(tipo: string | null | undefined) {
+  return tipo === "comprovante_pix" || tipo === "comprovante";
+}
+
+/** "2026-11-20T16:02:00Z" → "Apagado automaticamente em 20/11/2026" (dia de Brasília). */
+export function textoExpira(iso: string | null | undefined) {
+  const dia = diaBrasilia(iso);
+  const br = isoParaDataBr(dia);
+  return br ? `Apagado automaticamente em ${br}` : "";
+}
+
+const CAMPOS_DINHEIRO = new Set([
+  "valor",
+  "valor_total",
+  "valor_referencia",
+  "valor_unitario",
+  "pix_brcode_valor",
+  "brcode_valor",
+]);
+const CAMPOS_DATA = new Set(["vencimento", "emissao"]);
+const CAMPOS_DATA_HORA = new Set(["data_hora"]);
+
+/** "1234.56" ou "1.234,56" → "R$ 1.234,56". */
+export function reaisDocumento(valor: string) {
+  const limpo = valor.replace(/\s/g, "").replace(/^R\$/, "");
+  if (!limpo) return null;
+  const normal = limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
+  if (!/^\d+(\.\d{1,2})?$/.test(normal)) return null;
+  const n = Number(normal);
+  if (!Number.isFinite(n)) return null;
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** Data lida do documento, sem deslocar o fuso. "2026-10-25T14:32" → "25/10/2026 14:32". */
+export function dataHoraCampo(valor: string) {
+  const local = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(valor);
+  if (!local) return null;
+  if (/[zZ]$|[+-]\d{2}:\d{2}$/.test(valor)) {
+    const data = new Date(valor);
+    if (Number.isNaN(data.getTime())) return null;
+    const dia = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: FUSO,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(data);
+    const hora = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: FUSO,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(data);
+    return `${dia} ${hora}`;
+  }
+  return `${local[3]}/${local[2]}/${local[1]} ${local[4]}:${local[5]}`;
+}
+
+export type ItemNota = {
+  descricao: string;
+  quantidade: string | null;
+  valor_unitario: string | null;
+  valor_total: string | null;
+};
+
+export function itensNota(valor: Json): ItemNota[] | null {
+  if (!Array.isArray(valor) || valor.length === 0) return null;
+  const itens: ItemNota[] = [];
+  for (const item of valor) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const o = item as Record<string, Json>;
+    if (typeof o["descricao"] !== "string" || !o["descricao"]) return null;
+    itens.push({
+      descricao: o["descricao"],
+      quantidade: o["quantidade"] == null ? null : String(o["quantidade"]),
+      valor_unitario: o["valor_unitario"] == null ? null : String(o["valor_unitario"]),
+      valor_total: o["valor_total"] == null ? null : String(o["valor_total"]),
+    });
+  }
+  return itens;
+}
+
+export function apresentarCampo(nome: string, valor: Json): string {
+  if (valor == null) return "—";
+  if (typeof valor === "string" || typeof valor === "number") {
+    const texto = String(valor);
+    if (CAMPOS_DINHEIRO.has(nome) || nome.endsWith("_valor")) {
+      const reais = reaisDocumento(texto);
+      if (reais) return reais;
+    }
+    if (CAMPOS_DATA.has(nome)) {
+      const data = isoParaDataBr(texto);
+      if (data) return data;
+    }
+    if (CAMPOS_DATA_HORA.has(nome)) {
+      const data = dataHoraCampo(texto);
+      if (data) return data;
+    }
+    return texto;
+  }
+  return textoValorCampo(valor);
 }
 
 export function textoValorCampo(valor: Json): string {

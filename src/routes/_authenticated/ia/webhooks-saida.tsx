@@ -11,6 +11,7 @@ import {
   editarWebhook,
   entregasWebhook,
   listarWebhooks,
+  rotacionarSegredoWebhook,
   testarWebhook,
 } from "@/lib/gateway-webhooks.functions";
 import type { EntregaWebhook, WebhookSaida } from "@/lib/gateway/webhooks";
@@ -34,6 +35,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
   const editarFn = useServerFn(editarWebhook);
   const desativarFn = useServerFn(desativarWebhook);
   const testarFn = useServerFn(testarWebhook);
+  const rotacionarFn = useServerFn(rotacionarSegredoWebhook);
   const entregasFn = useServerFn(entregasWebhook);
   const cache = useQueryClient();
   const [segredo, setSegredo] = useState<string | null>(null);
@@ -76,13 +78,27 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
     onSuccess: () => toast.success("Teste enviado. A entrega entra na fila."),
     onError: (e: Error) => toast.error(e.message),
   });
+  const rotacionar = useMutation({
+    mutationFn: (id: string) =>
+      rotacionarFn({ data: { empresa: ctx.empresa, acao: "rotacionar", id } }),
+    onSuccess: (r) => {
+      if (r.segredo) setSegredo(r.segredo);
+      else toast.error("O gateway não devolveu o segredo novo.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const verEntregas = useMutation({
     mutationFn: (id: string) =>
       entregasFn({ data: { empresa: ctx.empresa, acao: "entregas", id } }),
     onSuccess: (r) => setEntregas(r.itens),
     onError: (e: Error) => toast.error(e.message),
   });
-  const ocupado = criar.isPending || salvar.isPending || desativar.isPending || testar.isPending;
+  const ocupado =
+    criar.isPending ||
+    salvar.isPending ||
+    desativar.isPending ||
+    testar.isPending ||
+    rotacionar.isPending;
   return (
     <WebhooksSaidaTela
       itens={lista.data?.itens ?? []}
@@ -95,6 +111,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
       onDesativar={(w) => desativar.mutate(w.id)}
       onTestar={(w) => testar.mutate(w.id)}
       onEntregas={(w) => verEntregas.mutate(w.id)}
+      onGerarSegredo={(w) => rotacionar.mutate(w.id)}
       segredo={segredo}
       onFecharSegredo={() => setSegredo(null)}
     />

@@ -350,6 +350,7 @@ describe("papéis", () => {
       ["GET", ["conversas", "c", "follow-ups"]],
       ["POST", ["conversas", "c", "follow-ups", "cancelar"], { motivo: "painel" }],
       ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
+      ["POST", ["webhooks-saida", "wh_1", "rotacionar-segredo"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
@@ -377,6 +378,7 @@ describe("papéis", () => {
         ["webhooks-saida"],
         { url: "https://x.example/h", eventos: ["pedido.criado"], ativo: true },
       ],
+      ["POST", ["webhooks-saida", "wh_1", "rotacionar-segredo"]],
       ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
       ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
     ];

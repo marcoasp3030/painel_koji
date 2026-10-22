@@ -25,6 +25,10 @@ const assert = require("node:assert/strict");
   };
 
   await abrir("/?tela=escopos", "Enviar documentos");
+  const callback = page.getByRole("checkbox", { name: /Resposta assíncrona/ });
+  assert.equal(await callback.isDisabled(), true);
+  assert.equal(await callback.isChecked(), false);
+  assert.equal(await page.getByRole("checkbox", { name: /Enviar documentos/ }).isChecked(), false);
   await foto("01-escopo-documentos.png");
 
   await abrir("/?tela=chaves", "Site da loja");
@@ -39,34 +43,74 @@ const assert = require("node:assert/strict");
   await foto("04-chave-uma-vez.png", segredo);
 
   await abrir("/?tela=documentos", "boleto-outubro.pdf");
+  await page.getByPlaceholder("dd/mm/aaaa").first().waitFor();
+  await page.getByText("Tipo e data filtram só os documentos já carregados nesta lista.").waitFor();
   await foto("05-documentos-lista.png");
-  await abrir("/?tela=documentos&detalhe=1", "a conferir");
-  const detalhe = page.getByRole("dialog");
-  await detalhe.getByText("validado").waitFor();
-  await detalhe.getByText("lido do texto").waitFor();
-  await foto("06-documento-detalhe.png", detalhe);
+
+  await abrir("/?tela=documentos&detalhe=boleto", "Linha digitável");
+  const boleto = page.getByRole("dialog");
+  await boleto.getByText("R$").first().waitFor();
+  await boleto.getByText("25/10/2026").first().waitFor();
+  await boleto.getByText("Apagado automaticamente em 20/11/2026").waitFor();
+  await boleto.getByRole("button", { name: "Copiar" }).first().waitFor();
+  await boleto.getByRole("button", { name: "Apagar" }).waitFor();
+  await foto("06-documento-boleto.png", boleto);
+  await boleto.getByRole("button", { name: "Apagar" }).click();
+  const apagar = page.getByRole("alertdialog");
+  await apagar.getByRole("button", { name: "Apagar" }).waitFor();
+  await foto("14-apagar-documento.png", apagar);
+
+  await abrir("/?tela=documentos&detalhe=nfe", "Itens");
+  const nfe = page.getByRole("dialog");
+  await nfe.getByText("Temaki salmão").waitFor();
+  await nfe.getByText("1.890,50").first().waitFor();
+  await foto("11-documento-nfe.png", nfe);
+
+  await abrir("/?tela=documentos&detalhe=pix", "Pagamento não verificado");
+  const pix = page.getByRole("dialog");
+  await pix.getByText("ID da transação").waitFor();
+  await pix.getByText("21/10/2026 14:32").first().waitFor();
+  await pix.getByRole("button", { name: "Copiar" }).waitFor();
+  await foto("12-documento-pix.png", pix);
 
   await abrir("/?tela=webhooks", "sistema.exemplo.com.br");
+  await page.getByRole("button", { name: "Gerar novo segredo" }).waitFor();
   await foto("07-webhooks-lista.png");
+  await page.getByRole("button", { name: "Gerar novo segredo" }).click();
+  await foto("16-gerar-segredo.png", page.getByRole("alertdialog"));
+
+  await abrir("/?tela=webhooks", "sistema.exemplo.com.br");
   await page.getByRole("button", { name: "Novo webhook" }).click();
   const webhook = page.getByRole("dialog");
   await webhook.getByText("Follow-up em ensaio").waitFor();
+  const ativo = webhook.getByRole("switch", { name: "Ativo" });
+  assert.equal(await ativo.isChecked(), true);
   await page.addStyleTag({
     content: '[role="dialog"]{max-height:none !important; overflow:visible !important}',
   });
   await foto("08-webhook-eventos.png", webhook);
 
-  await abrir("/?tela=followup", "Máximo por dia");
-  await page.getByText("Follow-up", { exact: true }).first().waitFor();
+  await abrir("/?tela=webhooks&segredo=1", "Copie agora");
+  const segredoWh = page.getByRole("dialog");
+  await segredoWh.getByRole("button", { name: "Já copiei, fechar" }).waitFor();
+  await foto("13-webhook-segredo.png", segredoWh);
+
+  await abrir("/?tela=followup", "By Koji");
+  await page.getByText("Enquanto estiver em ensaio, só o 1º é registrado.").waitFor();
+  await page.getByPlaceholder("00:00").first().waitFor();
   await foto("09-followup-config.png");
 
   await abrir("/?tela=conversa", "não quer follow-up");
   await page.getByText("Agendado").waitFor();
   await page.getByText("Cancelado").waitFor();
   await page.getByText("Ensaio").waitFor();
-  await page.getByRole("button", { name: "Reativar" }).waitFor();
-  await page.getByRole("button", { name: "Cancelar", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Cancelar este" }).waitFor();
   await foto("10-conversa-followup.png");
+  await page.getByRole("button", { name: "Reativar" }).click();
+  const reativar = page.getByRole("dialog");
+  await reativar.getByText("Reativar só com o pedido dele.").waitFor();
+  await reativar.getByLabel("Motivo").fill("Pedido do cliente por telefone");
+  await foto("15-reativar-followup.png", reativar);
 
   assert.equal(erros.length, 0, erros.join("\n"));
   await browser.close();

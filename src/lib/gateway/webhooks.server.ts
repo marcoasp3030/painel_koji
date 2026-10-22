@@ -38,6 +38,14 @@ export async function executarWebhook(s: Sessao, entrada: unknown) {
         const { dados } = await t.chamar<WebhookSaida>("DELETE", ["webhooks-saida", d.id]);
         return dados;
       }
+      case "rotacionar": {
+        const { dados } = await t.chamar<WebhookSaida>(
+          "POST",
+          ["webhooks-saida", d.id, "rotacionar-segredo"],
+          { corpo: {} },
+        );
+        return dados;
+      }
       case "testar": {
         const { dados } = await t.chamar<{ entrega_id: number; status: string }>(
           "POST",
@@ -56,6 +64,11 @@ export async function executarWebhook(s: Sessao, entrada: unknown) {
       }
     }
   } catch (erro) {
+    if (erro instanceof GatewayErro && erro.status === 404 && d.acao === "rotacionar") {
+      throw new Error(
+        "O gateway ainda não gera um segredo novo. O segredo só aparece na criação do webhook.",
+      );
+    }
     if (erro instanceof GatewayErro) throw new Error(mensagemParaUsuario(erro));
     throw erro;
   }

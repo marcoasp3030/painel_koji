@@ -220,6 +220,7 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
 
   return (
     <div className="mt-6 space-y-4 pb-24">
+      {nomeAgente ? <h2 className="font-display text-2xl text-ink-900">{nomeAgente}</h2> : null}
       {/* Cabeçalho: escopo, segmento, versão e rascunho */}
       <Cartao className="flex flex-wrap items-end gap-x-6 gap-y-3 p-4">
         <label className="text-sm">

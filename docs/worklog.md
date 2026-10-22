@@ -1,3 +1,20 @@
+## [2026-10-22 11:40] — Revisão dos prints ARQ/FUP (não publicado)
+- **Autor:** Grok 4.7
+- **Objetivo:** Corrigir datas, segredo, detalhe do documento e textos antes de publicar.
+- **Arquivos alterados:**
+  - `src/lib/data-hora.ts`, `src/components/luxtia/DataHora.tsx` — criados — data dd/mm/aaaa e hora 24h
+  - `src/components/luxtia/documentos/Documentos.tsx`, `src/lib/gateway/documentos.ts` — modificados — rótulos, R$, Copiar, itens, aviso PIX, validade, filtro local
+  - `src/components/luxtia/WebhooksSaida.tsx`, `src/lib/gateway/webhooks.ts`, `webhooks.server.ts` — modificados — ativo ligado, segredo uma vez, gerar novo
+  - `src/components/luxtia/FollowUpConversa.tsx`, `comportamento/CampoAtendimento.tsx`, `ComportamentoAgente.tsx` — modificados — cancelar na linha, motivo, hora, nome do agente
+  - `src/routes/__root.tsx`, `ia/chaves.tsx` — modificados — lang pt-BR; escopos vazios e callback desabilitado
+  - `docs/prints-arq-fup/` — modificados — prints das telas alteradas, com boleto, NF-e e PIX
+- **Resumo das mudanças:** O input nativo ignorava o idioma e mostrava mm/dd e AM/PM. Os campos passaram a ser texto. O detalhe do documento deixa de mostrar a chave técnica. O webhook novo abre ativo e o segredo segue o aviso da chave de formulário.
+- **Decisões e justificativas:** Tipo e data seguem na página carregada porque `GET /anexos` não aceita esses filtros. O motivo de reativar não vai ao gateway: o DELETE de opt-out não lê corpo. “Gerar novo segredo” chama `POST …/rotacionar-segredo`; essa rota ainda não existe e a tela avisa no 404.
+- **Comandos executados:** `bun test` documentos e módulo → 33 OK; `tsc --noEmit` → OK; ESLint dos arquivos → OK (avisos antigos da prévia visual)
+- **Erros e resoluções:** O Chromium do host não abriu (libatk). Os prints saíram no container `mcr.microsoft.com/playwright:v1.58.2-noble`.
+- **Pendências / TODO:** não publicado. Gateway sem filtro de tipo/data, sem motivo no opt-out e sem rotação do segredo HMAC.
+- **Próximos passos:** publicar só depois de o Marco ver os prints e, se quiser, o gateway ganhar as três rotas.
+
 ## [2026-10-21 22:55] — Telas de follow-up (não publicadas)
 - **Autor:** Grok 4.7
 - **Objetivo:** Configuração, bloco na conversa e opt-out, com a rota 404 sem derrubar a página.

@@ -262,6 +262,12 @@ const REGRAS: Regra[] = [
     papeis: ADMIN,
     corpo: semCorpo,
   },
+  {
+    metodo: "POST",
+    caminho: ["webhooks-saida", "*", "rotacionar-segredo"],
+    papeis: ADMIN,
+    corpo: semCorpo,
+  },
   // FUP1-a: ver e cancelar, admin e membro. Reativar o contato, só admin.
   { metodo: "GET", caminho: ["conversas", "*", "follow-ups"], papeis: AMBOS },
   {

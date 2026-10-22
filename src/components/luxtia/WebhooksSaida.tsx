@@ -39,6 +39,7 @@ export function WebhooksSaidaTela({
   onDesativar,
   onTestar,
   onEntregas,
+  onGerarSegredo,
   segredo,
   onFecharSegredo,
 }: {
@@ -52,6 +53,7 @@ export function WebhooksSaidaTela({
   onDesativar: (w: WebhookSaida) => void;
   onTestar: (w: WebhookSaida) => void;
   onEntregas: (w: WebhookSaida) => void;
+  onGerarSegredo: (w: WebhookSaida) => void;
   segredo: string | null;
   onFecharSegredo: () => void;
 }) {
@@ -113,6 +115,28 @@ export function WebhooksSaidaTela({
                   <Button variant="ghost" size="sm" onClick={() => onEntregas(w)}>
                     Entregas
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={salvando}>
+                        Gerar novo segredo
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Gerar um segredo novo?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          O segredo atual deixa de valer na hora. O novo aparece só desta vez —
+                          copie antes de fechar.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onGerarSegredo(w)}>
+                          Gerar novo segredo
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   {w.ativo ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -196,7 +220,7 @@ function FormularioWebhook({
 }) {
   const atual = alvo && alvo !== "nova" ? alvo : null;
   const [url, setUrl] = useState(atual?.url ?? "");
-  const [ativo, setAtivo] = useState(atual?.ativo ?? false);
+  const [ativo, setAtivo] = useState(atual ? atual.ativo : true);
   const [eventos, setEventos] = useState<string[]>(atual?.eventos ?? ["documento.pronto"]);
   const [erro, setErro] = useState("");
   const grupos = gruposDeEventos(atual?.eventos ?? []);
@@ -206,7 +230,7 @@ function FormularioWebhook({
   if (chave !== visto) {
     setVisto(chave);
     setUrl(atual?.url ?? "");
-    setAtivo(atual?.ativo ?? false);
+    setAtivo(atual ? atual.ativo : true);
     setEventos(atual?.eventos ?? ["documento.pronto", "documento.falhou", "conversa.resposta"]);
     setErro("");
   }
