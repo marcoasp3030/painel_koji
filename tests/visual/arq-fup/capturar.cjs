@@ -116,6 +116,24 @@ const assert = require("node:assert/strict");
   await reativar.getByLabel("Motivo").fill("Pedido do cliente por telefone");
   await foto("15-reativar-followup.png", reativar);
 
+  await abrir("/?tela=simular", "boleto-outubro.pdf");
+  await page.getByRole("button", { name: "Anexar documento" }).waitFor();
+  await page.getByText("Ver em Documentos").first().waitFor();
+  await page.getByText("Processando").waitFor();
+  await page.getByText("Sem texto").waitFor();
+  await page.getByText("Rejeitado").waitFor();
+  await page.getByRole("button", { name: "Tirar" }).waitFor();
+  await foto("17-simular-documento.png");
+
+  await abrir("/?tela=simularErros", "O arquivo é grande demais.");
+  assert.equal(await page.getByRole("button", { name: "Anexar documento" }).count(), 3);
+  await page.getByText("Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.").waitFor();
+  await page
+    .getByText("Este XML não é uma NF-e/NFC-e. Envie o XML da nota ou o PDF.")
+    .waitFor();
+  await page.getByText("A capacidade de documentos está desligada neste agente.").waitFor();
+  await foto("18-simular-erros.png");
+
   assert.equal(erros.length, 0, erros.join("\n"));
   await browser.close();
   console.log("prints ok");

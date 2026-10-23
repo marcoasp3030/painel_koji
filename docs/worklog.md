@@ -1,3 +1,47 @@
+## [2026-10-22 18:40] — Limite de 15 MB, leitura do anexo e XML fora da nota
+- **Autor:** Grok 4.7
+- **Objetivo:** Confirmar o corpo de 15 MB, o cartão que acompanha o 202 e o aviso de XML que não é nota, antes de publicar.
+- **Arquivos alterados:**
+  - `docker/Caddyfile` — modificado — `POST /_serverFn/*` com `request_body max_size 15MB`
+  - `src/lib/limite-corpo.ts`, `src/server.ts` — criados/modificados — o servidor recusa corpo acima de 15 MB com 413
+  - `src/lib/gateway/documentos.ts`, `erros.ts`, `simular.server.ts`, `gateway-simular.functions.ts` — modificados — aviso da NF-e e `GET /anexos/{id}`
+  - `src/components/luxtia/Simulador.tsx`, `documentos/CartaoDocumentoSimulado.tsx`, `CartaoDocumentoConversa.tsx` — modificados — consulta a cada 2 s por até 30 s
+  - `README.md`, `instrucoes.md` — modificados — registro
+- **Resumo das mudanças:** O proxy e o servidor do painel limitam o corpo da função em 15 MB. O cartão deixa Processando sozinho. XML sem a marca da NF-e/NFC-e usa a frase específica.
+- **Decisões e justificativas:** 15 MB decimais cabem o arquivo de 10 MB em base64 (~14 MB) e ficam abaixo dos 16 MiB do gateway nessa rota. A frase da nota olha os primeiros 4 KB, o mesmo trecho do gateway. O cartão usa o `anexo_id` da resposta 202.
+- **Comandos executados:** `bun test` documentos e módulo → 41 OK; `tsc --noEmit` → OK; ESLint dos arquivos → OK. Caddy validado e recarregado. POST de 16.000.002 bytes em `/_serverFn/…` → 413 do Caddy. POST de 12.600.002 bytes → o painel leu o JSON. PDF fictício de 9.437.184 bytes em `simular-documento` → 202, depois apagado.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** publicar com tag nova; volta `painel:arq-fup-20261022`
+- **Próximos passos:** publicar e conferir o Simular de texto do By Koji, sem clipe
+
+## [2026-10-22 17:52] — Documento no Simular conversa (não publicado)
+- **Autor:** Grok 4.7
+- **Objetivo:** Enviar PDF, XML, JPG, PNG ou WEBP no simulador quando o agente tem documentos ligados.
+- **Arquivos alterados:**
+  - `src/components/luxtia/Simulador.tsx`, `BarraEnvioSimulador.tsx`, `documentos/CartaoDocumentoConversa.tsx` — criados/modificados — clipe, cartão e aviso
+  - `src/lib/gateway/simular.server.ts`, `gateway-simular.functions.ts`, `cliente.server.ts`, `modulo.server.ts`, `documentos.ts`, `erros.ts` — criados/modificados — multipart para `simular-documento` e leitura da capacidade
+  - `src/routes/_authenticated/ia/documentos.tsx` — modificado — `?documento=anx_…` abre o detalhe
+  - `docs/prints-arq-fup/17-simular-documento.png`, `18-simular-erros.png` — criados
+  - `README.md`, `instrucoes.md` — modificados — registro
+- **Resumo das mudanças:** O clipe só aparece com `GET …/capacidades` e `ativo: true`. O arquivo vai em `POST …/simular-documento` (multipart), com mensagem opcional. Na conversa o arquivo vira cartão com nome, tipo, estado e link para Documentos.
+- **Decisões e justificativas:** O contrato da seção 14.5 não veio colado na mensagem; valeu a rota que o gateway já publica. O teto de 10 MB é o padrão da capacidade. O histórico não traz o id do anexo, então o cartão casa `[anexo: nome]` com `GET /anexos?conversation_id=`.
+- **Comandos executados:** `bun test` documentos e módulo → 38 OK; `tsc --noEmit` → OK; ESLint dos arquivos → OK (avisos antigos da prévia); prints Playwright → OK
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** não publicado
+- **Próximos passos:** publicar só com liberação
+
+## [2026-10-22 15:24] — Publicação painel:arq-fup-20261022
+- **Autor:** Grok 4.7
+- **Objetivo:** Publicar o painel até o commit 7a53f7e e conferir produção só navegando.
+- **Arquivos alterados:**
+  - `docs/worklog.md`, `instrucoes.md`, `README.md` — modificados — registro da publicação, depois da imagem pronta
+- **Resumo das mudanças:** A árvore estava limpa em `7a53f7e` antes do build. A imagem nova é `painel:arq-fup-20261022` (`sha256:5f859d0c906bdc708f842a5129ff9da7f918fe0ad706324c1c2594dc8c1719e1`). A volta é `painel:pedidos-20261020` (`sha256:71e678d2651e06979ddc6f6d55ba4334d830b0f1ccf7ae3814d024d1ae100966`). Container `590038b76381`, iniciado 22/10/2026 15:09 (Brasília). Só o painel foi recriado.
+- **Decisões e justificativas:** Sem mudança de schema, o dump não entra numa volta. A documentação foi escrita depois do build para a imagem continuar sendo exatamente o commit.
+- **Comandos executados:** `docker compose build painel` → OK; `sh docker/verificar-chave-no-bundle.sh` → chave 0, gateway no front 0, `GATEWAY_PANEL_KEY` no servidor 1; `docker compose up -d --no-deps --no-build painel` → OK. Conferência em https://painel.luxbrain.com.br, empresa By Koji, sem criar dado.
+- **Erros e resoluções:** nenhum. A string “403” no log do gateway é a porta `40374` de um `GET /health` 200, não um status.
+- **Pendências / TODO:** estes três arquivos de registro ainda não estão no git. Não rebuildar por causa deles.
+- **Próximos passos:** commit só se for pedido. Volta, se precisar: `docker tag painel:pedidos-20261020 painel_koji-painel && docker compose up -d --no-deps --no-build painel`.
+
 ## [2026-10-22 13:33] — Rotas do gateway no painel (não publicado)
 - **Autor:** Grok 4.7
 - **Objetivo:** Mostrar a reativação no contato, os rótulos novos e o botão de segredo com a janela de 24 h.

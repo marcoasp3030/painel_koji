@@ -6,6 +6,8 @@ import { CabecalhoPagina } from "@/components/luxtia/Superficie";
 import { CampoAtendimento } from "@/components/luxtia/comportamento/CampoAtendimento";
 import { ChavesFormularioTela } from "@/components/luxtia/documentos/ChavesFormulario";
 import { DocumentosTela } from "@/components/luxtia/documentos/Documentos";
+import { BarraEnvioSimulador } from "@/components/luxtia/BarraEnvioSimulador";
+import { CartaoDocumentoConversa } from "@/components/luxtia/documentos/CartaoDocumentoConversa";
 import { BlocoFollowUp, SeloOptOut } from "@/components/luxtia/FollowUpConversa";
 import { WebhooksSaidaTela } from "@/components/luxtia/WebhooksSaida";
 import { gradeJanela } from "@/lib/gateway/followup";
@@ -507,6 +509,127 @@ function Conversa() {
   );
 }
 
+function SimularDocumento() {
+  return (
+    <Moldura
+      titulo="Simular conversa"
+      descricao="Converse com um agente como se fosse um cliente. O clipe só aparece quando documentos estão ligados."
+    >
+      <div className="mt-6 overflow-hidden rounded-xl border border-base-200 bg-card">
+        <div className="space-y-3 px-4 py-4">
+          <div className="flex justify-end">
+            <div className="max-w-[80%] space-y-1">
+              <CartaoDocumentoConversa
+                nome="boleto-outubro.pdf"
+                tipo="boleto"
+                formato="pdf"
+                estado="pronto"
+                id="anx_0123456789abcdef01234567"
+              />
+              <div className="rounded-2xl rounded-br-md bg-purple-700 px-4 py-2 text-sm text-base-50">
+                Segue o boleto.
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <div className="max-w-[80%]">
+              <CartaoDocumentoConversa
+                nome="comprovante.png"
+                tipo={null}
+                formato="png"
+                estado="processando"
+                id="anx_abcdef0123456789abcdef01"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <div className="max-w-[80%]">
+              <CartaoDocumentoConversa
+                nome="foto-cardapio.jpg"
+                tipo="outro"
+                formato="jpg"
+                estado="sem_texto"
+                id="anx_1234567890abcdef12345678"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <div className="max-w-[80%]">
+              <CartaoDocumentoConversa
+                nome="nota-errada.xml"
+                tipo={null}
+                formato="xml"
+                estado="rejeitado"
+                id="anx_fedcba9876543210fedcba98"
+              />
+            </div>
+          </div>
+        </div>
+        <BarraEnvioSimulador
+          texto=""
+          onTexto={() => undefined}
+          bloqueado={false}
+          enviando={false}
+          podeAnexar
+          arquivo="boleto-outubro.pdf"
+          aviso={null}
+          onArquivo={() => undefined}
+          onTirarArquivo={() => undefined}
+          onEnviar={() => undefined}
+        />
+      </div>
+    </Moldura>
+  );
+}
+
+function SimularErros() {
+  const frases = [
+    "O arquivo é grande demais.",
+    "Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.",
+    "Este XML não é uma NF-e/NFC-e. Envie o XML da nota ou o PDF.",
+    "A capacidade de documentos está desligada neste agente.",
+  ];
+  return (
+    <Moldura
+      titulo="Simular conversa"
+      descricao="Sem a capacidade ligada, o clipe some. O aviso fica embaixo do campo."
+    >
+      <div className="mt-6 space-y-4">
+        <div className="overflow-hidden rounded-xl border border-base-200 bg-card">
+          <BarraEnvioSimulador
+            texto=""
+            onTexto={() => undefined}
+            bloqueado={false}
+            enviando={false}
+            podeAnexar={false}
+            arquivo={null}
+            aviso={null}
+            onArquivo={() => undefined}
+            onTirarArquivo={() => undefined}
+            onEnviar={() => undefined}
+          />
+        </div>
+        {frases.map((aviso) => (
+          <div key={aviso} className="overflow-hidden rounded-xl border border-base-200 bg-card">
+            <BarraEnvioSimulador
+              texto=""
+              onTexto={() => undefined}
+              bloqueado={false}
+              enviando={false}
+              podeAnexar
+              arquivo={null}
+              aviso={aviso}
+              onArquivo={() => undefined}
+              onTirarArquivo={() => undefined}
+              onEnviar={() => undefined}
+            />
+          </div>
+        ))}
+      </div>
+    </Moldura>
+  );
+}
+
 const telas: Record<string, () => ReactNode> = {
   escopos: Escopos,
   chaves: Chaves,
@@ -514,6 +637,8 @@ const telas: Record<string, () => ReactNode> = {
   webhooks: Webhooks,
   followup: FollowUpConfig,
   conversa: Conversa,
+  simular: SimularDocumento,
+  simularErros: SimularErros,
 };
 const Tela = telas[tela] ?? Chaves;
 createRoot(document.getElementById("root")!).render(<Tela />);

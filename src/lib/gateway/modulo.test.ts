@@ -73,6 +73,8 @@ const ROTAS_DO_TENANT: Op[] = [
   ["PATCH", ["agentes", "ag_1"], { fallback: "x" }],
   ["POST", ["agentes", "ag_1", "testar"]],
   ["POST", ["agentes", "ag_1", "simular"], {}],
+  ["GET", ["agentes", "ag_1", "capacidades"]],
+  ["POST", ["agentes", "ag_1", "simular-documento"], { identificador: "teste" }],
   ["GET", ["canais"]],
   ["POST", ["canais"], {}],
   ["PATCH", ["canais", "can_1"], { ativo: true }],
@@ -264,6 +266,7 @@ describe("papéis", () => {
       ["PUT", ["config"], { send_mode: "live" }],
       ["GET", ["contatos"]],
       ["POST", ["chaves-formulario"], { nome: "Site", agente_id: "ag_1", outro: true }],
+      ["POST", ["agentes", "ag_1", "simular-documento"], { identificador: "teste", base64: "qq" }],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -298,6 +301,12 @@ describe("papéis", () => {
         "POST",
         ["agentes", "ag_1", "simular"],
         { canal_id: "can_1", identificador: "a", texto: "oi" },
+      ],
+      ["GET", ["agentes", "ag_1", "capacidades"]],
+      [
+        "POST",
+        ["agentes", "ag_1", "simular-documento"],
+        { identificador: "teste", canal_id: "can_1", mensagem: "segue o boleto" },
       ],
       ["GET", ["canais"]],
       ["GET", ["canais", "can_1"]],
@@ -365,6 +374,8 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], { status: "pausado" }],
       ["POST", ["agentes", "ag_1", "testar"]],
       ["POST", ["agentes", "ag_1", "simular"], {}],
+      ["GET", ["agentes", "ag_1", "capacidades"]],
+      ["POST", ["agentes", "ag_1", "simular-documento"], { identificador: "teste" }],
       ["GET", []],
       ["POST", ["unidades"], { nome: "Loja" }],
       ["POST", ["canais"], {}],
@@ -630,5 +641,30 @@ describe("cliente HTTP", () => {
     const texto = JSON.stringify([falhas.map((f) => String(f)), erros.map((e) => e.map(String))]);
     expect(erros.length).toBeGreaterThan(0);
     expect(texto).not.toContain(CHAVE);
+  });
+
+  test("documento do simulador sai como multipart, sem JSON", async () => {
+    const rede = fetchFalso([Response.json({ anexo_id: "anx_1", estado: "processando" })]);
+    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE, fetch: rede.fn });
+    await cliente.requisitar({
+      metodo: "POST",
+      caminho: ["tenants", "bykoji", "agentes", "ag_1", "simular-documento"],
+      ator: "ana@koji.com",
+      papel: "admin",
+      corpo: { identificador: "teste" },
+      formulario: {
+        arquivo: {
+          nome: "boleto.pdf",
+          tipo: "application/pdf",
+          base64: Buffer.from("%PDF-1.4").toString("base64"),
+        },
+        campos: { identificador: "teste", mensagem: "segue" },
+      },
+    });
+    const init = rede.chamadas[0]!.init;
+    const cabecalhos = new Headers(init.headers);
+    expect(cabecalhos.get("content-type")).toBeNull();
+    expect(init.body).toBeInstanceOf(FormData);
+    expect(JSON.stringify(init.body)).not.toContain("JVBERi0");
   });
 });

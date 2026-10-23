@@ -7,8 +7,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Info, Loader2, RotateCcw, Send, TriangleAlert } from "lucide-react";
+import { Info, RotateCcw, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { BarraEnvioSimulador } from "@/components/luxtia/BarraEnvioSimulador";
+import { CartaoDocumentoSimulado } from "@/components/luxtia/documentos/CartaoDocumentoSimulado";
 import { dataHora, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { Cartao } from "@/components/luxtia/Superficie";
 import { Button } from "@/components/ui/button";
@@ -21,11 +23,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { listarAgentes, obterAgente } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
-import { historicoConversa, simularMensagem } from "@/lib/gateway-simular.functions";
+import {
+  anexosDaConversa,
+  capacidadeDocumentos,
+  historicoConversa,
+  simularDocumento,
+  simularMensagem,
+} from "@/lib/gateway-simular.functions";
 import { temposDeResposta } from "@/lib/gateway/conversa";
+import {
+  associarDocumentosDaConversa,
+  avisoXmlForaDaNota,
+  lerAnexoDaMensagem,
+  mensagemArquivoInvalido,
+} from "@/lib/gateway/documentos";
 import { ORIGEM_MENSAGEM, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
 const BANNER_IA_REAL =
@@ -35,6 +48,18 @@ const BANNER_SIMULACAO =
 
 function novoCliente() {
   return `teste-${new Date().toISOString().slice(11, 19).replace(/:/g, "")}`;
+}
+
+function arquivoEmBase64(arquivo: File) {
+  return arquivo.arrayBuffer().then((buffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binario = "";
+    const passo = 0x8000;
+    for (let i = 0; i < bytes.length; i += passo) {
+      binario += String.fromCharCode(...bytes.subarray(i, i + passo));
+    }
+    return btoa(binario);
+  });
 }
 
 export function Simulador({
@@ -51,13 +76,22 @@ export function Simulador({
   const obterAg = useServerFn(obterAgente);
   const listarCn = useServerFn(listarCanais);
   const simular = useServerFn(simularMensagem);
+  const enviarArquivo = useServerFn(simularDocumento);
   const historico = useServerFn(historicoConversa);
+  const capacidade = useServerFn(capacidadeDocumentos);
+  const listarAnexos = useServerFn(anexosDaConversa);
 
   const [agente, setAgente] = useState(agenteInicial ?? "");
   const [canal, setCanal] = useState("");
   const [cliente, setCliente] = useState(novoCliente);
   const [texto, setTexto] = useState("");
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [conversa, setConversa] = useState<string | null>(null);
+  const [recemEnviados, setRecemEnviados] = useState<
+    { id: string; nome: string; estado: string }[]
+  >([]);
+  const escolhaArquivo = useRef(0);
   const [agora, setAgora] = useState(() => Date.now());
   const fim = useRef<HTMLDivElement>(null);
 
@@ -84,8 +118,24 @@ export function Simulador({
     const primeiro = canaisApi.find((c) => c.ativo) ?? canaisApi[0];
     setCanal(primeiro?.id ?? "");
     setConversa(null);
+    setArquivo(null);
+    setAviso(null);
+    setRecemEnviados([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agente, canais.data]);
+
+  const docsLigados = useQuery({
+    queryKey: ["gateway", "capacidade-documentos", ctx.empresa, agente],
+    queryFn: () => capacidade({ data: { empresa: ctx.empresa, agente } }),
+    enabled: Boolean(agente),
+  });
+  const podeAnexar = docsLigados.data?.ativo === true;
+
+  const anexos = useQuery({
+    queryKey: ["gateway", "anexos-conversa", ctx.empresa, conversa],
+    queryFn: () => listarAnexos({ data: { empresa: ctx.empresa, conversa: conversa! } }),
+    enabled: Boolean(conversa),
+  });
 
   const mensagens = useQuery({
     queryKey: ["gateway", "historico", ctx.empresa, conversa],
@@ -121,12 +171,56 @@ export function Simulador({
       }),
     onSuccess: (r) => {
       setTexto("");
+      setAviso(null);
       setConversa(r.conversation_id);
       setAgora(Date.now());
       if (r.duplicada) toast.info("Mensagem repetida: o gateway já tinha recebido.");
       void mensagens.refetch();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      setAviso(e.message);
+      toast.error(e.message);
+    },
+  });
+
+  const envioDocumento = useMutation({
+    mutationFn: async () => {
+      if (!arquivo) throw new Error("Escolha um arquivo.");
+      const base64 = await arquivoEmBase64(arquivo);
+      return enviarArquivo({
+        data: {
+          empresa: ctx.empresa,
+          agente,
+          canal_id: canal,
+          identificador: cliente.trim(),
+          ...(texto.trim() ? { mensagem: texto.trim() } : {}),
+          nome: arquivo.name,
+          tipo: arquivo.type || "application/octet-stream",
+          base64,
+        },
+      });
+    },
+    onSuccess: (r) => {
+      const nomeEnviado = arquivo?.name ?? "documento";
+      setTexto("");
+      setArquivo(null);
+      setAviso(null);
+      if (r.anexo_id && /^anx_[0-9a-f]{24}$/.test(r.anexo_id)) {
+        setRecemEnviados((lista) => [
+          ...lista,
+          { id: r.anexo_id, nome: nomeEnviado, estado: r.estado || "processando" },
+        ]);
+      }
+      if (r.conversation_id) setConversa(r.conversation_id);
+      setAgora(Date.now());
+      if (r.duplicado) toast.info("Este arquivo já tinha sido recebido.");
+      void mensagens.refetch();
+      void anexos.refetch();
+    },
+    onError: (e: Error) => {
+      setAviso(e.message);
+      toast.error(e.message);
+    },
   });
 
   const efetiva = detalhe.data?.configuracao_efetiva ?? {};
@@ -162,11 +256,45 @@ export function Simulador({
   const demorou = esperando && (agora - desde) / 1000 > limiteEspera;
   const tempos = temposDeResposta(itens);
 
+  function escolherArquivo(escolhido: File) {
+    const erro = mensagemArquivoInvalido(escolhido.name, escolhido.size);
+    if (erro) {
+      setArquivo(null);
+      setAviso(erro);
+      return;
+    }
+    const vez = (escolhaArquivo.current += 1);
+    void escolhido
+      .slice(0, 4096)
+      .text()
+      .then((trecho) => {
+        if (escolhaArquivo.current !== vez) return;
+        const xml = avisoXmlForaDaNota(trecho);
+        setArquivo(xml ? null : escolhido);
+        setAviso(xml);
+      });
+  }
+
   function enviar() {
+    if (bloqueado || envio.isPending || envioDocumento.isPending) return;
+    if (arquivo) {
+      if (texto.trim().length > 2000) {
+        setAviso("A mensagem junto do arquivo pode ter até 2000 caracteres.");
+        return;
+      }
+      envioDocumento.mutate();
+      return;
+    }
     const mensagem = texto.trim();
-    if (!mensagem || bloqueado || envio.isPending) return;
+    if (!mensagem) return;
     envio.mutate(mensagem);
   }
+
+  const documentosDaConversa = associarDocumentosDaConversa(itens, anexos.data?.itens ?? []);
+  const idsNaLista = new Set(documentosDaConversa.flatMap((d) => (d?.id ? [d.id] : [])));
+  const sobrando = recemEnviados.filter((p) => !idsNaLista.has(p.id));
+  let cursorPendente = 0;
+  const enviando = envio.isPending || envioDocumento.isPending;
 
   const linkAgente = agente ? (
     <Link
@@ -231,6 +359,7 @@ export function Simulador({
           onClick={() => {
             setCliente(novoCliente());
             setConversa(null);
+            setRecemEnviados([]);
           }}
         >
           <RotateCcw className="size-4" aria-hidden /> Nova conversa
@@ -275,21 +404,40 @@ export function Simulador({
           {mensagens.data?.tem_mais ? (
             <p className="text-center text-xs text-ink-500">Mostrando as últimas 50 mensagens.</p>
           ) : null}
-          {itens.map((m) => {
+          {itens.map((m, indice) => {
             const doCliente = m.direcao === "entrada";
             const tempo = tempos.get(m.id);
+            const anexo = lerAnexoDaMensagem(m.conteudo);
+            const doc = documentosDaConversa[indice];
+            const pendente = !doc && anexo ? (sobrando[cursorPendente] ?? null) : null;
+            if (pendente) cursorPendente += 1;
+            const textoBolha = anexo ? anexo.texto : (m.conteudo ?? "—");
             return (
               <div key={m.id} className={`flex ${doCliente ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-[0_1px_2px_rgba(26,21,32,0.06)] ${
-                    doCliente
-                      ? "rounded-br-md bg-purple-700 text-base-50"
-                      : "rounded-bl-md border border-base-200 bg-card text-ink-900"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{m.conteudo ?? "—"}</p>
+                <div className="max-w-[80%] space-y-1 text-sm">
+                  {anexo ? (
+                    <CartaoDocumentoSimulado
+                      empresa={ctx.empresa}
+                      nome={doc?.nome || pendente?.nome || anexo.nome}
+                      tipo={doc?.tipo_documento ?? null}
+                      formato={doc?.formato ?? null}
+                      estado={doc?.estado ?? pendente?.estado ?? "processando"}
+                      id={doc?.id ?? pendente?.id ?? null}
+                    />
+                  ) : null}
+                  {textoBolha ? (
+                    <div
+                      className={`rounded-2xl px-4 py-2 shadow-[0_1px_2px_rgba(26,21,32,0.06)] ${
+                        doCliente
+                          ? "rounded-br-md bg-purple-700 text-base-50"
+                          : "rounded-bl-md border border-base-200 bg-card text-ink-900"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{textoBolha}</p>
+                    </div>
+                  ) : null}
                   <p
-                    className={`mt-1 text-[11px] ${doCliente ? "text-purple-200" : "text-ink-500"}`}
+                    className={`text-[11px] ${doCliente ? "text-right text-ink-500" : "text-ink-500"}`}
                   >
                     {ORIGEM_MENSAGEM[m.origem] ?? m.origem} · {dataHora(m.enviada_em)}
                     {tempo !== undefined
@@ -322,42 +470,24 @@ export function Simulador({
           <div ref={fim} />
         </div>
 
-        <form
-          className="flex items-end gap-2 border-t border-base-200 p-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            enviar();
+        <BarraEnvioSimulador
+          texto={texto}
+          onTexto={(valor) => {
+            setTexto(valor);
+            if (aviso) setAviso(null);
           }}
-        >
-          <Label htmlFor="si-texto" className="sr-only">
-            Mensagem
-          </Label>
-          <Textarea
-            id="si-texto"
-            rows={1}
-            value={texto}
-            disabled={bloqueado}
-            placeholder={
-              bloqueado ? "" : "Escreva como cliente… (Enter envia, Shift+Enter quebra linha)"
-            }
-            className="max-h-40 min-h-10 resize-none bg-base-50"
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                enviar();
-              }
-            }}
-          />
-          <Button type="submit" disabled={bloqueado || envio.isPending || !texto.trim()}>
-            {envio.isPending ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Send className="size-4" aria-hidden />
-            )}
-            <span className="sr-only sm:not-sr-only">Enviar</span>
-          </Button>
-        </form>
+          bloqueado={bloqueado}
+          enviando={enviando}
+          podeAnexar={podeAnexar}
+          arquivo={arquivo?.name ?? null}
+          aviso={aviso}
+          onArquivo={escolherArquivo}
+          onTirarArquivo={() => {
+            setArquivo(null);
+            setAviso(null);
+          }}
+          onEnviar={enviar}
+        />
       </Cartao>
     </div>
   );

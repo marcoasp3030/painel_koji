@@ -63,6 +63,10 @@ A lista e o detalhe mostram o atendimento atual (número, aberto, com humano ou 
 
 Configurações → Comportamento do agente edita o atendimento da empresa ou de um agente. O formulário é montado pelo `esquema` que o gateway devolve (tipos, limites, opções, padrão, `editavel`, `disponivel`), então um campo novo aparece sem mudar o painel. Cada campo mostra o valor em uso, a origem (plataforma, segmento, empresa ou agente), o selo "Personalizado" e a ação "Voltar ao padrão". As alterações viram rascunho e são publicadas com uma nota opcional. Quando o gateway pede confirmação, a tela mostra o trecho de cada aviso antes de reenviar. Abas: Personalidade, Comportamentos, Publicar, Prévia (rascunho ou publicado, como vai ao agente) e Histórico (antes/depois e Restaurar). Itens indisponíveis aparecem com o selo "em breve". "Pediu humano" e "Reclamação" ficam travados. Os campos de operação são só leitura. Admin e plataforma editam; o atendente só vê. O grupo Follow-up (ligar, 1º e 2º em minutos, máximo por dia e janela de horário em 24h) aparece quando o esquema do gateway traz esses campos. Com um agente escolhido, o nome dele fica no topo. Enquanto o follow-up está em ensaio, a ajuda do 2º avisa que só o 1º é registrado. Especificação em `docs/ESPEC_TELAS_CFG1.md`.
 
+## Simular conversa
+
+Admin e plataforma conversam com o agente por um canal API, sem enviar nada ao cliente. Quando o agente tem a capacidade de documentos ligada, um clipe ao lado da mensagem aceita PDF, XML, JPG, PNG e WEBP de até 10 MB, com texto opcional. O arquivo aparece na conversa como cartão (nome, tipo e estado) com link para o detalhe em Documentos. Enquanto está processando, o cartão consulta o anexo a cada 2 s, por até 30 s, e muda sozinho; depois disso avisa “Ainda lendo, atualize em instantes”. Arquivo grande demais, formato fora da lista ou capacidade desligada ganham um aviso curto. XML que não é NF-e/NFC-e avisa para enviar o XML da nota ou o PDF. O corpo dessa chamada aceita até 15 MB no servidor e no proxy.
+
 ## Documentos
 
 `/ia/documentos` lista os arquivos recebidos. Estado, tipo e período (de/até, dia de Brasília, dd/mm/aaaa) vão ao gateway em `GET /anexos`. O detalhe mostra os campos com rótulo, valor em R$ e data em dd/mm/aaaa, Copiar na linha digitável, no código de barras, na chave de acesso e no ID da transação, os itens da NF-e em tabela e “Apagado automaticamente em” quando há validade. Comprovante PIX traz o aviso de que o pagamento não foi verificado. Admin e plataforma apagam, com o botão em estilo de perigo; o membro só consulta. `/ia/chaves-formulario` cria a chave presa a um agente, com sites permitidos e limite por minuto. O valor aparece uma vez, com Copiar. Revogar pede confirmação e fica com admin e plataforma.
@@ -75,4 +79,4 @@ Na chave de API da empresa, nenhum escopo vem marcado. “Resposta assíncrona (
 
 O proxy aceita até 11 MiB só em `/gateway/api/v1/documentos` e subcaminhos. O restante de `/gateway/api/*` continua em 2 MiB.
 
-Prints com dados fictícios: `docs/prints-arq-fup/` (`tests/visual/arq-fup/capturar.cjs`). As telas ainda não foram publicadas.
+Prints com dados fictícios: `docs/prints-arq-fup/` (`tests/visual/arq-fup/capturar.cjs`). Publicado em 22/10/2026 como `painel:arq-fup-20261022`. A volta é `painel:pedidos-20261020`.

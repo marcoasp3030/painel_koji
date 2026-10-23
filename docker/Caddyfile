@@ -73,6 +73,14 @@
 		uri strip_prefix /rest/v1
 		reverse_proxy api-rest:3000
 	}
+	# Simular documento chega aqui: POST /_serverFn/… com o arquivo em base64.
+	# 15MB decimais cabem um arquivo de 10 MB (~14 MB em JSON) e recusam o que passar.
+	handle /_serverFn/* {
+		request_body {
+			max_size 15MB
+		}
+		reverse_proxy painel:3000
+	}
 	handle {
 		reverse_proxy painel:3000
 	}

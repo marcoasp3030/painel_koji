@@ -6,14 +6,27 @@ import {
   AVISO_PIX,
   CAMPOS_COPIAR,
   apresentarCampo,
+  associarDocumentosDaConversa,
   itensNota,
+  AVISO_AINDA_LENDO,
+  AVISO_XML_FORA_DA_NOTA,
+  INTERVALO_CONSULTA_ANEXO_MS,
+  PRAZO_CONSULTA_ANEXO_MS,
+  avisoXmlForaDaNota,
+  consultaDoAnexoDeveParar,
+  lerAnexoDaMensagem,
+  mensagemArquivoInvalido,
   normalizarOrigem,
   origensDoTexto,
   parametrosListaDocumentos,
   rotuloCampoDocumento,
   rotuloTipo,
   textoExpira,
+  LIMITE_ARQUIVO_BYTES,
 } from "./documentos";
+import { mensagemParaUsuario } from "./erros";
+import { executarAnexo, executarEnvioDocumento } from "./simular.server";
+import { LIMITE_CORPO_BYTES, corpoDaFuncaoExcede } from "@/lib/limite-corpo";
 import { executarDocumentos } from "./documentos.server";
 import { executarWebhook } from "./webhooks.server";
 import { gradeJanela, lerJanela, MENSAGEM_FOLLOWUP_AUSENTE } from "./followup";
@@ -186,6 +199,203 @@ test("gerar segredo novo avisa quando a rota ainda não existe", async () => {
   await expect(
     executarWebhook(sessao as never, { empresa: "bykoji", acao: "rotacionar", id: "wh_1" }),
   ).rejects.toThrow("O gateway ainda não gera um segredo novo");
+});
+
+test("arquivo do simulador: tamanho, formato e o cartão na conversa", () => {
+  expect(mensagemArquivoInvalido("boleto.pdf", 1200)).toBeNull();
+  expect(mensagemArquivoInvalido("foto.jpeg", 10)).toBeNull();
+  expect(mensagemArquivoInvalido("nota.XML", 10)).toBeNull();
+  expect(mensagemArquivoInvalido("boleto.pdf", LIMITE_ARQUIVO_BYTES + 1)).toBe(
+    "O arquivo é grande demais.",
+  );
+  expect(mensagemArquivoInvalido("virus.exe", 10)).toBe(
+    "Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.",
+  );
+  expect(mensagemArquivoInvalido("vazio.pdf", 0)).toBe("O arquivo está vazio.");
+  expect(avisoXmlForaDaNota("<pedido><item>1</item></pedido>")).toBe(AVISO_XML_FORA_DA_NOTA);
+  expect(avisoXmlForaDaNota("\uFEFF  <NFe xmlns='http://www.portalfiscal.inf.br/nfe'>")).toBeNull();
+  expect(avisoXmlForaDaNota("%PDF-1.4")).toBeNull();
+  expect(consultaDoAnexoDeveParar(1_000, 30_999, "processando")).toBe(false);
+  expect(consultaDoAnexoDeveParar(1_000, 31_000, "processando")).toBe(true);
+  expect(consultaDoAnexoDeveParar(1_000, 1_500, "pronto")).toBe(true);
+  expect(INTERVALO_CONSULTA_ANEXO_MS).toBe(2_000);
+  expect(PRAZO_CONSULTA_ANEXO_MS).toBe(30_000);
+  expect(AVISO_AINDA_LENDO).toBe("Ainda lendo, atualize em instantes");
+  expect(corpoDaFuncaoExcede("/_serverFn/abc", String(LIMITE_CORPO_BYTES))).toBe(false);
+  expect(corpoDaFuncaoExcede("/_serverFn/abc", String(LIMITE_CORPO_BYTES + 1))).toBe(true);
+  expect(corpoDaFuncaoExcede("/ia/simular", "99999999")).toBe(false);
+  expect(LIMITE_CORPO_BYTES).toBe(15_000_000);
+  expect(lerAnexoDaMensagem("[anexo: boleto.pdf]\nsegue o boleto")).toEqual({
+    nome: "boleto.pdf",
+    texto: "segue o boleto",
+  });
+  expect(lerAnexoDaMensagem("oi")).toBeNull();
+  const docs = associarDocumentosDaConversa(
+    [{ conteudo: "[anexo: boleto.pdf]" }, { conteudo: "oi" }, { conteudo: "[anexo: boleto.pdf]" }],
+    [
+      { nome: "boleto.pdf", criado_em: "2026-10-22T15:00:00Z", id: "a" },
+      { nome: "boleto.pdf", criado_em: "2026-10-22T15:02:00Z", id: "b" },
+    ],
+  );
+  expect(docs.map((d) => d?.id ?? null)).toEqual(["a", null, "b"]);
+  expect(
+    mensagemParaUsuario(
+      new GatewayErro({
+        codigo: "VALIDATION_ERROR",
+        status: 413,
+        detalhes: { campo: "arquivo", motivo: "tamanho" },
+      }),
+    ),
+  ).toBe("O arquivo é grande demais.");
+  expect(
+    mensagemParaUsuario(
+      new GatewayErro({
+        codigo: "VALIDATION_ERROR",
+        status: 400,
+        detalhes: { campo: "arquivo", motivo: "tipo_nao_aceito" },
+      }),
+    ),
+  ).toBe("Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.");
+  expect(
+    mensagemParaUsuario(
+      new GatewayErro({
+        codigo: "CONFLICT",
+        status: 409,
+        detalhes: { campo: "agente_id", motivo: "capacidade_desligada" },
+      }),
+    ),
+  ).toBe("A capacidade de documentos está desligada neste agente.");
+  expect(
+    mensagemParaUsuario(
+      new GatewayErro({
+        codigo: "VALIDATION_ERROR",
+        status: 400,
+        detalhes: { campo: "arquivo", motivo: "xml_nao_nfe" },
+      }),
+    ),
+  ).toBe(AVISO_XML_FORA_DA_NOTA);
+  expect(
+    mensagemParaUsuario(
+      new GatewayErro({
+        codigo: "VALIDATION_ERROR",
+        status: 400,
+        detalhes: { campo: "arquivo", motivo: "tipo_nao_aceito", nome: "pedido.xml" },
+      }),
+    ),
+  ).toBe(AVISO_XML_FORA_DA_NOTA);
+});
+
+test("envio do simulador vai em multipart, sem o arquivo no JSON", async () => {
+  let opcoes: { corpo?: unknown; formulario?: { campos: Record<string, string> } } | undefined;
+  const sessao = {
+    tenant: async () => ({
+      papel: "plataforma",
+      chamar: async (_m: string, caminho: string[], op?: typeof opcoes) => {
+        expect(caminho).toEqual(["agentes", "ag_1", "simular-documento"]);
+        opcoes = op;
+        return {
+          dados: {
+            anexo_id: "anx_abc",
+            estado: "processando",
+            conversation_id: "c",
+            duplicado: false,
+          },
+        };
+      },
+    }),
+  };
+  await executarEnvioDocumento(sessao as never, {
+    empresa: "bykoji",
+    agente: "ag_1",
+    canal_id: "can_1",
+    identificador: "teste",
+    mensagem: "segue",
+    nome: "boleto.pdf",
+    tipo: "application/pdf",
+    base64: Buffer.from("%PDF-1.4").toString("base64"),
+  });
+  expect(opcoes?.corpo).toEqual({
+    identificador: "teste",
+    canal_id: "can_1",
+    mensagem: "segue",
+  });
+  expect(opcoes?.formulario?.campos["mensagem"]).toBe("segue");
+  expect(JSON.stringify(opcoes?.corpo)).not.toContain("base64");
+});
+
+test("xml que não é nota não segue para o gateway", async () => {
+  let chamou = false;
+  const sessao = {
+    tenant: async () => ({
+      papel: "plataforma",
+      chamar: async () => {
+        chamou = true;
+        return { dados: {} };
+      },
+    }),
+  };
+  await expect(
+    executarEnvioDocumento(sessao as never, {
+      empresa: "bench_passo5",
+      agente: "ag_1",
+      canal_id: "can_1",
+      identificador: "teste",
+      nome: "pedido.xml",
+      tipo: "application/xml",
+      base64: Buffer.from("<pedido/>").toString("base64"),
+    }),
+  ).rejects.toThrow(AVISO_XML_FORA_DA_NOTA);
+  expect(chamou).toBe(false);
+});
+
+test("o gateway recusando um xml vira o aviso da nota", async () => {
+  const sessao = {
+    tenant: async () => ({
+      papel: "plataforma",
+      chamar: async () => {
+        throw new GatewayErro({
+          codigo: "VALIDATION_ERROR",
+          status: 400,
+          detalhes: { campo: "arquivo", motivo: "tipo_nao_aceito" },
+        });
+      },
+    }),
+  };
+  await expect(
+    executarEnvioDocumento(sessao as never, {
+      empresa: "bench_passo5",
+      agente: "ag_1",
+      canal_id: "can_1",
+      identificador: "teste",
+      nome: "pedido.xml",
+      tipo: "application/xml",
+      base64: Buffer.from("%PDF-1.4 nao e xml").toString("base64"),
+    }),
+  ).rejects.toThrow(AVISO_XML_FORA_DA_NOTA);
+});
+
+test("consulta do cartão lê o anexo pelo id", async () => {
+  let caminho: string[] = [];
+  const sessao = {
+    tenant: async () => ({
+      papel: "plataforma",
+      chamar: async (_m: string, c: string[]) => {
+        caminho = c;
+        return {
+          dados: {
+            id: "anx_0123456789abcdef01234567",
+            estado: "pronto",
+            tipo_documento: "boleto",
+            nome: "boleto.pdf",
+            formato: "pdf",
+          },
+        };
+      },
+    }),
+  };
+  const doc = await executarAnexo(sessao as never, "bench_passo5", "anx_0123456789abcdef01234567");
+  expect(caminho).toEqual(["anexos", "anx_0123456789abcdef01234567"]);
+  expect(doc.estado).toBe("pronto");
 });
 
 test("webhooks de saída incluem documentos, resposta e follow-up", () => {

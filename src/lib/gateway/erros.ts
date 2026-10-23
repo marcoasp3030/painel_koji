@@ -2,6 +2,7 @@
  * Erros da integração com o gateway de agentes.
  * Este arquivo não conhece URL nem chave e pode ser usado pelo navegador.
  */
+import { AVISO_XML_FORA_DA_NOTA } from "./documentos";
 
 export type CodigoGateway =
   | "VALIDATION_ERROR"
@@ -157,6 +158,17 @@ export function mensagemParaUsuario(erro: GatewayErro): string {
   if (erro.codigo === "RATE_LIMITED" && erro.tentarApos) {
     return `${erro.message} Tente em ${erro.tentarApos} s.`;
   }
+  const motivo = typeof erro.detalhes["motivo"] === "string" ? erro.detalhes["motivo"] : null;
+  if (motivo === "tamanho" || erro.status === 413) return "O arquivo é grande demais.";
+  if (motivo === "xml_nao_nfe") return AVISO_XML_FORA_DA_NOTA;
+  if (motivo === "tipo_nao_aceito") {
+    const nome = typeof erro.detalhes["nome"] === "string" ? erro.detalhes["nome"] : "";
+    if (nome.toLowerCase().endsWith(".xml")) return AVISO_XML_FORA_DA_NOTA;
+    return "Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.";
+  }
+  if (motivo === "capacidade_desligada")
+    return "A capacidade de documentos está desligada neste agente.";
+  if (motivo === "vazio") return "O arquivo está vazio.";
   const campo = typeof erro.detalhes["campo"] === "string" ? erro.detalhes["campo"] : null;
   // Só substitui a mensagem genérica do gateway; mensagens do próprio painel já explicam.
   if (campo && erro.message === MENSAGEM_PADRAO[erro.codigo]) {

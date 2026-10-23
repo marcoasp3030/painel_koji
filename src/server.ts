@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { corpoDaFuncaoExcede } from "./lib/limite-corpo";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -44,9 +45,20 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+function corpoGrandeDemais() {
+  return new Response(JSON.stringify({ erro: "O arquivo é grande demais." }), {
+    status: 413,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const caminho = new URL(request.url).pathname;
+      if (corpoDaFuncaoExcede(caminho, request.headers.get("content-length"))) {
+        return corpoGrandeDemais();
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

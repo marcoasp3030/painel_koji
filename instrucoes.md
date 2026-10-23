@@ -1,3 +1,19 @@
+## Simular conversa com documento — conferido, publicação em seguida (22/10/2026)
+
+- Clipe ao lado da mensagem só quando `GET …/agentes/{a}/capacidades` traz `documentos.ativo`. Aceita PDF, XML, JPG, PNG e WEBP até 10 MB. A mensagem junto é opcional.
+- Envio: `POST …/agentes/{a}/simular-documento` em multipart (`arquivo`, `identificador`, `canal_id`, `mensagem`).
+- O corpo dessa chamada passa por `POST /_serverFn/…`. O proxy (`docker/Caddyfile`, `request_body max_size 15MB`) e o servidor do painel (`src/server.ts`, `LIMITE_CORPO_BYTES` em `src/lib/limite-corpo.ts`) aceitam até 15 MB decimais.
+- Na conversa, cartão com nome, tipo e estado e link para `/ia/documentos?documento=anx_…`. Em Processando, o cartão consulta `GET …/anexos/{anexo_id}` a cada 2 s, por até 30 s, e troca sozinho para o estado final. Depois disso: “Ainda lendo, atualize em instantes”.
+- XML que não é NF-e/NFC-e: “Este XML não é uma NF-e/NFC-e. Envie o XML da nota ou o PDF.” Os outros formatos fora da lista continuam com “Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.”
+- Prints `docs/prints-arq-fup/17-simular-documento.png` e `18-simular-erros.png`.
+
+## ARQ/FUP publicado (22/10/2026, 15:09 Brasília)
+
+- Imagem `painel:arq-fup-20261022` = `sha256:5f859d0c906bdc708f842a5129ff9da7f918fe0ad706324c1c2594dc8c1719e1`, commit `7a53f7e`, árvore limpa no build. Container `590038b76381`. Só o painel foi recriado.
+- Volta: `painel:pedidos-20261020` = `sha256:71e678d2651e06979ddc6f6d55ba4334d830b0f1ccf7ae3814d024d1ae100966`. Comando: `docker tag painel:pedidos-20261020 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+- Backup `/home/twadmin/backups/painel/pre-arq-fup-20261022T180739Z`, diretório 700, arquivos 600. Dump SHA-256 `d4bf843a6824a0041774f267bc08ad3eaa0233f311c3dd1ef1ad20e9a241dfcc`, `pg_restore --list` 279 entradas. Sem mudança de schema: não restaurar o dump numa volta.
+- Conferência só de leitura, By Koji: Pedidos, Cardápio, Conversas, Modelos, Documentos, Chaves de formulário, Webhooks de saída e Comportamento do agente abriram sem alerta. Datas `11/10/2026, 16:56` e `20/10/2026, 12:26`; filtros `dd/mm/aaaa`; janela de follow-up `09:00`–`22:00`. Gateway: 159 respostas 200 e nenhuma 403. Nada foi criado para o cliente.
+
 ## Rotas do gateway no painel — ainda não publicado (22/10/2026)
 
 - Reativar envia `motivo` (3 a 300). No contato, depois da reativação, aparecem quem reativou e o motivo.

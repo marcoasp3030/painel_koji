@@ -7,6 +7,74 @@ import { isoParaDataBr } from "@/lib/data-hora";
 import { empresa, idRecurso } from "./esquemas";
 import type { Json } from "./tipos";
 
+/** Teto do simulador: o padrão da capacidade no gateway também é 10 MB. */
+export const LIMITE_ARQUIVO_BYTES = 10 * 1024 * 1024;
+
+/** O cartão consulta o anexo a cada 2 s e desiste aos 30 s. */
+export const INTERVALO_CONSULTA_ANEXO_MS = 2_000;
+export const PRAZO_CONSULTA_ANEXO_MS = 30_000;
+export const AVISO_AINDA_LENDO = "Ainda lendo, atualize em instantes";
+
+/** XML que o gateway não reconhece como NF-e/NFC-e. */
+export const AVISO_XML_FORA_DA_NOTA =
+  "Este XML não é uma NF-e/NFC-e. Envie o XML da nota ou o PDF.";
+
+const MARCA_NOTA_FISCAL = "portalfiscal.inf.br/nfe";
+
+const EXTENSAO_DOCUMENTO = new Set(["pdf", "xml", "jpg", "jpeg", "png", "webp"]);
+
+export const ACEITA_ARQUIVO = ".pdf,.xml,.jpg,.jpeg,.png,.webp";
+
+/** null quando o arquivo pode seguir. A frase é a que a tela mostra. */
+export function mensagemArquivoInvalido(nome: string, tamanho: number) {
+  if (tamanho <= 0) return "O arquivo está vazio.";
+  if (tamanho > LIMITE_ARQUIVO_BYTES) return "O arquivo é grande demais.";
+  const extensao = nome.split(".").pop()?.toLowerCase() ?? "";
+  if (!EXTENSAO_DOCUMENTO.has(extensao)) {
+    return "Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.";
+  }
+  return null;
+}
+
+/**
+ * XML (começa com "<") sem a marca da NF-e/NFC-e. PDF e imagem passam batido:
+ * o gateway reconhece esses formatos pela assinatura, não pelo nome.
+ */
+export function avisoXmlForaDaNota(trecho: string) {
+  const cabeca = trecho.replace(/^\uFEFF/, "").trimStart();
+  if (!cabeca.startsWith("<")) return null;
+  if (cabeca.includes(MARCA_NOTA_FISCAL)) return null;
+  return AVISO_XML_FORA_DA_NOTA;
+}
+
+/** true quando o cartão deve parar de consultar: estado final, ou 30 s de Processando. */
+export function consultaDoAnexoDeveParar(inicioMs: number, agoraMs: number, estado: string) {
+  if (estado !== "processando") return true;
+  return agoraMs - inicioMs >= PRAZO_CONSULTA_ANEXO_MS;
+}
+
+/** "[anexo: boleto.pdf]\\ntexto" → nome e o texto opcional. Outra mensagem devolve null. */
+export function lerAnexoDaMensagem(conteudo: string | null | undefined) {
+  if (!conteudo) return null;
+  const lido = /^\[anexo: ([^\]]+)\](?:\n([\s\S]*))?$/.exec(conteudo);
+  if (!lido?.[1]) return null;
+  return { nome: lido[1], texto: (lido[2] ?? "").trim() };
+}
+
+/** Liga cada mensagem `[anexo: nome]` ao documento da conversa, na ordem em que chegaram. */
+export function associarDocumentosDaConversa<
+  T extends { nome: string | null; criado_em: string | null },
+>(mensagens: { conteudo: string | null }[], documentos: T[]) {
+  const fila = [...documentos].sort((a, b) => (a.criado_em ?? "").localeCompare(b.criado_em ?? ""));
+  return mensagens.map((mensagem) => {
+    const lido = lerAnexoDaMensagem(mensagem.conteudo);
+    if (!lido) return null;
+    const indice = fila.findIndex((doc) => doc.nome === lido.nome);
+    if (indice < 0) return null;
+    return fila.splice(indice, 1)[0] ?? null;
+  });
+}
+
 export const ESTADOS_DOCUMENTO = [
   "processando",
   "pronto",

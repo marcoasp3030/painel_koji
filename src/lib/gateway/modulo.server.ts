@@ -159,6 +159,13 @@ const REGRAS: Regra[] = [
   // Testar como a empresa: sem corpo. Opções de teste (ex.: provedor real) são da plataforma.
   { metodo: "POST", caminho: ["agentes", "*", "testar"], papeis: ADMIN, corpo: semCorpo },
   { metodo: "POST", caminho: ["agentes", "*", "simular"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["agentes", "*", "capacidades"], papeis: ADMIN },
+  {
+    metodo: "POST",
+    caminho: ["agentes", "*", "simular-documento"],
+    papeis: ADMIN,
+    corpo: soChaves(["identificador", "canal_id", "mensagem"], "Campos do documento inválidos."),
+  },
   // Canais e consumo: só leitura.
   { metodo: "GET", caminho: ["canais"], papeis: AMBOS },
   { metodo: "GET", caminho: ["canais", "*"], papeis: AMBOS },

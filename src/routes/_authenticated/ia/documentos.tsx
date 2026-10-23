@@ -21,6 +21,10 @@ import {
 } from "@/lib/gateway/documentos";
 
 export const Route = createFileRoute("/_authenticated/ia/documentos")({
+  validateSearch: (s: Record<string, unknown>): { documento?: string } =>
+    typeof s["documento"] === "string" && /^anx_[0-9a-f]{24}$/.test(s["documento"])
+      ? { documento: s["documento"] }
+      : {},
   head: () => ({ meta: [{ title: "Documentos | Luxtia" }] }),
   component: () => (
     <PaginaGateway
@@ -56,7 +60,8 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
   const [extras, setExtras] = useState<DocumentoResumo[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [temMais, setTemMais] = useState(false);
-  const [aberto, setAberto] = useState<string | null>(null);
+  const { documento } = Route.useSearch();
+  const [aberto, setAberto] = useState<string | null>(documento ?? null);
   const [pagina, setPagina] = useState<TextoPagina | null>(null);
   const podeApagar = ctx.papel === "plataforma" || ctx.papel === "admin";
   const periodoOk = periodoDocumentosValido(filtro);
@@ -88,7 +93,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
       });
       const paginaLida = await texto({
         data: { empresa: ctx.empresa, acao: "texto", id: aberto, pagina: 1 },
-      });
+      }).catch(() => null);
       setPagina(paginaLida);
       return d;
     },

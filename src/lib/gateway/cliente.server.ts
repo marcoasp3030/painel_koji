@@ -3,6 +3,7 @@
  * Roda só no servidor: a chave vem do ambiente e nunca é registrada em log,
  * em mensagem de erro nem em resposta ao navegador.
  */
+import { LIMITE_ARQUIVO_BYTES } from "./documentos";
 import { GatewayErro, interpretarErro } from "./erros";
 
 export type MetodoGateway = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -28,6 +29,14 @@ export type RequisicaoGateway = {
    * e o arquivo em base64 — nunca vai para log.
    */
   arquivo?: boolean;
+  /**
+   * Envio multipart (simulador com arquivo). O corpo JSON não vai junto.
+   * `base64` não entra em log.
+   */
+  formulario?: {
+    arquivo: { nome: string; tipo: string; base64: string };
+    campos: Record<string, string>;
+  };
 };
 
 export type ClienteGateway = {
@@ -92,6 +101,39 @@ function atorSeguro(ator: string) {
   return limpo;
 }
 
+function montarFormulario(formulario: NonNullable<RequisicaoGateway["formulario"]>) {
+  const limpo = formulario.arquivo.base64.replace(/\s/g, "");
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(limpo)) {
+    throw new GatewayErro({
+      codigo: "VALIDATION_ERROR",
+      status: 400,
+      mensagem: "Não foi possível ler o arquivo.",
+    });
+  }
+  const bytes = Buffer.from(limpo, "base64");
+  if (bytes.byteLength === 0) {
+    throw new GatewayErro({
+      codigo: "VALIDATION_ERROR",
+      status: 400,
+      mensagem: "O arquivo está vazio.",
+    });
+  }
+  if (bytes.byteLength > LIMITE_ARQUIVO_BYTES) {
+    throw new GatewayErro({
+      codigo: "VALIDATION_ERROR",
+      status: 413,
+      mensagem: "O arquivo é grande demais.",
+    });
+  }
+  const nome = formulario.arquivo.nome.replace(/[\\/]/g, "").slice(0, 120) || "documento";
+  const form = new FormData();
+  form.append("arquivo", new Blob([bytes], { type: formulario.arquivo.tipo }), nome);
+  for (const [chave, valor] of Object.entries(formulario.campos)) {
+    if (valor) form.append(chave, valor);
+  }
+  return form;
+}
+
 export function criarClienteGateway(deps: Dependencias): ClienteGateway {
   const executar = deps.fetch ?? fetch;
   const esperar = deps.esperar ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
@@ -110,7 +152,8 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
       // Escopo da sessão: o gateway confere a empresa; plataforma pode omitir.
       if (req.escopoEmpresa) cabecalhos["X-Tenant-Scope"] = req.escopoEmpresa;
       if (req.arquivo) cabecalhos["Accept"] = "application/octet-stream";
-      if (req.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
+      const formulario = req.formulario ? montarFormulario(req.formulario) : null;
+      if (!formulario && req.corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
       // Para log: só método e caminho, sem query (busca pode ter telefone).
       const rotulo = `${req.metodo} ${url.pathname}`;
 
@@ -120,7 +163,11 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
           resposta = await executar(url, {
             method: req.metodo,
             headers: cabecalhos,
-            ...(req.corpo === undefined ? {} : { body: JSON.stringify(req.corpo) }),
+            ...(formulario
+              ? { body: formulario }
+              : req.corpo === undefined
+                ? {}
+                : { body: JSON.stringify(req.corpo) }),
             signal: AbortSignal.timeout(req.tempoLimiteMs ?? tempoLimitePadraoMs),
             redirect: "error",
           });
