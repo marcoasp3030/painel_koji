@@ -28,10 +28,17 @@ O painel sobe com Postgres, autenticação e API REST na mesma origem `painel.lu
 
 ```sh
 python3 docker/gerar-segredos.py
-docker compose up -d --build
+docker compose up -d
 ```
 
-O proxy escuta nas portas 80 e 443. O arquivo `.env` fica só na máquina e não entra no Git.
+Uma imagem nova do painel só sai com a árvore commitada. `docker/publicar-painel.sh` recusa alteração não commitada, grava o commit na imagem e marca a tag `painel:<commit>`.
+
+```sh
+sh docker/publicar-painel.sh
+docker compose up -d --no-deps --no-build painel
+```
+
+O primeiro acesso `admin@luxtia.local` só é criado se a conta ainda não existe, e a senha vem de `BOOTSTRAP_SUPER_ADMIN_SENHA` no `.env`. Com a conta já criada, a variável fica vazia e o bootstrap não roda. O proxy escuta nas portas 80 e 443. O arquivo `.env` fica só na máquina e não entra no Git.
 
 ## Unidades e histórico
 

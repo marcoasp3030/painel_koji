@@ -1,3 +1,16 @@
+## Bootstrap sem senha no código (26/10/2026, 12:52 Brasília)
+
+- A conta que o bootstrap criava é `admin@luxtia.local` (nome Super Admin, papel `super_admin`). Ela já existe no banco de produção: criada em 07/10/2026 18:30 e último acesso em 23/10/2026 09:07 (Brasília). Tem senha. O valor não foi exibido.
+- O código não guarda mais senha. `BOOTSTRAP_SUPER_ADMIN_SENHA` só é usada se essa conta não existir; se existir, o bootstrap recusa e não altera a senha. A variável no servidor fica vazia. O Marco troca a senha da conta. O histórico do Git não foi reescrito.
+- A imagem em produção `painel:conversas-20261026` é o commit `d91f64317e3f7fbd733c56ed7e94bac0fdabe4b9` (a mesma `sha256:7ba6a24b…`). Publicação seguinte: `sh docker/publicar-painel.sh`, que recusa árvore suja e grava `org.opencontainers.image.revision`.
+
+## Conversas — publicado (26/10/2026, 12:31 Brasília)
+
+- A tela que estava no ar era a imagem anterior. O código novo só passou a valer depois de recriar o painel.
+- Imagem `painel:conversas-20261026` = `sha256:7ba6a24b2b4184dd7be570a04919c4ae6db69abef7ffe17c6d7c15556acc96b5`. Container `0ba6b9326aec`. Só o painel foi recriado.
+- Volta: `painel:volta-conversas-20261026` = `sha256:64a05bb61aca115a22eaad2350e71d0cd5c1fbb76840e22ef5363b24f75ea434` (a mesma `painel:simular-doc-20261022`). Comando: `docker tag painel:volta-conversas-20261026 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+- O arquivo novo `Conversas-Dp6Mtten.js` responde 200. Quem já tinha a página aberta precisa atualizar forçado.
+
 ## Conversas — layout da lista e da sessão (26/10/2026)
 
 - A página divide a altura da tela entre a lista e a conversa aberta. A lista mostra iniciais, horário curto (Brasília), estado, canal e a última mensagem.

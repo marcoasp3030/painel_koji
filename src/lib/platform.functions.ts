@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { decidirBootstrap, VARIAVEL_SENHA_BOOTSTRAP } from "./bootstrap-super-admin";
 import { PROVIDER_BY_KEY, PROVIDERS, type ProviderKey } from "./providers";
 
 const SUPER_ADMIN_EMAIL = "admin@luxtia.local";
@@ -127,25 +128,62 @@ function maskCredentials(provider: ProviderKey, credentials: Record<string, stri
   return out;
 }
 
-/** Cria o acesso inicial do Super Admin apenas quando ainda não existe nenhum. */
+/** Recusa criar quando não dá para confirmar: é mais seguro do que arriscar uma conta duplicada. */
+async function contaBootstrapExiste(supabaseAdmin: {
+  auth: {
+    admin: {
+      listUsers: (params: { page: number; perPage: number }) => Promise<{
+        data: { users: { email?: string | null }[] } | null;
+        error: unknown;
+      }>;
+    };
+  };
+}): Promise<boolean> {
+  for (let pagina = 1; pagina <= 20; pagina += 1) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page: pagina,
+      perPage: 200,
+    });
+    if (error) {
+      console.error("bootstrapSuperAdmin", "falha ao consultar contas");
+      return true;
+    }
+    const usuarios = data?.users ?? [];
+    if (usuarios.some((usuario) => (usuario.email ?? "").toLowerCase() === SUPER_ADMIN_EMAIL)) {
+      return true;
+    }
+    if (usuarios.length < 200) return false;
+  }
+  console.error("bootstrapSuperAdmin", "consulta de contas incompleta");
+  return true;
+}
+
+/** Cria o acesso inicial apenas se essa conta ainda não existe. A senha vem de variável de uso único. */
 export const bootstrapSuperAdmin = createServerFn({ method: "POST" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: existing } = await supabaseAdmin
-    .from("user_roles")
-    .select("id")
-    .eq("role", "super_admin")
-    .limit(1);
-  if (existing && existing.length > 0) return { created: false };
+  const contaExiste = await contaBootstrapExiste(supabaseAdmin);
+  const senhaInformada = process.env[VARIAVEL_SENHA_BOOTSTRAP];
+  const senhaDefinida = typeof senhaInformada === "string" && senhaInformada.trim().length > 0;
+  const decisao = decidirBootstrap({ contaExiste, senhaDefinida });
+  if (decisao.acao === "recusar") {
+    if (decisao.motivo === "senha-ausente") {
+      console.error("bootstrapSuperAdmin recusado: variável de uso único ausente");
+    }
+    return { created: false };
+  }
+
+  const senha = senhaInformada!.trim();
+  delete process.env[VARIAVEL_SENHA_BOOTSTRAP];
 
   const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
     email: SUPER_ADMIN_EMAIL,
-    password: "32443030",
+    password: senha,
     email_confirm: true,
     user_metadata: { full_name: "Super Admin" },
   });
   if (error || !created?.user) {
-    console.error("bootstrapSuperAdmin", error);
+    console.error("bootstrapSuperAdmin", "falha ao criar a conta inicial");
     return { created: false };
   }
 

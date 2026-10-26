@@ -1,3 +1,32 @@
+## [2026-10-26 12:52] — Senha de bootstrap fora do código
+- **Autor:** Grok 4.7
+- **Objetivo:** Tirar a senha fixa do bootstrap e impedir imagem nova com árvore suja.
+- **Arquivos alterados:**
+  - `src/lib/platform.functions.ts` — modificado — a senha passa a vir de variável de uso único
+  - `src/lib/bootstrap-super-admin.ts` — criado — decide recusar ou criar, sem guardar senha
+  - `src/lib/bootstrap-super-admin.test.ts` — criado — três casos da decisão
+  - `docker/publicar-painel.sh` — criado — recusa build com alteração não commitada
+  - `Dockerfile`, `docker-compose.yml` — modificados — o build exige o commit e a imagem grava o rótulo
+  - `.env.example`, `README.md` — modificados — variável vazia e o comando de publicação
+- **Resumo das mudanças:** A conta inicial é `admin@luxtia.local`, nome Super Admin, papel super_admin. Ela já existe em produção (criada em 07/10/2026 18:30, último acesso em 23/10/2026 09:07, horário de Brasília) e tem senha; o valor não foi lido nem impresso. O bootstrap consulta essa conta e não cria de novo. Sem a conta e sem a variável, também não cria. A imagem que está no ar foi etiquetada com o commit do código dela, `d91f64317e3f7fbd733c56ed7e94bac0fdabe4b9`.
+- **Decisões e justificativas:** O histórico não foi reescrito. A senha da conta fica para o Marco trocar. A variável não foi preenchida no `.env`, porque a conta já existe. O script marca uma tag `painel:volta-<data>` da imagem em uso antes de um build futuro.
+- **Comandos executados:** `bun test src/lib/bootstrap-super-admin.test.ts` → 3 OK. `sh docker/publicar-painel.sh` com árvore suja → recusou, código 1.
+- **Erros e resoluções:** o commit local não tinha autor configurado; o commit usou o autor já presente no histórico, sem alterar o git config.
+- **Pendências / TODO:** atualizar dependências, publicar a imagem nova e aplicar os cabeçalhos do Caddy
+- **Próximos passos:** push depois deste commit; em seguida as versões do TanStack, do seroval e do nanoid
+
+## [2026-10-26 12:31] — Publicação do layout de conversas
+- **Autor:** Grok 4.7
+- **Objetivo:** Colocar no ar o layout novo, porque a tela aberta ainda era a imagem anterior.
+- **Arquivos alterados:**
+  - `docs/worklog.md`, `instrucoes.md` — modificados — registro da publicação
+- **Resumo das mudanças:** A imagem nova é `painel:conversas-20261026` (`sha256:7ba6a24b2b4184dd7be570a04919c4ae6db69abef7ffe17c6d7c15556acc96b5`). O container `0ba6b9326aec` subiu às 12:31 (Brasília). Só o painel foi recriado. O arquivo `Conversas-Dp6Mtten.js` responde 200 em https://painel.luxbrain.com.br.
+- **Decisões e justificativas:** A volta é a imagem que estava no ar, `painel:volta-conversas-20261026` (`sha256:64a05bb61aca115a22eaad2350e71d0cd5c1fbb76840e22ef5363b24f75ea434`), a mesma de `painel:simular-doc-20261022`.
+- **Comandos executados:** `docker compose build painel` → OK. `docker compose up -d --no-deps --no-build painel` → OK. O bundle traz “Mensagens recentes”.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** quem já estava com a página aberta precisa atualizar forçado (Ctrl+F5)
+- **Próximos passos:** volta, se precisar: `docker tag painel:volta-conversas-20261026 painel_koji-painel && docker compose up -d --no-deps --no-build painel`
+
 ## [2026-10-26 12:24] — Layout da página de conversas
 - **Autor:** Grok 4.7
 - **Objetivo:** Deixar a lista e a sessão da conversa mais claras e abrir já nas mensagens recentes.
