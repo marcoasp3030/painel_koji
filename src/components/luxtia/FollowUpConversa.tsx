@@ -131,9 +131,17 @@ export function BlocoFollowUp({
   cancelando: boolean;
   onCancelar: () => void;
 }) {
+  const vazio = !carregando && !indisponivel && !erro && itens.length === 0;
   return (
-    <section className="space-y-3 border-b p-4" aria-label="Follow-up">
-      <h3 className="font-medium text-ink-900">Follow-up</h3>
+    <section
+      className={vazio ? "border-b px-4 py-2" : "space-y-3 border-b px-4 py-3"}
+      aria-label="Follow-up"
+    >
+      {vazio ? (
+        <p className="text-xs text-ink-500">Nenhum follow-up nesta conversa.</p>
+      ) : (
+        <h3 className="font-medium text-ink-900">Follow-up</h3>
+      )}
       {carregando ? <p className="text-sm text-ink-500">Carregando follow-ups…</p> : null}
       {indisponivel ? (
         <p className="text-sm text-ink-500">Follow-up ainda não está disponível.</p>
@@ -142,9 +150,6 @@ export function BlocoFollowUp({
         <p role="alert" className="text-sm text-destructive">
           {erro}
         </p>
-      ) : null}
-      {!carregando && !indisponivel && itens.length === 0 ? (
-        <p className="text-sm text-ink-500">Nenhum follow-up nesta conversa.</p>
       ) : null}
       {!carregando && !indisponivel && itens.length > 0 ? (
         <ul className="space-y-2">

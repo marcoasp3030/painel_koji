@@ -1,3 +1,45 @@
+## [2026-10-26 12:24] — Layout da página de conversas
+- **Autor:** Grok 4.7
+- **Objetivo:** Deixar a lista e a sessão da conversa mais claras e abrir já nas mensagens recentes.
+- **Arquivos alterados:**
+  - `src/components/luxtia/Conversas.tsx` — modificado — lista, bolhas, rolagem e compositor
+  - `src/components/luxtia/FollowUpConversa.tsx` — modificado — aviso vazio em uma linha
+  - `src/components/luxtia/AtendimentosConversa.tsx` — modificado — menos espaço vertical
+  - `README.md` — modificado — descrição da tela
+  - `instrucoes.md` — modificado — registro da etapa
+- **Resumo das mudanças:** A lista e a conversa passam a ocupar a altura da tela. Cada contato ganha iniciais, horário curto e o estado. Ao abrir, o histórico vai para a última mensagem. Se a pessoa sobe para ler o passado, a posição fica e aparece “Mensagens recentes”. No celular a conversa ocupa a tela, com voltar. Enter envia.
+- **Decisões e justificativas:** Atendimento e follow-up ficam recolhidos para o histórico ter espaço. O horário da bolha e da lista usa América/São_Paulo. Carregar mensagens anteriores preserva a rolagem.
+- **Comandos executados:** prettier, `tsc --noEmit` e ESLint dos três componentes → OK. Prévia no navegador: ao abrir, a distância até o fim do histórico foi 0 e a mensagem antiga não estava visível; o atalho voltou ao fim.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** não publicado
+- **Próximos passos:** publicar só se pedirem
+
+## [2026-10-23 09:30] — Marco admin da empresa Luxbrain Testes
+- **Autor:** Grok 4.7
+- **Objetivo:** Dar ao usuário do Marco acesso de admin da empresa luxbrain_testes e conferir o clipe em Simular conversa.
+- **Arquivos alterados:**
+  - `docs/prints-arq-fup/20-anexar-luxbrain-testes.png` — criado — print da tela com o clipe
+  - `docs/prints-arq-fup/20-anexar-luxbrain-testes-barra.png` — criado — a barra de envio
+- **Resumo das mudanças:** A conta é marco.santos@ticway.com.br. Foi criado o cliente do painel Luxbrain Testes, ligado a `luxbrain_testes`, e o Marco entrou como administrador dessa empresa. O cliente koji (`bykoji`) e os vínculos dele não foram alterados. O papel super_admin dele permanece: é assim que ele chega ao By Koji hoje, porque não tem vínculo de empresa lá.
+- **Decisões e justificativas:** Tirar o super_admin mudaria o acesso ao By Koji. O seletor que a tela mostra continua sendo o de Super Admin, que lista todas as empresas do gateway. O vínculo novo é o de admin da empresa.
+- **Comandos executados:** sessão do GoTrue do próprio e-mail → Chromium em `/ia/simular`, empresa Luxbrain Testes, agente Teste Documentos → botão “Anexar documento” visível e habilitado.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** se o Marco for deixar de ser Super Admin, falta decidir o vínculo do By Koji
+- **Próximos passos:** nada a publicar
+
+## [2026-10-23 09:08] — Commit da imagem e o clipe no caminho do Marco
+- **Autor:** Grok 4.7
+- **Objetivo:** Commitar a árvore exata de `painel:simular-doc-20261022` e ver, no navegador, por que o clipe não apareceria em bench_passo5.
+- **Arquivos alterados:**
+  - `docs/worklog.md`, `instrucoes.md` — modificados — registro deste caminho
+  - `docs/prints-arq-fup/19-clipe-bench-passo5.png`, `19-tela-bench-passo5.png` — criados — print do clipe depois da troca de empresa
+- **Resumo das mudanças:** O código da imagem publicada ficou no commit `b0a6b3b249471fef313c1eb506adf243e400887f`. No Chromium, Super Admin de teste, By Koji → bench_passo5 → Simular conversa → Teste Documentos, o navegador chama a capacidade e o clipe aparece habilitado.
+- **Decisões e justificativas:** A tela só mostra o clipe quando `documentos.ativo === true`. Canal, send_mode, papel e provedor não escondem o botão. Como o caminho já mostra o clipe, não houve correção nem imagem nova. Daqui em diante, imagem só com árvore limpa e o commit como label.
+- **Comandos executados:** Playwright/Chromium em `https://painel.luxbrain.com.br/ia/simular` → clipe visível, botão habilitado, console sem erro.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** a imagem que está no ar não tem o label do commit; o próximo build é que grava.
+- **Próximos passos:** não republicar esta tela. No próximo build, `git status` limpo e label com o hash.
+
 ## [2026-10-22 18:40] — Limite de 15 MB, leitura do anexo e XML fora da nota
 - **Autor:** Grok 4.7
 - **Objetivo:** Confirmar o corpo de 15 MB, o cartão que acompanha o 202 e o aviso de XML que não é nota, antes de publicar.

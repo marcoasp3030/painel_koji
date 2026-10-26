@@ -1,3 +1,28 @@
+## Conversas — layout da lista e da sessão (26/10/2026)
+
+- A página divide a altura da tela entre a lista e a conversa aberta. A lista mostra iniciais, horário curto (Brasília), estado, canal e a última mensagem.
+- Ao abrir uma conversa, o histórico já fica nas mensagens recentes. Subir para ler o passado não puxa de volta; o atalho “Mensagens recentes” desce até o fim. Carregar mensagens anteriores mantém o ponto de leitura.
+- Bolhas: cliente à esquerda, IA em roxo à direita, atendente em dourado. Separador por dia. Enter envia; Shift+Enter quebra a linha.
+- No celular, a conversa ocupa a tela e há voltar para a lista. Atendimento e follow-up ficam recolhidos em “Atendimento e follow-up”.
+- Sem publicação.
+
+## Acesso de Marco à Luxbrain Testes (23/10/2026)
+
+- Usuário do painel: `marco.santos@ticway.com.br` (já era `super_admin`, sem vínculo de empresa). O login `admin@luxtia.local` é a conta de sistema, usada por último em 23/10.
+- Cliente do painel `Luxbrain Testes` (`luxbrain-testes`), ligado ao gateway `luxbrain_testes`. Marco é administrador dessa empresa (`tenant_users.is_tenant_admin`).
+- By Koji não mudou: cliente `koji`, gateway `bykoji`, sem membro novo.
+- O papel `super_admin` foi mantido. Sem ele, o seletor some e o By Koji deixa de abrir, porque ele não tem vínculo nessa empresa.
+- Conferido com essa conta: Simular conversa → Luxbrain Testes → Teste Documentos. O botão “Anexar documento” aparece habilitado. Print `docs/prints-arq-fup/20-anexar-luxbrain-testes.png`.
+
+## Clipe no Simular depois da troca de empresa (23/10/2026)
+
+- A imagem `painel:simular-doc-20261022` (`sha256:64a05bb61aca115a22eaad2350e71d0cd5c1fbb76840e22ef5363b24f75ea434`) está no git: commit `b0a6b3b249471fef313c1eb506adf243e400887f`. Volta continua `painel:arq-fup-20261022`.
+- Regra daqui em diante: não gerar imagem com árvore suja. O commit do build entra como label da imagem.
+- Caminho conferido no Chromium (Super Admin de teste): By Koji, troca para bench_passo5, Simular conversa, agente Teste Documentos (`ag_92b3853d724f146f03ecfdb9`).
+- O navegador chama a função de capacidades ao escolher o agente (id `36cd5d4b93f1…`, HTTP 200, `ativo: true`). Não chama na troca de empresa enquanto nenhum agente está escolhido; a lista de canais é refeita na troca. Ao escolher o agente, capacidade e detalhe são buscados de novo.
+- O clipe depende só de `ativo === true`. Neste momento: capacidade true, canal API `can_ddefc934b2a21dcca872234c` (API documentos, ativo), `send_mode` dry, papel super admin, provedor mock e `agente_mode` mock. O botão não está desabilitado. Console sem erro.
+- Print: `docs/prints-arq-fup/19-clipe-bench-passo5.png`. Sem correção e sem imagem nova.
+
 ## Simular conversa com documento — conferido, publicação em seguida (22/10/2026)
 
 - Clipe ao lado da mensagem só quando `GET …/agentes/{a}/capacidades` traz `documentos.ativo`. Aceita PDF, XML, JPG, PNG e WEBP até 10 MB. A mensagem junto é opcional.

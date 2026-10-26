@@ -6,12 +6,12 @@ import {
 } from "@/lib/gateway-followup.functions";
 import { AtendimentosConversa, ResumoAtendimento } from "./AtendimentosConversa";
 import { BlocoFollowUp, SeloOptOut } from "./FollowUpConversa";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { dataHora, Etiqueta, type ContextoGateway } from "./Gateway";
-import { Cartao } from "./Superficie";
+import { Cartao, Iniciais } from "./Superficie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,9 +51,66 @@ import {
 } from "@/lib/gateway/conversas";
 import { ROTULO_STATUS, type StatusPedido } from "@/lib/gateway/pedidos";
 import { Link } from "@tanstack/react-router";
-import { Pencil, ShoppingBag } from "lucide-react";
+import { ArrowDown, ArrowLeft, Pencil, Send, ShoppingBag } from "lucide-react";
 import type { CanalGateway } from "@/lib/gateway/tipos";
 import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
+
+const TOM_ESTADO: Record<EstadoConversa, string> = {
+  aguardando_atendente: "bg-gold-300/35 text-gold-700",
+  atendente: "bg-purple-100 text-purple-800",
+  bot: "bg-success-soft text-success",
+  encerrada: "bg-base-100 text-ink-500",
+};
+
+/** Horário curto da lista, no fuso de Brasília. */
+function tempoCurto(iso: string | null | undefined, agora: number) {
+  if (!iso) return "";
+  const instante = Date.parse(iso);
+  if (Number.isNaN(instante)) return "";
+  const minutos = Math.max(0, Math.round((agora - instante) / 60000));
+  if (minutos < 1) return "agora";
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) return `${horas} h`;
+  return new Date(instante).toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function diaDaMensagem(iso: string | null) {
+  if (!iso) return "";
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return "";
+  return data.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function horaDaMensagem(iso: string | null) {
+  if (!iso) return "—";
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return "—";
+  return data.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function SeloEstado({ estado }: { estado: EstadoConversa }) {
+  return (
+    <span
+      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${TOM_ESTADO[estado]}`}
+    >
+      {ROTULO_ESTADO[estado]}
+    </span>
+  );
+}
 
 function esbocoConversa(abertura: {
   conversa: string;
@@ -276,7 +333,7 @@ export function Conversas({
   const atual =
     itens.find((c) => c.conversation_id === selecionada?.conversation_id) ?? selecionada;
   return (
-    <div className="mt-6 space-y-4">
+    <div className="mt-4 flex h-[calc(100dvh-16rem)] min-h-[36rem] flex-col gap-3">
       {avisoEspera ? (
         <div role="status" className="rounded-lg bg-gold-300/20 p-3 text-sm">
           Há novas conversas aguardando atendente.{" "}
@@ -297,7 +354,7 @@ export function Conversas({
       {espera.isError ? (
         <p role="alert">Não foi possível carregar a fila de atendimento. {espera.error.message}</p>
       ) : null}
-      <Cartao className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+      <Cartao className="grid shrink-0 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-6">
         <label className="text-sm">
           Buscar contato
           <Input
@@ -375,7 +432,7 @@ export function Conversas({
           <Input type="datetime-local" value={desde} onChange={(e) => setDesde(e.target.value)} />
         </label>
       </Cartao>
-      <p className="text-xs text-ink-500">
+      <p className="shrink-0 text-xs text-ink-500">
         {soAguardando
           ? "Fila de espera: a mais antiga primeiro."
           : "Quem aguarda atendente aparece no topo. Encerradas só aparecem no filtro “Encerrada” ou em “Todos”."}
@@ -397,10 +454,20 @@ export function Conversas({
       ) : !leitura ? (
         <p className="text-sm text-ink-500">Preparando o acompanhamento das novidades…</p>
       ) : null}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_2fr]">
-        <Cartao className="overflow-hidden">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(17.5rem,22.5rem)_minmax(0,1fr)]">
+        <Cartao
+          className={`flex h-full min-h-0 flex-col overflow-hidden ${atual ? "max-lg:hidden" : ""}`}
+        >
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2.5">
+            <p className="text-sm font-medium text-ink-900">
+              {soAguardando ? "Fila de espera" : "Conversas"}
+            </p>
+            <p className="text-xs tabular-nums text-ink-500">{itens.length}</p>
+          </div>
           {itens.some((c) => c.aguardando_atendente_desde) ? (
-            <p className="border-b bg-gold-300/20 p-3 font-medium">Aguardando atendente</p>
+            <p className="shrink-0 border-b bg-gold-300/20 px-4 py-2 text-xs font-medium text-gold-700">
+              Há contatos aguardando atendente
+            </p>
           ) : null}
           {lista.isError ? (
             <p role="alert" className="p-4 text-destructive">
@@ -419,60 +486,88 @@ export function Conversas({
               Nenhuma conversa nesta página com os filtros escolhidos.
             </p>
           ) : null}
-          <div className="max-h-[65vh] overflow-y-auto">
-            {itens.map((c) => (
-              <button
-                key={c.conversation_id}
-                className={`block w-full border-b p-4 text-left hover:bg-purple-50 ${atual?.conversation_id === c.conversation_id ? "bg-purple-50" : ""}`}
-                onClick={() => setSelecionada(c)}
-              >
-                <div className="flex items-center gap-2">
-                  <strong className="min-w-0 truncate">{nomeContato(c)}</strong>
-                  {c.follow_up?.estado === "agendado" ? (
-                    <Etiqueta tom="roxo">Follow-up</Etiqueta>
-                  ) : null}
-                  <SeloOrigemNome origem={c.nome_origem} />
-                  {leitura && temNovidade(c, leitura) ? (
-                    <span
-                      className="size-2 shrink-0 rounded-full bg-purple-700"
-                      title="Novas mensagens"
-                      aria-label="Novas mensagens"
-                    />
-                  ) : null}
-                </div>
-                <p className="mt-1">
-                  <MarcaCanal
-                    conversa={c}
-                    canal={c.canal_id ? porCanal.get(c.canal_id) : undefined}
-                  />
-                </p>
-                <UltimaMensagemResumo conversa={c} />
-                <ResumoAtendimento atendimento={c.atendimento} />
-                <p className="mt-2 text-xs text-ink-500">
-                  {dataHora(c.ultima?.em ?? c.ultima_em)} ·{" "}
-                  {ROTULO_ESTADO[estadoConversa(c, agora)]}
-                  {c.unidade_preferida_nome || c.unidade_preferida
-                    ? ` · ${c.unidade_preferida_nome || c.unidade_preferida}`
-                    : ""}
-                </p>
-                {c.pedido_aberto ? (
-                  <p className="mt-1.5">
-                    <SeloPedidoAberto pedido={c.pedido_aberto} />
-                  </p>
-                ) : null}
-                {estadoConversa(c, agora) === "aguardando_atendente" &&
-                c.aguardando_atendente_desde ? (
-                  <div className="mt-2 space-y-1">
-                    <Etiqueta tom="alerta">
-                      {seloEspera(c.aguardando_atendente_desde, agora)}
-                    </Etiqueta>
-                    <p className="text-xs text-gold-700">
-                      {c.aguardando_motivo ? MOTIVO_ATENDENTE[c.aguardando_motivo] : ""}
-                    </p>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {itens.map((c) => {
+              const escolhida = atual?.conversation_id === c.conversation_id;
+              const estadoItem = estadoConversa(c, agora);
+              const novidade = Boolean(leitura && temNovidade(c, leitura));
+              const nome = nomeContato(c);
+              const quando = c.ultima?.em ?? c.ultima_em;
+              return (
+                <button
+                  key={c.conversation_id}
+                  type="button"
+                  aria-current={escolhida ? "true" : undefined}
+                  className={`flex w-full gap-3 border-b border-base-200 px-3 py-3 text-left transition-colors hover:bg-purple-50/80 ${
+                    escolhida
+                      ? "bg-purple-50 shadow-[inset_3px_0_0_0_var(--purple-700)]"
+                      : estadoItem === "aguardando_atendente"
+                        ? "bg-gold-300/10"
+                        : ""
+                  }`}
+                  onClick={() => setSelecionada(c)}
+                >
+                  <Iniciais nome={nome} />
+                  <div className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <strong
+                        className={`min-w-0 flex-1 truncate text-sm ${novidade ? "text-ink-900" : "font-medium text-ink-700"}`}
+                      >
+                        {nome}
+                      </strong>
+                      <time
+                        className="shrink-0 text-[11px] tabular-nums text-ink-500"
+                        dateTime={quando ?? undefined}
+                      >
+                        {tempoCurto(quando, agora)}
+                      </time>
+                      {novidade ? (
+                        <span
+                          className="size-2 shrink-0 rounded-full bg-purple-700"
+                          title="Novas mensagens"
+                          aria-label="Novas mensagens"
+                        />
+                      ) : null}
+                    </span>
+                    <UltimaMensagemResumo conversa={c} />
+                    <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <SeloEstado estado={estadoItem} />
+                      {c.follow_up?.estado === "agendado" ? (
+                        <Etiqueta tom="roxo">Follow-up</Etiqueta>
+                      ) : null}
+                      <SeloOrigemNome origem={c.nome_origem} />
+                    </span>
+                    <span className="mt-1 block truncate">
+                      <MarcaCanal
+                        conversa={c}
+                        canal={c.canal_id ? porCanal.get(c.canal_id) : undefined}
+                      />
+                      {c.unidade_preferida_nome || c.unidade_preferida
+                        ? ` · ${c.unidade_preferida_nome || c.unidade_preferida}`
+                        : ""}
+                    </span>
+                    <ResumoAtendimento atendimento={c.atendimento} compacto />
+                    {c.pedido_aberto ? (
+                      <span className="mt-1.5 block">
+                        <SeloPedidoAberto pedido={c.pedido_aberto} />
+                      </span>
+                    ) : null}
+                    {estadoItem === "aguardando_atendente" && c.aguardando_atendente_desde ? (
+                      <span className="mt-1.5 block space-y-1">
+                        <Etiqueta tom="alerta">
+                          {seloEspera(c.aguardando_atendente_desde, agora)}
+                        </Etiqueta>
+                        {c.aguardando_motivo ? (
+                          <span className="block text-xs text-gold-700">
+                            {MOTIVO_ATENDENTE[c.aguardando_motivo]}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
                   </div>
-                ) : null}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
           {!soAguardando && lista.hasNextPage ? (
             <Button
@@ -485,20 +580,27 @@ export function Conversas({
             </Button>
           ) : null}
         </Cartao>
-        {atual ? (
-          <Atendimento
-            key={atual.conversation_id}
-            ctx={ctx}
-            conversa={atual}
-            canal={atual.canal_id ? porCanal.get(atual.canal_id) : undefined}
-            agora={agora}
-            marcar={marcar}
-          />
-        ) : (
-          <Cartao className="p-12 text-center text-ink-500">
-            Escolha uma conversa para ler o histórico e atender.
-          </Cartao>
-        )}
+        <div className={`h-full min-h-0 min-w-0 ${atual ? "flex" : "hidden lg:flex"}`}>
+          {atual ? (
+            <Atendimento
+              key={atual.conversation_id}
+              ctx={ctx}
+              conversa={atual}
+              canal={atual.canal_id ? porCanal.get(atual.canal_id) : undefined}
+              agora={agora}
+              marcar={marcar}
+              voltar={() => setSelecionada(null)}
+            />
+          ) : (
+            <Cartao className="flex h-full min-h-0 w-full flex-col items-center justify-center px-8 text-center">
+              <p className="font-display text-2xl text-purple-800">Nenhuma conversa aberta</p>
+              <p className="mt-2 max-w-sm text-sm leading-relaxed text-ink-500">
+                Escolha um contato na lista. As mensagens mais recentes aparecem assim que a
+                conversa abre.
+              </p>
+            </Cartao>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -602,12 +704,14 @@ function Atendimento({
   canal,
   agora,
   marcar,
+  voltar,
 }: {
   ctx: ContextoGateway;
   conversa: Conversa;
   canal: CanalGateway | undefined;
   agora: number;
   marcar: (c: Conversa) => void;
+  voltar: () => void;
 }) {
   const enc = useServerFn(gerirAtendimentos);
   const listarFollow = useServerFn(listarFollowUps);
@@ -649,6 +753,51 @@ function Atendimento({
     refetchIntervalInBackground: false,
   });
   const itens = juntarMensagens(...(mensagens.data?.pages.map((p) => p.itens) ?? []));
+  const painel = useRef<HTMLDivElement>(null);
+  const coladoNoFim = useRef(true);
+  const preservarRolagem = useRef(false);
+  const alturaAntes = useRef(0);
+  const [longeDoFim, setLongeDoFim] = useState(false);
+  const ultimaId = itens.at(-1)?.id ?? 0;
+  const primeiraId = itens[0]?.id ?? 0;
+  const medirRolagem = useCallback(() => {
+    const el = painel.current;
+    if (!el) return;
+    const distancia = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const noFim = distancia < 80;
+    coladoNoFim.current = noFim;
+    setLongeDoFim(!noFim && el.scrollHeight > el.clientHeight + 80);
+  }, []);
+  const irParaRecentes = useCallback((suave: boolean) => {
+    const el = painel.current;
+    if (!el) return;
+    coladoNoFim.current = true;
+    setLongeDoFim(false);
+    el.scrollTo({ top: el.scrollHeight, behavior: suave ? "smooth" : "auto" });
+  }, []);
+  // Abre já nas mensagens recentes. Se a pessoa subiu para ler o passado, a rolagem fica onde está.
+  useLayoutEffect(() => {
+    const el = painel.current;
+    if (!el || !mensagens.isSuccess) return;
+    if (preservarRolagem.current) {
+      const ganho = el.scrollHeight - alturaAntes.current;
+      if (ganho > 0) el.scrollTop += ganho;
+      preservarRolagem.current = false;
+      medirRolagem();
+      return;
+    }
+    if (coladoNoFim.current) {
+      el.scrollTop = el.scrollHeight;
+      setLongeDoFim(false);
+    }
+  }, [
+    itens.length,
+    ultimaId,
+    primeiraId,
+    mensagens.isSuccess,
+    mensagens.dataUpdatedAt,
+    medirRolagem,
+  ]);
   const ultimaLida = itens.at(-1)?.enviada_em;
   useEffect(() => {
     if (
@@ -726,30 +875,59 @@ function Atendimento({
   const estado = estadoConversa(conversa, agora);
   const [editando, setEditando] = useState(false);
   const podeEditarNome = Boolean(conversa.contato_id) && conversa.nome_origem !== "anonimizado";
+  let diaAnterior = "";
   return (
-    <Cartao className="flex min-w-0 flex-col">
-      <div className="space-y-3 border-b p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="min-w-0 truncate font-display text-xl">{titulo}</h2>
-          <SeloOrigemNome origem={conversa.nome_origem} />
-          {conversa.contato_id ? (
-            <SeloOptOut
-              optOut={followUps.data?.opt_out}
-              podeReativar={ctx.papel === "plataforma" || ctx.papel === "admin"}
-              onReativar={(motivo) => reativar.mutate(motivo)}
-            />
-          ) : null}
-          {podeEditarNome && !editando ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-ink-500"
-              onClick={() => setEditando(true)}
-            >
-              <Pencil className="size-3.5" aria-hidden />
-              Editar nome
-            </Button>
-          ) : null}
+    <Cartao className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
+      <div className="shrink-0 space-y-3 border-b bg-card px-4 py-3">
+        <div className="flex items-start gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="mt-0.5 shrink-0 lg:hidden"
+            aria-label="Voltar para a lista"
+            onClick={voltar}
+          >
+            <ArrowLeft aria-hidden />
+          </Button>
+          <Iniciais nome={titulo} />
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="min-w-0 truncate font-display text-xl leading-tight">{titulo}</h2>
+              <SeloEstado estado={estado} />
+              <SeloOrigemNome origem={conversa.nome_origem} />
+              {conversa.contato_id ? (
+                <SeloOptOut
+                  optOut={followUps.data?.opt_out}
+                  podeReativar={ctx.papel === "plataforma" || ctx.papel === "admin"}
+                  onReativar={(motivo) => reativar.mutate(motivo)}
+                />
+              ) : null}
+              {podeEditarNome && !editando ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-ink-500"
+                  onClick={() => setEditando(true)}
+                >
+                  <Pencil className="size-3.5" aria-hidden />
+                  Editar nome
+                </Button>
+              ) : null}
+            </div>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
+              {fone && fone !== titulo ? <span>{fone}</span> : null}
+              <MarcaCanal conversa={conversa} canal={canal} />
+              {estado === "atendente" && conversa.bot_pausado_ate ? (
+                <span>até {dataHora(conversa.bot_pausado_ate)}</span>
+              ) : null}
+              {conversa.unidade_preferida_nome || conversa.unidade_preferida ? (
+                <span>
+                  Unidade: {conversa.unidade_preferida_nome || conversa.unidade_preferida}
+                </span>
+              ) : null}
+            </p>
+          </div>
         </div>
         {editando && conversa.contato_id ? (
           <EditarNome
@@ -759,33 +937,22 @@ function Atendimento({
             fechar={() => setEditando(false)}
           />
         ) : null}
-        {fone && fone !== titulo ? <p className="text-sm text-ink-500">{fone}</p> : null}
-        <MarcaCanal conversa={conversa} canal={canal} />
-        <p className="text-sm text-ink-500">
-          {ROTULO_ESTADO[estado]}
-          {estado === "atendente" && conversa.bot_pausado_ate
-            ? ` · até ${dataHora(conversa.bot_pausado_ate)}`
-            : ""}
-          {conversa.unidade_preferida_nome || conversa.unidade_preferida
-            ? ` · Unidade preferida: ${conversa.unidade_preferida_nome || conversa.unidade_preferida}`
-            : ""}
-        </p>
-        {conversa.pedido_aberto ? (
-          <Link
-            to="/ia/pedidos"
-            search={{ pedido: conversa.pedido_aberto.numero }}
-            className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
-            title="Abrir o pedido"
-          >
-            <SeloPedidoAberto pedido={conversa.pedido_aberto} />
-          </Link>
-        ) : null}
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          {conversa.pedido_aberto ? (
+            <Link
+              to="/ia/pedidos"
+              search={{ pedido: conversa.pedido_aberto.numero }}
+              className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+              title="Abrir o pedido"
+            >
+              <SeloPedidoAberto pedido={conversa.pedido_aberto} />
+            </Link>
+          ) : null}
+          <label className="text-xs text-ink-500">
             Pausa em minutos
             <Input
               type="number"
-              className="w-24"
+              className="mt-1 w-24"
               min={1}
               max={1440}
               value={minutos}
@@ -794,6 +961,7 @@ function Atendimento({
           </label>
           <Button
             variant="outline"
+            size="sm"
             disabled={acao.isPending || minutos < 1 || minutos > 1440 || !Number.isInteger(minutos)}
             onClick={() => acao.mutate("assumir")}
           >
@@ -801,6 +969,7 @@ function Atendimento({
           </Button>
           <Button
             variant="outline"
+            size="sm"
             disabled={acao.isPending || conversa.status !== "pausada"}
             onClick={() => acao.mutate("devolver")}
           >
@@ -808,91 +977,179 @@ function Atendimento({
           </Button>
         </div>
       </div>
-      <BlocoFollowUp
-        itens={followUps.data?.itens ?? []}
-        carregando={followUps.isLoading}
-        indisponivel={followUps.data?.indisponivel === true}
-        erro={followUps.error instanceof Error ? followUps.error.message : undefined}
-        podeCancelar
-        cancelando={cancelarFollow.isPending}
-        onCancelar={() => cancelarFollow.mutate()}
-      />
-      <AtendimentosConversa
-        atual={conversa.atendimento}
-        selecionado={atendimentoId}
-        selecionar={setAtendimentoId}
-        ler={lerAtendimentos}
-        agir={agirAtendimento}
-        mudou={() => {
-          void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
-          void mensagens.refetch();
-        }}
-      />
-      <div className="h-[50vh] space-y-3 overflow-y-auto p-4" aria-label="Histórico da conversa">
-        {mensagens.hasNextPage ? (
-          <Button
-            variant="ghost"
-            className="w-full"
-            disabled={mensagens.isFetchingNextPage}
-            onClick={() => void mensagens.fetchNextPage()}
-          >
-            Carregar mensagens anteriores
-          </Button>
-        ) : null}
-        {mensagens.isError ? (
-          <p role="alert" className="text-destructive">
-            {mensagens.error.message}
-          </p>
-        ) : null}
-        {mensagens.isLoading ? <p>Carregando histórico…</p> : null}
-        {itens.map((m) => (
-          <div
-            key={m.id}
-            className={`flex ${m.direcao === "saida" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-xl px-3 py-2 ${m.origem === "humano" ? "bg-gold-300/20" : m.direcao === "saida" ? "bg-purple-50" : "bg-base-100"}`}
-            >
-              <p className="whitespace-pre-wrap break-words text-sm">
-                {m.conteudo ?? "Mensagem sem texto"}
-              </p>
-              <p className="mt-1 text-xs text-ink-500">
-                {ORIGEM_MENSAGEM[m.origem] ?? m.origem} · {dataHora(m.enviada_em)}
-              </p>
+      <details className="shrink-0 border-b bg-base-50/80">
+        <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-ink-900">
+          Atendimento e follow-up
+        </summary>
+        <div className="max-h-64 overflow-y-auto">
+          <BlocoFollowUp
+            itens={followUps.data?.itens ?? []}
+            carregando={followUps.isLoading}
+            indisponivel={followUps.data?.indisponivel === true}
+            erro={followUps.error instanceof Error ? followUps.error.message : undefined}
+            podeCancelar
+            cancelando={cancelarFollow.isPending}
+            onCancelar={() => cancelarFollow.mutate()}
+          />
+          <AtendimentosConversa
+            atual={conversa.atendimento}
+            selecionado={atendimentoId}
+            selecionar={setAtendimentoId}
+            ler={lerAtendimentos}
+            agir={agirAtendimento}
+            mudou={() => {
+              void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+              void mensagens.refetch();
+            }}
+          />
+        </div>
+      </details>
+      <div className="relative min-h-0 flex-1 bg-[radial-gradient(circle_at_top,_rgba(165,148,189,0.16),_transparent_42%),linear-gradient(180deg,#faf9f7,#f4f2ee)]">
+        <div
+          ref={painel}
+          onScroll={medirRolagem}
+          className="absolute inset-0 space-y-2 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5"
+          aria-label="Histórico da conversa"
+        >
+          {mensagens.hasNextPage ? (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full bg-card"
+                disabled={mensagens.isFetchingNextPage}
+                onClick={() => {
+                  const el = painel.current;
+                  if (el) alturaAntes.current = el.scrollHeight;
+                  preservarRolagem.current = true;
+                  void mensagens.fetchNextPage();
+                }}
+              >
+                {mensagens.isFetchingNextPage ? "Carregando…" : "Mensagens anteriores"}
+              </Button>
             </div>
-          </div>
-        ))}
+          ) : null}
+          {mensagens.isError ? (
+            <p role="alert" className="text-center text-sm text-destructive">
+              {mensagens.error.message}
+            </p>
+          ) : null}
+          {mensagens.isLoading ? (
+            <div className="space-y-3" aria-hidden>
+              <div className="h-14 w-2/3 animate-pulse rounded-2xl bg-card" />
+              <div className="ml-auto h-14 w-1/2 animate-pulse rounded-2xl bg-purple-100" />
+              <div className="h-20 w-3/5 animate-pulse rounded-2xl bg-card" />
+            </div>
+          ) : null}
+          {!mensagens.isLoading && !mensagens.isError && itens.length === 0 ? (
+            <p className="py-12 text-center text-sm text-ink-500">
+              Nenhuma mensagem neste recorte.
+            </p>
+          ) : null}
+          {itens.map((m, indice) => {
+            const dia = diaDaMensagem(m.enviada_em);
+            const mostraDia = Boolean(dia) && dia !== diaAnterior;
+            diaAnterior = dia;
+            const saida = m.direcao === "saida";
+            const humano = m.origem === "humano";
+            const proxima = itens[indice + 1];
+            const fechaGrupo =
+              !proxima ||
+              proxima.direcao !== m.direcao ||
+              proxima.origem !== m.origem ||
+              diaDaMensagem(proxima.enviada_em) !== dia;
+            return (
+              <div key={m.id} className={fechaGrupo ? "pb-1" : ""}>
+                {mostraDia ? (
+                  <div className="sticky top-0 z-[1] mb-2 flex justify-center">
+                    <span className="rounded-full border border-base-200 bg-card/95 px-2.5 py-0.5 text-[11px] font-medium text-ink-500 shadow-sm">
+                      {dia}
+                    </span>
+                  </div>
+                ) : null}
+                <div className={`flex ${saida ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[min(85%,32rem)] px-3.5 py-2 shadow-[0_1px_2px_rgba(26,21,32,0.06)] ${
+                      humano
+                        ? "rounded-2xl rounded-br-md bg-gold-300/35 text-ink-900"
+                        : saida
+                          ? "rounded-2xl rounded-br-md bg-purple-700 text-base-50"
+                          : "rounded-2xl rounded-bl-md border border-base-200 bg-card text-ink-900"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                      {m.conteudo ?? "Mensagem sem texto"}
+                    </p>
+                    {fechaGrupo ? (
+                      <p
+                        className={`mt-1 text-[10px] ${saida && !humano ? "text-purple-200" : "text-ink-500"}`}
+                      >
+                        {ORIGEM_MENSAGEM[m.origem] ?? m.origem} · {horaDaMensagem(m.enviada_em)}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {longeDoFim ? (
+          <button
+            type="button"
+            className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-base-200 bg-card px-3 py-1.5 text-xs font-medium text-purple-800 shadow-[0_8px_20px_rgba(46,35,64,0.12)]"
+            onClick={() => irParaRecentes(true)}
+          >
+            <ArrowDown className="size-3.5" aria-hidden />
+            Mensagens recentes
+          </button>
+        ) : null}
       </div>
       <form
-        className="space-y-2 border-t p-4"
+        className="shrink-0 border-t bg-card px-3 py-3 sm:px-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (texto.trim() && !acao.isPending) acao.mutate("mensagens");
+          if (texto.trim() && !acao.isPending) {
+            coladoNoFim.current = true;
+            acao.mutate("mensagens");
+          }
         }}
       >
         {atendimentoId && atendimentoId !== conversa.atendimento?.id && (
-          <p className="text-sm text-amber-800">
+          <p className="mb-2 text-sm text-amber-800">
             Você está consultando um atendimento anterior. Uma nova mensagem será enviada no
             atendimento atual.
           </p>
         )}
-        <label className="text-sm" htmlFor="atendimento-texto">
-          Sua mensagem ao contato
-        </label>
-        <Textarea
-          id="atendimento-texto"
-          value={texto}
-          maxLength={20000}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder="Escreva como atendente…"
-        />
-        <p className="text-xs text-ink-500">
-          Enviar uma mensagem pausa o agente automaticamente. Em envio de teste, ela fica somente no
-          histórico.
+        <div className="flex items-end gap-2">
+          <Textarea
+            id="atendimento-texto"
+            value={texto}
+            maxLength={20000}
+            rows={2}
+            className="max-h-32 min-h-11 resize-none rounded-2xl bg-base-50"
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="Escreva a mensagem para o contato…"
+            aria-label="Sua mensagem ao contato"
+          />
+          <Button
+            type="submit"
+            className="h-11 shrink-0 rounded-full px-4"
+            disabled={acao.isPending || !texto.trim()}
+          >
+            <Send aria-hidden />
+            {acao.isPending ? "Enviando…" : "Enviar"}
+          </Button>
+        </div>
+        <p className="mt-1.5 text-[11px] text-ink-500">
+          Enter envia. Shift+Enter quebra a linha. Enviar pausa o agente. Em teste, a mensagem fica
+          só no histórico.
         </p>
-        <Button type="submit" disabled={acao.isPending || !texto.trim()}>
-          Enviar como atendente
-        </Button>
       </form>
     </Cartao>
   );

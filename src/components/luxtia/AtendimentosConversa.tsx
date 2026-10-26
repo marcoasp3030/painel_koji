@@ -113,7 +113,7 @@ export function AtendimentosConversa({
     }
   }
   return (
-    <section aria-label="Atendimentos" className="space-y-3 border-b bg-purple-50/50 p-4">
+    <section aria-label="Atendimentos" className="space-y-2 border-b bg-purple-50/40 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ResumoAtendimento atendimento={ultimo} />
         {ultimo && (
