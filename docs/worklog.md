@@ -1,3 +1,15 @@
+## [2026-10-28 18:17] — USUARIOS1 publicado
+- **Autor:** Grok 4.7
+- **Objetivo:** Commitar o USUARIOS1, publicar o painel junto com o gateway PAPEL1-a e conferir com uma conta de plataforma.
+- **Arquivos alterados:**
+ - `docs/worklog.md`, `instrucoes.md`, `README.md` — modificados — registro da publicação
+- **Resumo das mudanças:** O código saiu no commit `af380cb9d107fab8d166b552a9f1f5e8296ea7e0`. A imagem nova é `painel:af380cb9d107fab8d166b552a9f1f5e8296ea7e0` (`sha256:c52a7c65d9e15d0e9aa6b7a338b51a754b068f9f61fed52f8e610a4ba63150a6`). O container `03f5c95acff1` subiu às 18:13 (Brasília). Só o painel foi recriado. A volta é a imagem que estava no ar, `painel:volta-20261028T211243Z` (`sha256:7ba6a24b2b4184dd7be570a04919c4ae6db69abef7ffe17c6d7c15556acc96b5`).
+- **Decisões e justificativas:** O gateway no ar já era `gateway:20e4df4`. A chave de plataforma continua vazia: a sessão usa a chave da empresa e o gateway registra o aviso da fase A. A conferência entrou com `marco.santos@ticway.com.br`, não com a conta de emergência. Esse login gravou o prazo da segunda etapa até 04/11/2026 18:14 (Brasília).
+- **Comandos executados:** `sh docker/publicar-painel.sh` → OK. `sh docker/verificar-chave-no-bundle.sh` → chave 0 no bundle. `docker compose up -d --no-deps --no-build painel` → OK. Navegador: login, Usuários, Pedidos, Cardápio, Conversas e Comportamento do agente abriram. Gateway: 77 respostas 200 e nenhuma 403.
+- **Erros e resoluções:** O log do painel registrou pedidos abortados ao trocar de página no meio do carregamento. As telas abriram na sequência e o gateway não devolveu erro.
+- **Pendências / TODO:** `SMTP_HOST` e `GATEWAY_PLATFORM_KEY` continuam vazios. O Marco troca a senha da conta de emergência. O prazo de 7 dias do Marco começou nesta conferência.
+- **Próximos passos:** volta, se precisar: `docker tag painel:volta-20261028T211243Z painel_koji-painel && docker compose up -d --no-deps --no-build painel`
+
 ## [2026-10-28 16:15] — Ajustes do USUARIOS1 antes de publicar
 - **Autor:** Grok 4.7
 - **Objetivo:** Convite sem SMTP, chave de plataforma vazia sem quebrar a sessão, e conta de emergência, sem publicar.
@@ -475,17 +487,5 @@
 - **Erros e resoluções:** no teste novo, esperei exceção para dado inválido, mas `executarGestao` devolve `{ok:false}` (`expect…rejects` → "Received promise that resolved"); corrigida a expectativa, código sem mudança. ESLint acusou só formatação do Prettier nas linhas novas → `prettier --write`.
 - **Pendências / TODO:** prints da tela dependem de login do Marco no navegador do Cursor; nenhuma unidade real foi salva. Não commitado (regra do painel).
 - **Próximos passos:** prints (lista, formulário aberto sem salvar). Volta: `docker tag painel:cfg1a-20261011 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
-
-## [2026-10-11 16:46] — Proxy: liberar /gateway/health/ops (OPS1)
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Deixar o UptimeRobot ler `/gateway/health/ops` por fora, só com `ok` (200/503), sem motivos.
-- **Arquivos alterados:**
-  - `docker/Caddyfile` — modificado — `/gateway/health/ops` incluído no `@publico` do bloco `gateway_https`
-- **Resumo das mudanças:** Uma linha no proxy. A resposta pública já sai sem `motivos`: o Caddy envia `X-Forwarded-For` e o gateway trata a chamada como externa. Os motivos ficam só em `http://127.0.0.1:8100/health/ops`.
-- **Decisões e justificativas:** Configuração conferida com `caddy validate` numa cópia dentro do contêiner antes de tocar no arquivo. Arquivo reescrito no lugar (mesmo inode, o bind mount é de arquivo único) e `caddy reload`, sem recriar o contêiner. Nada no gateway mudou.
-- **Comandos executados:** `caddy validate` → OK; `caddy reload` → OK; por fora: `/gateway/health/ops` 503 `{"ok":false}` (esperado até o B2 estar no `.env`), `/gateway/health` 200, `/gateway/admin/v1/tenants` 404, `/gateway/api/v1/unidades` sem chave 401, `/gateway/health/opsx` 404, `/` 200; proxy "Up 3 days"
-- **Erros e resoluções:** nenhum. O aviso "Unnecessary header_up X-Forwarded-For" no reload já existia e não muda nada.
-- **Pendências / TODO:** não commitado (regra do painel). Backup do arquivo anterior em `/home/twadmin/backups/painel/pre-healthops-20261011T194613Z/Caddyfile`.
-- **Próximos passos:** depois das credenciais do B2 e do Telegram no `.env`, conferir `{"ok":true}` 200 por fora e apontar o UptimeRobot. Volta: `cat <backup>/Caddyfile > docker/Caddyfile` + `docker exec painel_koji-proxy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
 
 Entradas anteriores (até 11/10/2026) estão em `docs/worklog-arquivo/2026-10.md`.

@@ -1,3 +1,10 @@
+## USUARIOS1 — publicado (28/10/2026, 18:17 Brasília)
+
+- Commit `af380cb9d107fab8d166b552a9f1f5e8296ea7e0`. Imagem `painel:af380cb9d107fab8d166b552a9f1f5e8296ea7e0` = `sha256:c52a7c65d9e15d0e9aa6b7a338b51a754b068f9f61fed52f8e610a4ba63150a6`. Container `03f5c95acff1`, no ar desde 18:13 (Brasília). Só o painel foi recriado.
+- Volta: `painel:volta-20261028T211243Z` = `sha256:7ba6a24b2b4184dd7be570a04919c4ae6db69abef7ffe17c6d7c15556acc96b5` (a imagem `painel:conversas-20261026`). Comando: `docker tag painel:volta-20261028T211243Z painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
+- Gateway em produção: `gateway:20e4df4`. A chave de plataforma segue vazia; a sessão de plataforma usa a chave da empresa.
+- Conferido com `marco.santos@ticway.com.br` (plataforma), empresa By Koji, só leitura: Usuários, Pedidos, Cardápio, Conversas e Comportamento do agente abriram. O gateway respondeu 77 vezes com 200 e nenhuma com 403. O prazo da segunda etapa dessa conta ficou 04/11/2026 18:14 (Brasília). A conta de emergência não entrou.
+
 ## USUARIOS1 — ajustes antes da publicação (28/10/2026, 16:15 Brasília)
 
 - Sem SMTP, o convite mostra o link uma vez para quem convidou. Vale 24 horas, é de uso único e pode ser revogado na lista. Com `SMTP_HOST`, volta a ser por e-mail.
