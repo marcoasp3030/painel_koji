@@ -1,3 +1,4 @@
+import { peloMenos, telefoneParaPapel } from "@/lib/acesso/papeis";
 import { gerirAtendimentos } from "@/lib/gateway-enc1.functions";
 import {
   cancelarFollowUps,
@@ -871,7 +872,7 @@ function Atendimento({
     onError: (e: Error) => toast.error(e.message),
   });
   const titulo = nomeContato(conversa);
-  const fone = telefoneVisivel(conversa);
+  const fone = telefoneParaPapel(ctx.papel, telefoneVisivel(conversa));
   const estado = estadoConversa(conversa, agora);
   const [editando, setEditando] = useState(false);
   const podeEditarNome = Boolean(conversa.contato_id) && conversa.nome_origem !== "anonimizado";
@@ -899,7 +900,7 @@ function Atendimento({
               {conversa.contato_id ? (
                 <SeloOptOut
                   optOut={followUps.data?.opt_out}
-                  podeReativar={ctx.papel === "plataforma" || ctx.papel === "admin"}
+                  podeReativar={peloMenos(ctx.papel, "gestor")}
                   onReativar={(motivo) => reativar.mutate(motivo)}
                 />
               ) : null}
@@ -967,14 +968,16 @@ function Atendimento({
           >
             Assumir atendimento
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={acao.isPending || conversa.status !== "pausada"}
-            onClick={() => acao.mutate("devolver")}
-          >
-            Devolver ao agente
-          </Button>
+          {peloMenos(ctx.papel, "supervisor") ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={acao.isPending || conversa.status !== "pausada"}
+              onClick={() => acao.mutate("devolver")}
+            >
+              Devolver ao agente
+            </Button>
+          ) : null}
         </div>
       </div>
       <details className="shrink-0 border-b bg-base-50/80">
@@ -987,7 +990,7 @@ function Atendimento({
             carregando={followUps.isLoading}
             indisponivel={followUps.data?.indisponivel === true}
             erro={followUps.error instanceof Error ? followUps.error.message : undefined}
-            podeCancelar
+            podeCancelar={peloMenos(ctx.papel, "supervisor")}
             cancelando={cancelarFollow.isPending}
             onCancelar={() => cancelarFollow.mutate()}
           />
@@ -997,6 +1000,7 @@ function Atendimento({
             selecionar={setAtendimentoId}
             ler={lerAtendimentos}
             agir={agirAtendimento}
+            podeEncerrar={peloMenos(ctx.papel, "supervisor")}
             mudou={() => {
               void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
               void mensagens.refetch();

@@ -343,6 +343,42 @@ export function chaveCampo(caminho: string) {
 export function campoSoLeitura(c: CampoEsquema) {
   return c.tipo === "so_plataforma" || c.grupo === "operacao";
 }
+
+/** Sem efeito no agente hoje: a tela não mostra, nem na ficha nem no atendimento. */
+export const CAMPOS_SEM_EFEITO = [
+  "aviso_demora",
+  "media_wait_s",
+  "fora_do_horario_aceita_agendado",
+] as const;
+
+/** Botões e reações só saem em canal WhatsApp (uazapi). */
+export const CAMPOS_SO_WHATSAPP = [
+  "botoes_interativos",
+  "reacoes",
+  "reacoes_emojis",
+  "reacoes_max_dia",
+] as const;
+
+export const AVISO_SO_WHATSAPP = "Disponível só em canal WhatsApp";
+
+export function agenteTemWhatsapp(
+  canais: readonly { tipo: string; agente_id: string | null }[],
+  agenteId: string,
+) {
+  return canais.some((c) => c.agente_id === agenteId && c.tipo === "uazapi");
+}
+
+/** dd/mm no fuso de Brasília, para a faixa do rascunho. */
+export function diaMes(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(data);
+}
 export function campoDisponivel(c: CampoEsquema) {
   return c.disponivel !== false;
 }

@@ -1,5 +1,6 @@
-/** Aba Comportamento: mensagens, tempos, piloto e alertas, em linguagem simples. */
+/** Aba Comportamento: nome, piloto e alerta. Só a plataforma. O restante é rascunho. */
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -10,24 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { salvarComportamento } from "@/lib/gateway-agentes.functions";
-import { FALLBACK_PADRAO, problemaFallback } from "@/lib/gateway/fallback";
 import { problemaPiloto } from "@/lib/gateway/agentes";
 import { diferencas, paraTexto, valoresIniciais, type Formulario } from "@/lib/gateway/formulario";
 import type { AgenteDetalhe } from "@/lib/gateway/tipos";
 import { CAMPO_AGENTE, ORIGEM_VALOR } from "@/lib/gateway/vocabulario";
 
-const CAMPOS_EMPRESA = [
-  "aviso_demora",
-  "slow_notice_s",
-  "fallback",
-  "debounce_s",
-  "max_wait_s",
-  "pause_minutes",
-  "modo_piloto",
-  "contatos_permitidos",
-  "alerta_telefone",
-];
+/** Efeito imediato. Espera, pausa, falha e demora ficam no rascunho de atendimento. */
+const CAMPOS_PLATAFORMA = ["modo_piloto", "contatos_permitidos", "alerta_telefone"];
 
 type CampoAgente = keyof typeof CAMPO_AGENTE;
 
@@ -35,11 +27,8 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const queryClient = useQueryClient();
   const alterar = useServerFn(salvarComportamento);
   const plataforma = ctx.papel === "plataforma";
-  const podeEditar = plataforma || ctx.papel === "admin";
-  const campos = useMemo(
-    () => (plataforma ? ["nome", ...CAMPOS_EMPRESA] : CAMPOS_EMPRESA),
-    [plataforma],
-  );
+  const podeEditar = peloMenos(ctx.papel, "gestor");
+  const campos = useMemo(() => (plataforma ? ["nome", ...CAMPOS_PLATAFORMA] : []), [plataforma]);
   const original = agente as unknown as Record<string, unknown>;
 
   const [form, setForm] = useState<Formulario>(() => valoresIniciais(campos, original));
@@ -48,17 +37,10 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const alterados = diferencas(campos, form, original);
   const sujo = Object.keys(alterados).length > 0;
 
-  const [erroFallback, setErroFallback] = useState<string | null>(null);
-  const avisoFallback = problemaFallback(form["fallback"]);
   const salvar = useMutation({
     mutationFn: () =>
       alterar({ data: { empresa: ctx.empresa, agente: agente.id, dados: alterados } }),
-    onSuccess: async (r) => {
-      if (!r.ok) {
-        setErroFallback(r.erro.mensagem);
-        return;
-      }
-      setErroFallback(null);
+    onSuccess: async () => {
       toast.success("Comportamento salvo.");
       await queryClient.invalidateQueries({
         queryKey: ["gateway", "agente", ctx.empresa, agente.id],
@@ -71,7 +53,6 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const efetiva = agente.configuracao_efetiva ?? {};
   const origem = (efetiva["origem_config"] ?? {}) as Record<string, string>;
   const definir = (campo: string, valor: string) => {
-    if (campo === "fallback") setErroFallback(null);
     setForm((f) => ({ ...f, [campo]: valor }));
   };
 
@@ -138,13 +119,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
       <div className="space-y-1.5">
         <RotuloCampo htmlFor={id} campo={CAMPO_AGENTE[campo]} />
         {tipo === "longo" ? (
-          <Textarea
-            {...comum}
-            rows={2}
-            placeholder={campo === "fallback" ? FALLBACK_PADRAO : dica}
-            aria-invalid={campo === "fallback" && !!(avisoFallback || erroFallback)}
-            aria-describedby={campo === "fallback" ? "fallback-ajuda fallback-erro" : undefined}
-          />
+          <Textarea {...comum} rows={2} placeholder={dica} />
         ) : (
           <Input
             {...comum}
@@ -156,16 +131,6 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             className="max-w-xs"
           />
         )}
-        {campo === "fallback" ? (
-          <>
-            <p id="fallback-ajuda" className="text-xs text-ink-500">
-              Exemplo: {FALLBACK_PADRAO} Vazio usa o padrão.
-            </p>
-            <p id="fallback-erro" role="alert" className="text-sm text-destructive">
-              {avisoFallback || erroFallback}
-            </p>
-          </>
-        ) : null}
         {campo !== "nome" ? padrao(campo) : null}
       </div>
     );
@@ -180,59 +145,60 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
       className="space-y-6 pb-24"
       onSubmit={(e) => {
         e.preventDefault();
-        if (podeEditar && sujo && !avisoPiloto && !avisoFallback) salvar.mutate();
+        if (podeEditar && sujo && !avisoPiloto) salvar.mutate();
       }}
     >
-      {!podeEditar ? (
-        <p className="rounded-lg bg-purple-50 px-4 py-3 text-sm text-purple-800">
-          Seu acesso permite apenas consultar este agente.
-        </p>
+      {!plataforma ? (
+        <Cartao className="p-6">
+          <h2 className="font-display text-xl text-purple-800">Comportamento</h2>
+          <p className="mt-2 text-sm text-ink-700">
+            Espera, pausa, mensagem de falha e aviso de demora ficam em Configurações →
+            Comportamento do agente. A mudança entra em rascunho e só vale depois de publicar.
+          </p>
+          <Button asChild className="mt-4" variant="outline">
+            <Link to="/ia/configuracoes/comportamento">Abrir Comportamento do agente</Link>
+          </Button>
+        </Cartao>
       ) : null}
 
       {plataforma ? <Secao titulo="Identificação">{campoTexto({ campo: "nome" })}</Secao> : null}
 
-      <Secao titulo="Mensagens" descricao="O que o cliente recebe quando algo foge do normal.">
-        {campoTexto({ campo: "aviso_demora", tipo: "longo" })}
-        {campoTexto({ campo: "slow_notice_s", tipo: "numero", min: 0 })}
-        {campoTexto({ campo: "fallback", tipo: "longo" })}
-      </Secao>
-
-      <Secao titulo="Tempos" descricao="Quanto o agente espera antes de responder.">
-        {campoTexto({ campo: "debounce_s", tipo: "numero", min: 1, max: 15 })}
-        {campoTexto({ campo: "max_wait_s", tipo: "numero", min: 1, max: 30 })}
-        {campoTexto({ campo: "pause_minutes", tipo: "numero", min: 0 })}
-      </Secao>
-
-      <Secao titulo="Piloto" descricao="Libere o agente aos poucos.">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-base-200 bg-base-50 px-4 py-3">
-            <div>
-              <Label htmlFor="cmp-modo_piloto">{CAMPO_AGENTE.modo_piloto.rotulo}</Label>
-              <Ajuda>{CAMPO_AGENTE.modo_piloto.ajuda}</Ajuda>
+      {plataforma ? (
+        <>
+          <Secao titulo="Piloto" descricao="Libere o agente aos poucos.">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-base-200 bg-base-50 px-4 py-3">
+                <div>
+                  <Label htmlFor="cmp-modo_piloto">{CAMPO_AGENTE.modo_piloto.rotulo}</Label>
+                  <Ajuda>{CAMPO_AGENTE.modo_piloto.ajuda}</Ajuda>
+                </div>
+                <Switch
+                  id="cmp-modo_piloto"
+                  checked={pilotoLigado}
+                  disabled={!podeEditar}
+                  onCheckedChange={(v) => definir("modo_piloto", v ? "true" : "false")}
+                />
+              </div>
+              {padrao("modo_piloto")}
             </div>
-            <Switch
-              id="cmp-modo_piloto"
-              checked={pilotoLigado}
-              disabled={!podeEditar}
-              onCheckedChange={(v) => definir("modo_piloto", v ? "true" : "false")}
-            />
-          </div>
-          {padrao("modo_piloto")}
-        </div>
-        {pilotoLigado ? campoTexto({ campo: "contatos_permitidos", tipo: "longo" }) : null}
-        {avisoPiloto ? (
-          <p
-            role="alert"
-            className="rounded-lg bg-gold-300/25 px-4 py-3 text-sm text-gold-700 lg:col-span-2"
-          >
-            {avisoPiloto} Inclua pelo menos um número ou desligue o interruptor.
-          </p>
-        ) : null}
-      </Secao>
+            {pilotoLigado ? campoTexto({ campo: "contatos_permitidos", tipo: "longo" }) : null}
+            {avisoPiloto ? (
+              <p
+                role="alert"
+                className="rounded-lg bg-gold-300/25 px-4 py-3 text-sm text-gold-700 lg:col-span-2"
+              >
+                {avisoPiloto} Inclua pelo menos um número ou desligue o interruptor.
+              </p>
+            ) : null}
+          </Secao>
 
-      <Secao titulo="Alertas">{campoTexto({ campo: "alerta_telefone", tipo: "telefone" })}</Secao>
+          <Secao titulo="Alertas">
+            {campoTexto({ campo: "alerta_telefone", tipo: "telefone" })}
+          </Secao>
+        </>
+      ) : null}
 
-      {podeEditar && sujo ? (
+      {plataforma && podeEditar && sujo ? (
         <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-200 bg-card px-5 py-3 shadow-[0_10px_28px_rgba(46,35,64,0.12)]">
           <p className="text-sm text-ink-700">
             {avisoPiloto ? "Corrija o piloto para salvar." : "Há alterações não salvas."}
@@ -246,10 +212,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             >
               Descartar
             </Button>
-            <Button
-              type="submit"
-              disabled={salvar.isPending || Boolean(avisoPiloto || avisoFallback)}
-            >
+            <Button type="submit" disabled={salvar.isPending || Boolean(avisoPiloto)}>
               {salvar.isPending ? "Salvando…" : "Salvar alterações"}
             </Button>
           </div>

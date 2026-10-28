@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { DocumentosTela } from "@/components/luxtia/documentos/Documentos";
 import {
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/ia/documentos")({
     <PaginaGateway
       titulo="Documentos"
       descricao="Arquivos recebidos pelo formulário ou pelo n8n, com a leitura e a confiança de cada campo."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor"]}
     >
       {(ctx) => <Tela key={ctx.empresa ?? "empresa"} ctx={ctx} />}
     </PaginaGateway>
@@ -63,7 +64,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
   const { documento } = Route.useSearch();
   const [aberto, setAberto] = useState<string | null>(documento ?? null);
   const [pagina, setPagina] = useState<TextoPagina | null>(null);
-  const podeApagar = ctx.papel === "plataforma" || ctx.papel === "admin";
+  const podeApagar = peloMenos(ctx.papel, "gestor");
   const periodoOk = periodoDocumentosValido(filtro);
   const consulta = {
     empresa: ctx.empresa,

@@ -221,12 +221,14 @@ function Auditoria() {
                   <td className="px-4 py-3">
                     <span
                       className={
-                        row.status === "success"
-                          ? "rounded-full border border-base-200 px-2.5 py-1 text-xs text-purple-800"
-                          : "rounded-full border border-destructive/40 px-2.5 py-1 text-xs text-destructive"
+                        row.status === "alerta"
+                          ? "rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs text-amber-950"
+                          : row.status === "success"
+                            ? "rounded-full border border-base-200 px-2.5 py-1 text-xs text-purple-800"
+                            : "rounded-full border border-destructive/40 px-2.5 py-1 text-xs text-destructive"
                       }
                     >
-                      {row.status === "success" ? "Concluída" : "Falhou"}
+                      {row.status === "alerta" ? "Alerta" : row.status === "success" ? "Concluída" : "Falhou"}
                     </span>
                   </td>
                 </tr>

@@ -3,7 +3,7 @@ import { criarClienteGateway } from "./cliente.server";
 import { criarModuloGateway, type PapelGateway } from "./modulo.server";
 import { executarAvisos } from "./avisos.server";
 import { filtrarMenu, TENANT_NAV } from "../nav";
-async function montar(papel: PapelGateway = "admin", respostas: Response[] = []) {
+async function montar(papel: PapelGateway = "gestor", respostas: Response[] = []) {
   const chamadas: {
     url: string;
     role: string | null;
@@ -16,11 +16,19 @@ async function montar(papel: PapelGateway = "admin", respostas: Response[] = [])
       userId: "u",
       email: "sessao@teste.com",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "teste", ativo: true, admin: papel === "admin" }],
+      vinculos: [
+        {
+          gatewayTenantId: "teste",
+          ativo: true,
+          admin: papel === "gestor",
+          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+        },
+      ],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway/admin/v1",
       chave: "chave-sintetica-testes",
+      chavePlataforma: "chave-plataforma-sintetica",
       fetch: (async (url: URL, init: RequestInit) => {
         const h = new Headers(init.headers);
         chamadas.push({
@@ -37,11 +45,12 @@ async function montar(papel: PapelGateway = "admin", respostas: Response[] = [])
   return { sessao: await modulo.sessao({ userId: "u", email: "forjado@teste.com" }), chamadas };
 }
 test("PED1-b X-Role e X-Actor vêm do perfil em GET/escrita e chamadas globais", async () => {
-  for (const papel of ["membro", "admin", "plataforma"] as const) {
+  for (const papel of ["funcionario", "gestor", "plataforma"] as const) {
     const c = await montar(papel);
     const t = await c.sessao.tenant("teste");
     await t.chamar("GET", ["pedidos", "contagem"]);
-    await t.chamar("POST", ["pedidos", "123", "avisos", "confirmado", "reenviar"]);
+    if (papel !== "funcionario")
+      await t.chamar("POST", ["pedidos", "123", "avisos", "confirmado", "reenviar"]);
     expect(c.chamadas.every((x) => x.role === papel && x.actor === "sessao@teste.com")).toBe(true);
     if (papel === "plataforma") {
       const p = await c.sessao.plataforma();
@@ -51,7 +60,7 @@ test("PED1-b X-Role e X-Actor vêm do perfil em GET/escrita e chamadas globais",
   }
 });
 test("PED1-b membro não altera textos: erro 403 claro, sem chamada; menu oculto", async () => {
-  const c = await montar("membro");
+  const c = await montar("funcionario");
   const r = await executarAvisos(c.sessao, {
     acao: "salvar",
     status: "confirmado",
@@ -61,14 +70,14 @@ test("PED1-b membro não altera textos: erro 403 claro, sem chamada; menu oculto
   expect(r.ok).toBe(false);
   if (!r.ok) {
     expect(r.erro.status).toBe(403);
-    expect(r.erro.mensagem).toContain("administradores");
+    expect(r.erro.mensagem).toContain("supervisor");
   }
   expect(c.chamadas).toHaveLength(0);
   const t = await c.sessao.tenant();
   await expect(
     t.chamar("PUT", ["pedidos", "avisos", "confirmado"], { corpo: { texto: "teste" } }),
   ).rejects.toThrow();
-  expect(filtrarMenu(TENANT_NAV, "membro").some((i) => i.to.includes("configuracoes/avisos"))).toBe(
+  expect(filtrarMenu(TENANT_NAV, "funcionario").some((i) => i.to.includes("configuracoes/avisos"))).toBe(
     false,
   );
 });
@@ -108,7 +117,7 @@ test("PED1-b configuração por modalidade, null restaura, prévia passa sintaxe
 });
 test("PED1-b 400 de texto e 403 do gateway chegam ao formulário", async () => {
   for (const status of [400, 403]) {
-    const c = await montar("admin", [
+    const c = await montar("gestor", [
       Response.json(
         {
           erro: {
@@ -135,7 +144,7 @@ test("PED1-b 400 de texto e 403 do gateway chegam ao formulário", async () => {
   }
 });
 test("PED1-b reenvio do membro e conflito incerto não são repetidos automaticamente", async () => {
-  const c = await montar("membro", [
+  const c = await montar("supervisor", [
     Response.json(
       { erro: { codigo: "CONFLICT", detalhes: { campo: "aviso", motivo: "entrega_incerta" } } },
       { status: 409 },

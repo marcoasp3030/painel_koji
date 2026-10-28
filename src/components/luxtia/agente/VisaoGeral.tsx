@@ -7,8 +7,14 @@ import { Loader2, MessagesSquare, Play } from "lucide-react";
 import { Ajuda, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { Cartao } from "@/components/luxtia/Superficie";
 import { Button } from "@/components/ui/button";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { testarAgente } from "@/lib/gateway-agentes.functions";
-import { resumoProntidao, type AcaoProntidao, type ItemProntidao } from "@/lib/gateway/prontidao";
+import {
+  itensDaVisao,
+  resumoProntidao,
+  type AcaoProntidao,
+  type ItemProntidao,
+} from "@/lib/gateway/prontidao";
 import type { AgenteDetalhe, ResultadoTeste } from "@/lib/gateway/tipos";
 import { CAMPO_AGENTE, RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 import { Checklist } from "./Checklist";
@@ -29,8 +35,9 @@ export function VisaoGeral({
   onSituacao: (status: "ativo" | "pausado" | "rascunho") => void;
 }) {
   const plataforma = ctx.papel === "plataforma";
-  const podeEditar = plataforma || ctx.papel === "admin";
-  const { prontos, total } = resumoProntidao(itens);
+  const podeEditar = peloMenos(ctx.papel, "gestor");
+  const visiveis = itensDaVisao(itens, ctx.papel);
+  const { prontos, total } = resumoProntidao(visiveis);
   const situacoes = (plataforma ? ["ativo", "pausado", "rascunho"] : ["ativo", "pausado"]) as (
     "ativo" | "pausado" | "rascunho"
   )[];
@@ -52,7 +59,7 @@ export function VisaoGeral({
         </div>
         <div className="mt-3">
           <Checklist
-            itens={itens}
+            itens={visiveis}
             papel={ctx.papel}
             status={agente.status}
             ocupado={salvando}

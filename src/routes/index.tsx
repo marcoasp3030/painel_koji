@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { aceitarConvite, verConvite } from "@/lib/usuarios.functions";
 import { bootstrapSuperAdmin } from "@/lib/platform.functions";
 import { LuxtiaWordmark, GoldRule } from "@/components/luxtia/Brand";
 import { Button } from "@/components/ui/button";
@@ -29,15 +31,24 @@ export const Route = createFileRoute("/")({
   component: Login,
 });
 
+function tokenConvite() {
+  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+  return new URLSearchParams(hash).get("convite") ?? new URLSearchParams(window.location.search).get("convite");
+}
+
 function Login() {
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
+    const convite = tokenConvite();
+    setToken(convite);
     void bootstrapSuperAdmin();
+    if (convite) return;
     void supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/painel", replace: true });
     });
@@ -85,10 +96,26 @@ function Login() {
           <div className="lg:hidden">
             <LuxtiaWordmark tone="dark" />
           </div>
-          <h2 className="mt-8 font-display text-3xl text-purple-800 lg:mt-0">Acessar a plataforma</h2>
-          <p className="mt-2 text-ink-500">Use o acesso fornecido pela administração.</p>
+          <h2 className="mt-8 font-display text-3xl text-purple-800 lg:mt-0">
+            {token ? "Criar senha" : "Acessar a plataforma"}
+          </h2>
+          <p className="mt-2 text-ink-500">
+            {token ? "Este convite vale uma vez." : "Use o acesso fornecido pela administração."}
+          </p>
           <GoldRule className="mt-6" />
 
+          {token ? (
+            <AceitarConvite
+              token={token}
+              onPronto={(email) => {
+                window.history.replaceState(null, "", window.location.pathname);
+                setToken(null);
+                setIdentifier(email);
+                setPassword("");
+                if (email) setError("Senha definida. Entre com ela.");
+              }}
+            />
+          ) : (
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="identifier">Usuário ou e-mail</Label>
@@ -122,8 +149,122 @@ function Login() {
               {loading ? "Entrando…" : "Entrar"}
             </Button>
           </form>
+          )}
         </div>
       </section>
     </div>
+  );
+}
+
+function AceitarConvite({
+  token,
+  onPronto,
+}: {
+  token: string;
+  onPronto: (email: string) => void;
+}) {
+  const navigate = useNavigate();
+  const ver = useServerFn(verConvite);
+  const aceitar = useServerFn(aceitarConvite);
+  const [email, setEmail] = useState<string | null>(null);
+  const [senha, setSenha] = useState("");
+  const [confirma, setConfirma] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    void ver({ data: { token } })
+      .then((r) => {
+        if (vivo) setEmail(r.email);
+      })
+      .catch(() => {
+        if (vivo) setErro("Este convite não vale mais.");
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [token, ver]);
+
+  async function enviar(event: React.FormEvent) {
+    event.preventDefault();
+    if (senha.length < 8) {
+      setErro("A senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (senha !== confirma) {
+      setErro("As senhas não conferem.");
+      return;
+    }
+    setOcupado(true);
+    setErro(null);
+    try {
+      const r = await aceitar({ data: { token, senha } });
+      window.history.replaceState(null, "", window.location.pathname);
+      const entrou = await supabase.auth.signInWithPassword({ email: r.email, password: senha });
+      if (entrou.error) {
+        onPronto(r.email);
+        return;
+      }
+      navigate({ to: "/painel", replace: true });
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Este convite não vale mais.");
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  if (!email && erro) {
+    return (
+      <div className="mt-8 space-y-4">
+        <p role="alert" className="text-sm text-destructive">
+          {erro}
+        </p>
+        <Button type="button" variant="outline" className="w-full" onClick={() => onPronto("")}>
+          Ir para o acesso
+        </Button>
+      </div>
+    );
+  }
+  if (!email) return <p className="mt-8 text-sm text-ink-500">Conferindo o convite…</p>;
+
+  return (
+    <form onSubmit={(event) => void enviar(event)} className="mt-8 space-y-5">
+      <p className="text-sm text-ink-500">{email}</p>
+      <div className="space-y-2">
+        <Label htmlFor="senha-convite">Senha</Label>
+        <Input
+          id="senha-convite"
+          type="password"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          autoComplete="new-password"
+          className="bg-base-50"
+          required
+          minLength={8}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="confirma-convite">Confirme a senha</Label>
+        <Input
+          id="confirma-convite"
+          type="password"
+          value={confirma}
+          onChange={(e) => setConfirma(e.target.value)}
+          autoComplete="new-password"
+          className="bg-base-50"
+          required
+          minLength={8}
+        />
+      </div>
+      {erro ? (
+        <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          {erro}
+        </p>
+      ) : null}
+      <Button type="submit" className="w-full" disabled={ocupado}>
+        {ocupado ? "Salvando…" : "Definir senha e entrar"}
+      </Button>
+    </form>
   );
 }

@@ -21,7 +21,7 @@ function PaginaPedidos() {
     <PaginaGateway
       titulo="Pedidos"
       descricao="Acompanhe os pedidos da empresa e avance só o próximo passo que a loja pode dar."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor", "funcionario"]}
     >
       {(ctx) => <Pedidos key={ctx.empresa ?? "vinculada"} ctx={ctx} abrir={busca.pedido} />}
     </PaginaGateway>

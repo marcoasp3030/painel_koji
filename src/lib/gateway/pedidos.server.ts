@@ -1,6 +1,7 @@
 import type { Json } from "./tipos";
 import { pedidoSchema, type PedidoEntrada } from "./pedidos";
 import { AcessoNegado, type ModuloGateway } from "./modulo.server";
+import { telefoneParaPapel } from "@/lib/acesso/papeis";
 import { GatewayErro, mensagemParaUsuario } from "./erros";
 
 type Sessao = Awaited<ReturnType<ModuloGateway["sessao"]>>;
@@ -84,6 +85,7 @@ export async function executarPedidos(
     if (d.acao === "detalhe") {
       const { dados } = await t.chamar("GET", ["pedidos", d.numero]);
       await comNomeAtual(t, [dados as PedidoComCliente]);
+      mascararTelefones(t.papel, [dados as PedidoComCliente]);
       return { ok: true, dados: dados as Json };
     }
     if (d.acao === "status") {
@@ -101,6 +103,7 @@ export async function executarPedidos(
       query: queryLista(d),
     });
     await comNomeAtual(t, dados.itens ?? []);
+    mascararTelefones(t.papel, dados.itens ?? []);
     return { ok: true, dados: dados as Json };
   } catch (e) {
     if (e instanceof AcessoNegado) throw e;
@@ -171,7 +174,7 @@ export async function comNomeAtual(t: Escopo, pedidos: PedidoComCliente[]) {
     const faltam = [
       ...new Set(
         alvos
-          .filter((p) => !nomes.has(p.conversation_id!))
+          .filter((p) => t.papel !== "funcionario" && !nomes.has(p.conversation_id!))
           .map((p) => (p.cliente?.telefone ?? "").replace(/\D/g, ""))
           .filter((d) => d.length >= 8),
       ),
@@ -187,6 +190,13 @@ export async function comNomeAtual(t: Escopo, pedidos: PedidoComCliente[]) {
   } catch (e) {
     if (e instanceof AcessoNegado) throw e;
     // Nome atual é complemento: sem ele o pedido segue com o nome gravado no fechamento.
+  }
+}
+
+function mascararTelefones(papel: Escopo["papel"], pedidos: PedidoComCliente[]) {
+  for (const p of pedidos) {
+    if (p.cliente?.telefone)
+      p.cliente.telefone = telefoneParaPapel(papel, p.cliente.telefone);
   }
 }
 

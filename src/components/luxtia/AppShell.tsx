@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoGateway } from "@/lib/gateway.functions";
+import { estadoSeguranca } from "@/lib/seguranca.functions";
+import { AtivarSegundaEtapa, FaixaSeguranca } from "./Seguranca";
 import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
 import {
   agruparMenu,
@@ -69,6 +71,7 @@ export function AppShell({
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuAberto, setMenuAberto] = useState(false);
+  const [segurancaAberta, setSegurancaAberta] = useState(false);
   const [recolhido, setRecolhido] = useState(false);
   const textoMenu = recolhido ? "lg:hidden" : "";
 
@@ -100,6 +103,13 @@ export function AppShell({
   }, [menuAberto]);
 
   const buscarAcesso = useServerFn(obterAcessoGateway);
+  const buscarSeguranca = useServerFn(estadoSeguranca);
+  const seguranca = useQuery({
+    queryKey: ["seguranca"],
+    queryFn: () => buscarSeguranca(),
+    staleTime: 30_000,
+    retry: false,
+  });
   const buscarModulos = useServerFn(obterModulosEmpresa);
   const acesso = useQuery({
     queryKey: ["gateway", "acesso"],
@@ -145,6 +155,20 @@ export function AppShell({
     queryClient.clear();
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
+  }
+
+  if (seguranca.data?.bloqueado) {
+    return (
+      <div className="min-h-screen bg-base-100">
+        <FaixaSeguranca prazo={seguranca.data.prazo_ate} bloqueado />
+        <AtivarSegundaEtapa onPronta={() => void seguranca.refetch()} />
+        <div className="px-6 pb-8">
+          <button type="button" className="text-sm underline" onClick={() => void sair()}>
+            Sair
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -304,8 +328,44 @@ export function AppShell({
                 {atual?.label ?? "Painel"}
               </p>
             </div>
+            <button
+              type="button"
+              className="rounded-lg border border-base-200 bg-card px-3 py-1.5 text-sm text-purple-800"
+              onClick={() => setSegurancaAberta(true)}
+            >
+              Segurança
+            </button>
           </header>
-          <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:py-6">{children}</main>
+          {seguranca.data?.obrigatorio && seguranca.data.fatores === 0 ? (
+            <FaixaSeguranca
+              prazo={seguranca.data.prazo_ate}
+              bloqueado={seguranca.data.bloqueado}
+            />
+          ) : null}
+          <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:py-6">
+            {seguranca.data?.bloqueado ? (
+              <AtivarSegundaEtapa onPronta={() => void seguranca.refetch()} />
+            ) : (
+              children
+            )}
+          </main>
+          {segurancaAberta ? (
+            <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 p-6">
+              <div className="w-full max-w-lg rounded-xl bg-card shadow-lg">
+                <AtivarSegundaEtapa
+                  onPronta={() => {
+                    setSegurancaAberta(false);
+                    void seguranca.refetch();
+                  }}
+                />
+                <div className="px-6 pb-6">
+                  <button type="button" className="text-sm underline" onClick={() => setSegurancaAberta(false)}>
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </TooltipProvider>

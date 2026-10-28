@@ -2,6 +2,7 @@
  * Checklist de prontidão do agente. Só calcula; a tela decide, pelo papel,
  * se mostra o botão que leva ao que falta.
  */
+import { peloMenos } from "@/lib/acesso/papeis";
 import type { AgenteDetalhe, CanalGateway, CircuitoAgente, PapelGateway } from "./tipos";
 
 export type AcaoProntidao = "ativar" | "criar_canal" | "ver_canais" | "configurar_ia" | "ativar_ia";
@@ -161,6 +162,14 @@ export function prontidao(
   return itens;
 }
 
+/** Envio, respostas e Skyone são configuração da plataforma: a empresa não vê. */
+const CHAVES_SO_PLATAFORMA = new Set(["skyone", "respostas", "envio"]);
+
+export function itensDaVisao(itens: ItemProntidao[], papel: PapelGateway) {
+  if (papel === "plataforma") return itens;
+  return itens.filter((item) => !CHAVES_SO_PLATAFORMA.has(item.chave));
+}
+
 export function resumoProntidao(itens: ItemProntidao[]) {
   const contados = itens.filter((i) => i.estado !== "info");
   return { prontos: contados.filter((i) => i.estado === "ok").length, total: contados.length };
@@ -169,7 +178,7 @@ export function resumoProntidao(itens: ItemProntidao[]) {
 /** Quem pode resolver cada pendência pelo painel (o servidor confere de novo). */
 export function acaoPermitida(acao: AcaoProntidao, papel: PapelGateway, status: string) {
   if (papel === "plataforma") return true;
-  if (acao === "ver_canais") return true;
-  if (acao === "ativar") return papel === "admin" && status === "pausado";
+  if (acao === "ver_canais") return peloMenos(papel, "gestor");
+  if (acao === "ativar") return peloMenos(papel, "gestor") && status === "pausado";
   return false;
 }

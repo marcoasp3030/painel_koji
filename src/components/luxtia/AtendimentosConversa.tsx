@@ -45,6 +45,7 @@ export function AtendimentosConversa({
   ler,
   agir,
   mudou,
+  podeEncerrar = true,
 }: {
   atual?: AtendimentoConversa | null | undefined;
   selecionado: string;
@@ -52,6 +53,7 @@ export function AtendimentosConversa({
   ler: (cursor?: number) => Promise<RespostaEnc1>;
   agir: (acao: "encerrar" | "reabrir") => Promise<RespostaEnc1>;
   mudou: () => void;
+  podeEncerrar?: boolean;
 }) {
   const [pagina, setPagina] = useState<PaginaAtendimentos | null>(null),
     [erro, setErro] = useState(""),
@@ -116,7 +118,7 @@ export function AtendimentosConversa({
     <section aria-label="Atendimentos" className="space-y-2 border-b bg-purple-50/40 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ResumoAtendimento atendimento={ultimo} />
-        {ultimo && (
+        {ultimo && podeEncerrar && (
           <Button
             size="sm"
             variant="outline"

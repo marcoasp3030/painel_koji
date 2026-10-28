@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { peloMenos } from "@/lib/acesso/papeis";
 import type { ContextoGateway } from "./Gateway";
 import { Etiqueta } from "./Gateway";
 import { useGestao, EditorFaixas } from "./gestao-base";
@@ -148,7 +149,7 @@ export function OperacaoVarias({
   onLimpar: () => void;
 }) {
   const [modo, setModo] = useState<"pausa" | "excecao" | "feriados" | null>(null);
-  if (ctx.papel === "membro") return null;
+  if (!peloMenos(ctx.papel, "supervisor")) return null;
   const escolhidas = unidades.filter((u) => selecionadas.includes(u.id));
   return (
     <>

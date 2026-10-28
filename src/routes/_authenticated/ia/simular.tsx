@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/ia/simular")({
     <PaginaGateway
       titulo="Simular conversa"
       descricao="Converse com um agente como se fosse um cliente, por um canal API (para testes). Nada é enviado aos clientes."
-      papeis={["plataforma", "admin"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
     >
       {(ctx) => <SimularPagina key={ctx.empresa ?? "empresa"} ctx={ctx} />}
     </PaginaGateway>

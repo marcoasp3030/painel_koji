@@ -25,7 +25,7 @@ function PaginaConversas() {
     <PaginaGateway
       titulo="Conversas"
       descricao="Acompanhe as mensagens e assuma o atendimento quando precisar."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor", "funcionario"]}
     >
       {(ctx) => (
         <Conversas

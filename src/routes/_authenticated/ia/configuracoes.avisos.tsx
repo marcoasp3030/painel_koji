@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/ia/configuracoes/avisos")(
       sobretitulo="Configurações"
       titulo="Avisos de pedido"
       descricao="Configurações da empresa"
-      papeis={["plataforma", "admin"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
     >
       {(ctx) => <AvisosPedido key={ctx.empresa ?? "vinculada"} ctx={ctx} />}
     </PaginaGateway>

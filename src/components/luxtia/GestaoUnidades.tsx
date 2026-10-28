@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { useGestao, EditorFaixas, botoesPausaRapida, textoPrazo } from "./gestao-base";
 import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
 import { pedidosEmUso } from "@/lib/gateway/modulos";
@@ -133,8 +134,10 @@ export function GestaoUnidades({
     refetchInterval: 30000,
     refetchIntervalInBackground: false,
   });
-  const admin = ctx.papel !== "membro";
-  const secaoEfetiva: SecaoUnidade = admin ? secao : "agenda";
+  const gestor = peloMenos(ctx.papel, "gestor");
+  const admin = peloMenos(ctx.papel, "supervisor");
+  const secaoEfetiva: SecaoUnidade =
+    !admin || (secao === "horarios" && !gestor) ? "agenda" : secao;
   const itens = q.data?.itens ?? [];
   const termo = busca.trim().toLocaleLowerCase("pt-BR");
   const visiveis = itens.filter((u) =>
@@ -190,7 +193,7 @@ export function GestaoUnidades({
             className="mt-1 max-w-md"
           />
         </label>
-        {admin && (
+        {gestor && (
           <Button className="min-h-11" onClick={() => setEditar("nova")}>
             Nova unidade
           </Button>
@@ -278,7 +281,7 @@ export function GestaoUnidades({
                     >
                       Agenda
                     </Button>
-                    {admin && (
+                    {gestor && (
                       <Button
                         className="min-h-11 px-2"
                         variant={
@@ -301,14 +304,16 @@ export function GestaoUnidades({
                       </Button>
                     )}
                   </div>
-                  <Button
-                    className="min-h-11 w-full"
-                    disabled={g.busy}
-                    onClick={() => (u.situacao.motivo === "pausa" ? reabrir(u.id) : setPausar(u))}
-                  >
-                    {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
-                  </Button>
                   {admin && (
+                    <Button
+                      className="min-h-11 w-full"
+                      disabled={g.busy}
+                      onClick={() => (u.situacao.motivo === "pausa" ? reabrir(u.id) : setPausar(u))}
+                    >
+                      {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
+                    </Button>
+                  )}
+                  {gestor && (
                     <Button
                       className="min-h-11 w-full"
                       variant="outline"
@@ -329,6 +334,7 @@ export function GestaoUnidades({
                 id={unidadeId}
                 secao={secaoEfetiva}
                 admin={admin}
+                gestor={gestor}
                 ocupado={g.busy}
                 onSecao={(proxima) => seguir(unidadeId, proxima)}
                 onVoltar={() => seguir(null)}
@@ -723,6 +729,7 @@ function Detalhe({
   id,
   secao,
   admin,
+  gestor,
   ocupado,
   onSecao,
   onVoltar,
@@ -734,6 +741,7 @@ function Detalhe({
   id: string;
   secao: SecaoUnidade;
   admin: boolean;
+  gestor: boolean;
   ocupado: boolean;
   onSecao: (secao: SecaoUnidade) => void;
   onVoltar: () => void;
@@ -749,13 +757,11 @@ function Detalhe({
     refetchIntervalInBackground: false,
   });
   const u = q.data;
-  const secoes: { id: SecaoUnidade; rotulo: string }[] = admin
-    ? [
-        { id: "agenda", rotulo: "Agenda" },
-        { id: "horarios", rotulo: "Horários" },
-        { id: "excecoes", rotulo: "Exceções" },
-      ]
-    : [{ id: "agenda", rotulo: "Agenda" }];
+  const secoes: { id: SecaoUnidade; rotulo: string }[] = [
+    { id: "agenda", rotulo: "Agenda" },
+    ...(gestor ? [{ id: "horarios" as const, rotulo: "Horários" }] : []),
+    ...(admin ? [{ id: "excecoes" as const, rotulo: "Exceções" }] : []),
+  ];
   return (
     <div className="space-y-4">
       <Button className="min-h-11 lg:hidden" variant="outline" onClick={onVoltar}>
@@ -779,33 +785,33 @@ function Detalhe({
                   {cidadeUf(u) ? ` · ${cidadeUf(u)}` : ""}
                 </p>
               </div>
-              {admin && (
-                <Link
-                  to="/ia/gestao/alteracoes"
-                  search={{ unidade: u.id }}
-                  className="text-sm font-medium text-purple-800 underline-offset-4 hover:underline"
-                >
-                  Histórico desta unidade
-                </Link>
-              )}
+              <Link
+                to="/ia/gestao/alteracoes"
+                search={{ unidade: u.id }}
+                className="text-sm font-medium text-purple-800 underline-offset-4 hover:underline"
+              >
+                Histórico desta unidade
+              </Link>
             </div>
             <SituacaoUnidade u={u} />
             <div className="flex flex-wrap gap-2">
-              <Button
-                className="min-h-11"
-                disabled={ocupado}
-                onClick={() => (u.situacao.motivo === "pausa" ? onReabrir(u.id) : onPausar(u))}
-              >
-                {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
-              </Button>
               {admin && (
+                <Button
+                  className="min-h-11"
+                  disabled={ocupado}
+                  onClick={() => (u.situacao.motivo === "pausa" ? onReabrir(u.id) : onPausar(u))}
+                >
+                  {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
+                </Button>
+              )}
+              {gestor && (
                 <Button className="min-h-11" variant="outline" onClick={() => onEditar(u)}>
                   Editar dados
                 </Button>
               )}
             </div>
           </Cartao>
-          {admin && (
+          {secoes.length > 1 && (
             <div
               role="tablist"
               aria-label="Seções da unidade"
@@ -827,7 +833,7 @@ function Detalhe({
           )}
           {secao === "agenda" ? (
             <Previa ctx={ctx} id={id} />
-          ) : secao === "horarios" && admin ? (
+          ) : secao === "horarios" && gestor ? (
             <Horarios ctx={ctx} u={u} />
           ) : admin ? (
             <Excecoes ctx={ctx} u={u} />

@@ -1,6 +1,6 @@
 /** Formatos das respostas do gateway usados pelas telas (sem segredos). */
 
-export type PapelGateway = "plataforma" | "admin" | "membro";
+export type PapelGateway = "plataforma" | "gestor" | "supervisor" | "funcionario";
 
 export type Pagina<T> = { itens: T[]; proximo_cursor: string | null };
 

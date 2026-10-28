@@ -24,7 +24,7 @@ const item = {
   arquivado: false,
 };
 async function montar(
-  papel: PapelGateway = "admin",
+  papel: PapelGateway = "gestor",
   responder: (u: URL) => Response = () => Response.json(item),
 ) {
   const chamadas: { url: URL; metodo: string; corpo: unknown; headers: Headers }[] = [];
@@ -33,11 +33,19 @@ async function montar(
       userId: "real",
       email: "sessao@teste.local",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "teste", ativo: true, admin: papel === "admin" }],
+      vinculos: [
+        {
+          gatewayTenantId: "teste",
+          ativo: true,
+          admin: papel === "gestor",
+          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+        },
+      ],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway/admin/v1",
       chave: "sintetica-testes",
+      chavePlataforma: "sintetica-testes",
       fetch: (async (u: URL, init: RequestInit) => {
         chamadas.push({
           url: new URL(String(u)),
@@ -83,7 +91,7 @@ const operacoes: PedidoCat3[] = [
   { acao: "sugestoes_acao", operacao: "restaurar", chaves: ["edamame"] },
 ];
 test("CAT3 admin e plataforma: rotas explícitas, papel e actor da sessão; todas as operações", async () => {
-  for (const papel of ["admin", "plataforma"] as const) {
+  for (const papel of ["gestor", "plataforma"] as const) {
     for (const d of operacoes) {
       const c = await montar(papel);
       const r = await executarCat3(c.s, { ...d, empresa: "teste" });
@@ -100,14 +108,14 @@ test("CAT3 membro: só esgotar/repor; lote e todos os outros comandos recusados 
     ...operacoes,
     { acao: "lote", itens: [1], operacao: "esgotar", simulacao: false } as PedidoCat3,
   ]) {
-    const c = await montar("membro");
+    const c = await montar("funcionario");
     const r = await executarCat3(c.s, d);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.erro.status).toBe(403);
     expect(c.chamadas).toHaveLength(0);
   }
   for (const operacao of ["esgotar", "repor"] as const) {
-    const c = await montar("membro");
+    const c = await montar("funcionario");
     const r = await executarCat3(c.s, { acao: "item", id: 1, operacao });
     expect(r.ok).toBe(true);
     if (r.ok) expect(JSON.stringify(r.dados)).not.toContain("Nota interna");
@@ -125,7 +133,7 @@ test("CAT3 isolamento de todas as operações e cabeçalhos forjados", async () 
   }
 });
 test("CAT3 PATCH parcial preserva microssegundos, alcance, resultado parcial e notas só admin", async () => {
-  const c = await montar("admin", () =>
+  const c = await montar("gestor", () =>
     Response.json({
       ...item,
       aplicado_em: [
@@ -151,7 +159,7 @@ test("CAT3 PATCH parcial preserva microssegundos, alcance, resultado parcial e n
     expect(JSON.stringify(r.dados)).toContain("inexistente");
   }
   expect(() =>
-    autorizar("membro", "PATCH", ["catalogo", "itens", "1"], { ativo: false }),
+    autorizar("funcionario", "PATCH", ["catalogo", "itens", "1"], { ativo: false }),
   ).toThrow();
 });
 test("CAT3 valida lote: não repete IDs, até 500, percentual ou valor, mover exige categoria", async () => {
@@ -187,7 +195,7 @@ test("CAT3 simulação e aplicação são chamadas distintas; mantém falhas por
       { item_id: 2, ok: false, motivo: "sem_preco" },
     ],
   };
-  const c = await montar("admin", () => Response.json(resposta));
+  const c = await montar("gestor", () => Response.json(resposta));
   const r = await executarCat3(c.s, {
     acao: "lote",
     itens: [1, 2],
@@ -212,7 +220,7 @@ test("CAT3 categorias ordem, erro no campo, sugestões com cursor e grupos expl�
       { ...item, item_id: 2, nome: "A", posicao: null },
     ] as ItemCardapio[]).map((i) => i.item_id),
   ).toEqual([1, 2]);
-  const c = await montar("admin", () =>
+  const c = await montar("gestor", () =>
     Response.json(
       {
         erro: {
@@ -234,8 +242,9 @@ test("CAT3 categorias ordem, erro no campo, sugestões com cursor e grupos expl�
   expect(s.chamadas[0]!.url.searchParams.get("ignoradas")).toBe("true");
 });
 test("ENC1 admin/membro: listar paginado, encerrar e reabrir; actor real", async () => {
-  for (const papel of ["admin", "membro"] as const) {
-    for (const acao of ["listar", "encerrar", "reabrir"] as const) {
+  for (const papel of ["gestor", "supervisor", "funcionario"] as const) {
+    const acoes = papel === "funcionario" ? (["listar"] as const) : (["listar", "encerrar", "reabrir"] as const);
+    for (const acao of acoes) {
       const c = await montar(papel, (u) =>
         u.pathname.endsWith("/canal")
           ? Response.json({ agente_id: null })
@@ -259,7 +268,7 @@ test("ENC1 tenant alheio, actor forjado, conversa oculta e conflito 409", async 
       (await executarEnc1(c.s, { acao: "reabrir", conversa: "teste:canal:cliente", ...d })).ok,
     ).toBe(false);
   expect(c.chamadas).toHaveLength(0);
-  const oculto = await montar("membro", (u) =>
+  const oculto = await montar("funcionario", (u) =>
     u.pathname.endsWith("/canal")
       ? Response.json({ agente_id: "ag1" })
       : Response.json({ itens: [{ id: "ag1", nome: "[teste] Interno" }], proximo_cursor: null }),
@@ -296,7 +305,7 @@ test("ENC1 tenant alheio, actor forjado, conversa oculta e conflito 409", async 
 });
 
 test("CAT3 esgotados usa filtro do gateway, mesmo quando motivo principal é sem preço; arquivados isolados", async () => {
-  const c = await montar("admin", (u) =>
+  const c = await montar("gestor", (u) =>
     Response.json({
       itens:
         u.searchParams.get("esgotados") === "true"

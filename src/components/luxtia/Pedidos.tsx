@@ -18,6 +18,7 @@ import {
   Store,
   X,
 } from "lucide-react";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { avisos } from "@/lib/gateway-avisos.functions";
 import { pedidos } from "@/lib/gateway-pedidos.functions";
 import {
@@ -997,7 +998,9 @@ function Detalhe({
     }
   }
   const pedido = q.data;
-  const botoes = acoesPedido(pedido?.proximos_status ?? []);
+  const botoes = acoesPedido(pedido?.proximos_status ?? []).filter(
+    (b) => b.status !== "cancelado" || peloMenos(ctx.papel, "supervisor"),
+  );
   const principais = botoes.filter((b) => b.status !== "cancelado" && b.status !== "recusado");
   const negativas = botoes.filter((b) => b.status === "cancelado" || b.status === "recusado");
   const escolhida = botoes.find((b) => b.status === acao);
@@ -1130,7 +1133,9 @@ function Detalhe({
                       search={{
                         conversa: pedido.conversation_id,
                         ...(cliente?.temNome ? { nome: cliente.nome } : {}),
-                        ...(pedido.cliente?.telefone ? { telefone: pedido.cliente.telefone } : {}),
+                        ...(pedido.cliente?.telefone && peloMenos(ctx.papel, "supervisor")
+                          ? { telefone: pedido.cliente.telefone }
+                          : {}),
                         ...(pedido.cliente?.canal?.tipo
                           ? { canal: pedido.cliente.canal.tipo }
                           : {}),

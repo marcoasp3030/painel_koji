@@ -143,7 +143,7 @@ test("estado, telefone e canal usam só o que a lista já devolve", () => {
 test("agentes de teste em páginas posteriores continuam ocultos; falha de canal não libera histórico", async () => {
   let chamadas = 0;
   const t = {
-    papel: "membro" as const,
+    papel: "funcionario" as const,
     chamar: async <T>() => ({
       dados: (++chamadas === 1
         ? { itens: [{ id: "a", nome: "normal" }], proximo_cursor: "a" }
@@ -154,7 +154,7 @@ test("agentes de teste em páginas posteriores continuam ocultos; falha de canal
   await expect(
     exigirConversaVisivel(
       {
-        papel: "membro",
+        papel: "funcionario",
         chamar: async () => {
           throw new Error("canal indisponível");
         },

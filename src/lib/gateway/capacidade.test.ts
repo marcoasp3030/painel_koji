@@ -10,11 +10,12 @@ async function montar(papel: string, respostas: Response[] = []) {
       userId: "u",
       email: null,
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "bykoji", ativo: true, admin: papel === "admin" }],
+      vinculos: [{ gatewayTenantId: "bykoji", ativo: true, admin: papel === "gestor" }],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway:8000/admin/v1",
       chave: "sintetica-para-testes-123456789",
+      chavePlataforma: "sintetica-para-testes-123456789",
       fetch: (async (url: URL, init: RequestInit) => {
         chamadas.push({
           caminho: url.pathname,
@@ -28,7 +29,7 @@ async function montar(papel: string, respostas: Response[] = []) {
   return { sessao: await modulo.sessao({ userId: "u", email: null }), chamadas };
 }
 test("capacidade só plataforma: leituras, gravações e outro tenant recusados antes da rede", async () => {
-  for (const papel of ["admin", "membro"])
+  for (const papel of ["gestor", "funcionario"])
     for (const empresa of ["bykoji", "outro"])
       for (const agente of [undefined, "ag_1"]) {
         const c = await montar(papel);

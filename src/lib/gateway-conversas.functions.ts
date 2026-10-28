@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buscaRestrita, telefoneParaPapel } from "@/lib/acesso/papeis";
 import { empresa, idRecurso } from "./gateway/esquemas";
 import type { Pagina } from "./gateway/tipos";
 import {
@@ -42,6 +43,14 @@ export const listarConversas = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
+      if (buscaRestrita(t.papel, data.busca)) {
+        const { GatewayErro } = await import("./gateway/erros");
+        throw new GatewayErro({
+          codigo: "VALIDATION_ERROR",
+          status: 400,
+          mensagem: "A busca do funcionário aceita nome ou só os 4 últimos dígitos do telefone.",
+        });
+      }
       const { agentesOcultos, exigirAgenteVisivel } = await import("./gateway/ocultos");
       if (data.agente) await exigirAgenteVisivel(t, data.agente);
       const ocultos = await agentesOcultos(t);
@@ -55,7 +64,11 @@ export const listarConversas = createServerFn({ method: "POST" })
           const { dados }: { dados: Pagina<Conversa> } = await t.chamar("GET", ["conversas"], {
             query: { ...query, aguardando: true, cursor, limite: 100 },
           });
-          itens.push(...dados.itens.filter((c) => !ocultos.has(c.agente_id)));
+          itens.push(
+            ...dados.itens
+              .filter((c) => !ocultos.has(c.agente_id))
+              .map((c) => mascararConversa(t.papel, c)),
+          );
           if (!dados.proximo_cursor)
             return { itens: ordenarConversas(itens), proximo_cursor: null };
           if (dados.proximo_cursor === cursor) break;
@@ -71,7 +84,12 @@ export const listarConversas = createServerFn({ method: "POST" })
       const { dados } = await t.chamar<Pagina<Conversa>>("GET", ["conversas"], {
         query: { ...query, limite: 100 },
       });
-      return { ...dados, itens: dados.itens.filter((c) => !ocultos.has(c.agente_id)) };
+      return {
+        ...dados,
+        itens: dados.itens
+          .filter((c) => !ocultos.has(c.agente_id))
+          .map((c) => mascararConversa(t.papel, c)),
+      };
     });
   });
 export const obterCursorEventos = createServerFn({ method: "POST" })
@@ -223,3 +241,14 @@ export const editarNomeContato = createServerFn({ method: "POST" })
       }
     });
   });
+
+function mascararConversa(papel: ConversaPapel, c: Conversa): Conversa {
+  if (papel !== "funcionario") return c;
+  return {
+    ...c,
+    telefone: telefoneParaPapel(papel, c.telefone),
+    telefone_formatado: telefoneParaPapel(papel, c.telefone_formatado ?? null),
+    telefone_e164: telefoneParaPapel(papel, c.telefone_e164),
+  };
+}
+type ConversaPapel = Parameters<typeof telefoneParaPapel>[0];

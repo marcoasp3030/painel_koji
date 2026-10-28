@@ -3,8 +3,13 @@ import { criarClienteGateway } from "./cliente.server";
 import { criarModuloGateway } from "./modulo.server";
 import { executarAtendimento } from "./atendimento.server";
 import {
+  AVISO_SO_WHATSAPP,
+  CAMPOS_SEM_EFEITO,
+  CAMPOS_SO_WHATSAPP,
   SEM_EDICOES,
+  agenteTemWhatsapp,
   corpoRascunho,
+  diaMes,
   gruposDoEsquema,
   marcarTrechos,
   porCampo,
@@ -16,18 +21,26 @@ import {
 } from "./atendimento";
 import { filtrarMenu, TENANT_NAV } from "../nav";
 
-async function montar(papel = "admin", respostas: Response[] = []) {
+async function montar(papel = "gestor", respostas: Response[] = []) {
   const chamadas: { url: URL; method: string; body: unknown; papel: string | null }[] = [];
   const modulo = criarModuloGateway({
     carregarPerfil: async () => ({
       userId: "u",
       email: "ana@koji.com",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "bykoji", ativo: true, admin: papel === "admin" }],
+      vinculos: [
+        {
+          gatewayTenantId: "bykoji",
+          ativo: true,
+          admin: papel === "gestor",
+          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+        },
+      ],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway:8000/admin/v1",
       chave: "sintetica-nao-segredo-real-123456",
+      chavePlataforma: "sintetica-nao-segredo-real-123456",
       fetch: (async (url: URL, init: RequestInit) => {
         const h = new Headers(init.headers);
         chamadas.push({
@@ -178,8 +191,8 @@ test("CFG1-a trechos marcados, erros por campo e valores legíveis", () => {
   expect(textoValor(null)).toBe("—");
 });
 
-test("CFG1-a membro lê e vê a prévia; escrita recusada sem chamar o gateway", async () => {
-  const c = await montar("membro");
+test("CFG1-a supervisor lê e vê a prévia; escrita recusada sem chamar o gateway", async () => {
+  const c = await montar("supervisor");
   for (const acao of ["ler", "versoes"]) {
     expect((await executarAtendimento(c.sessao, { acao })).ok).toBe(true);
   }
@@ -200,13 +213,13 @@ test("CFG1-a membro lê e vê a prévia; escrita recusada sem chamar o gateway",
     });
   }
   expect(c.chamadas).toHaveLength(feitas);
-  expect(c.chamadas.every((x) => x.papel === "membro")).toBe(true);
+  expect(c.chamadas.every((x) => x.papel === "supervisor")).toBe(true);
   expect(c.chamadas[2]!.url.pathname).toBe("/admin/v1/tenants/bykoji/atendimento/previa");
   expect(c.chamadas[2]!.body).toEqual({ fonte: "publicado" });
 });
 
 test("CFG1-a admin: rascunho parcial, publicar com nota e escopo do agente", async () => {
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     Response.json({}),
     Response.json({}),
     Response.json({ nome: "Atendimento By Koji" }),
@@ -217,7 +230,7 @@ test("CFG1-a admin: rascunho parcial, publicar com nota e escopo do agente", asy
     baseado_em: 2,
     perfil: { tom: "formal", emojis: null },
   });
-  expect(c.chamadas[0]).toMatchObject({ method: "PUT", papel: "admin" });
+  expect(c.chamadas[0]).toMatchObject({ method: "PUT", papel: "gestor" });
   expect(c.chamadas[0]!.url.pathname).toBe("/admin/v1/tenants/bykoji/atendimento/rascunho");
   expect(c.chamadas[0]!.body).toEqual({ baseado_em: 2, perfil: { tom: "formal", emojis: null } });
 
@@ -237,14 +250,14 @@ test("CFG1-a admin: rascunho parcial, publicar com nota e escopo do agente", asy
 });
 
 test("CFG1-a agente de teste oculto vira não encontrado para a empresa", async () => {
-  const c = await montar("admin", [Response.json({ nome: "[teste] Bench" })]);
+  const c = await montar("gestor", [Response.json({ nome: "[teste] Bench" })]);
   const r = await executarAtendimento(c.sessao, { acao: "ler", agente: "ag_teste" });
   expect(r.ok).toBe(false);
   expect(c.chamadas).toHaveLength(1);
 });
 
 test("CFG1-a erros: todos os campos, confirmação com trecho, bloqueio e versão desatualizada", async () => {
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     erro(400, {
       campos: [
         { campo: "perfil.tom", motivo: "opcao" },
@@ -302,10 +315,10 @@ test("CFG1-a erros: todos os campos, confirmação com trecho, bloqueio e versã
 });
 
 test("CFG1-a gateway 403 vira 'Sem permissão'; outra empresa não chama o gateway", async () => {
-  const c = await montar("admin", [erro(403, {}, "FORBIDDEN")]);
+  const c = await montar("gestor", [erro(403, {}, "FORBIDDEN")]);
   const r = await executarAtendimento(c.sessao, { acao: "descartar" });
   expect(r.ok === false && r.erro.mensagem).toContain("Sem permissão");
-  const outra = await montar("admin");
+  const outra = await montar("gestor");
   await expect(
     executarAtendimento(outra.sessao, { acao: "ler", empresa: "outra" }),
   ).rejects.toThrow();
@@ -313,9 +326,48 @@ test("CFG1-a gateway 403 vira 'Sem permissão'; outra empresa não chama o gatew
   expect((await executarAtendimento(outra.sessao, { acao: "inventada" })).ok).toBe(false);
 });
 
-test("CFG1-a menu: admin e membro veem Comportamento do agente", () => {
-  for (const papel of ["admin", "membro"] as const)
+test("CFG1-a menu: gestor e supervisor veem Comportamento do agente", () => {
+  for (const papel of ["gestor", "supervisor"] as const)
     expect(
       filtrarMenu(TENANT_NAV, papel).some((i) => i.to === "/ia/configuracoes/comportamento"),
     ).toBe(true);
+});
+
+test("campos sem efeito somem do esquema; WhatsApp só com canal uazapi", () => {
+  const v = visao({
+    esquema: {
+      perfil: {},
+      comportamentos: {
+        aviso_demora: { grupo: "mensagens", tipo: "texto", editavel: true, disponivel: true },
+        media_wait_s: { grupo: "ritmo", tipo: "inteiro", editavel: true, disponivel: true },
+        fora_do_horario_aceita_agendado: {
+          grupo: "fora_do_horario",
+          tipo: "booleano",
+          editavel: true,
+          disponivel: false,
+        },
+        debounce_s: { grupo: "ritmo", tipo: "inteiro", editavel: true, disponivel: true },
+        botoes_interativos: {
+          grupo: "mensagens",
+          tipo: "escolha",
+          opcoes: ["on", "off"],
+          editavel: true,
+          disponivel: true,
+        },
+      },
+    },
+  });
+  const grupos = gruposDoEsquema(v.esquema, "comportamentos", CAMPOS_SEM_EFEITO);
+  const campos = grupos.flatMap((g) => g.campos.map(([c]) => c));
+  expect(campos).toEqual(["debounce_s", "botoes_interativos"]);
+  expect(CAMPOS_SO_WHATSAPP).toContain("botoes_interativos");
+  expect(CAMPOS_SO_WHATSAPP).toContain("reacoes");
+  expect(AVISO_SO_WHATSAPP).toBe("Disponível só em canal WhatsApp");
+  const canais = [
+    { tipo: "api", agente_id: "ag_1" },
+    { tipo: "uazapi", agente_id: "ag_2" },
+  ];
+  expect(agenteTemWhatsapp(canais, "ag_1")).toBe(false);
+  expect(agenteTemWhatsapp(canais, "ag_2")).toBe(true);
+  expect(diaMes("2026-10-20T15:26:00.000Z")).toBe("20/10");
 });

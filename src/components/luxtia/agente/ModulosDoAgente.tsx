@@ -17,12 +17,13 @@ import {
   alterarModulosAgente,
   obterModulosAgente,
 } from "@/lib/gateway-modulos.functions";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { rotuloModulo, type ModulosAgente } from "@/lib/gateway/modulos";
 
 export function ModulosDoAgente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const obter = useServerFn(obterModulosAgente);
   const plataforma = ctx.papel === "plataforma";
-  const admin = ctx.papel === "admin" || plataforma;
+  const admin = peloMenos(ctx.papel, "gestor");
 
   const dados = useQuery({
     queryKey: ["gateway", "modulos-agente", ctx.empresa, agenteId],

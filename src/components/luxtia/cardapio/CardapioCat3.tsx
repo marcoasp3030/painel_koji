@@ -30,6 +30,7 @@ export function CardapioCat3({
   itens,
   unidades,
   admin,
+  grade = false,
   servicos,
   executar,
   filtros,
@@ -42,6 +43,8 @@ export function CardapioCat3({
   itens: ItemCardapio[];
   unidades: Unidade[];
   admin: boolean;
+  /** Supervisor edita disponibilidade e horários, sem preço nem exclusão. */
+  grade?: boolean;
   servicos: ServicosCat2;
   executar: ExecutarCat3;
   filtros: BuscaCardapio;
@@ -805,6 +808,7 @@ export function CardapioCat3({
             <ItemCat2
               item={editar}
               admin={false}
+              grade={grade}
               itens={daUnidade}
               unidadeNome={unidade}
               servicos={servicos}

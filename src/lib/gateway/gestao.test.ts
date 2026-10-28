@@ -31,7 +31,7 @@ function chamadaUnidade(c: {
 }) {
   return c.chamadas.find((x) => !x.url.includes("/modulos"));
 }
-async function montar(papel = "admin", respostas: Response[] = []) {
+async function montar(papel = "gestor", respostas: Response[] = []) {
   const chamadas: {
     url: string;
     method: string | undefined;
@@ -43,11 +43,19 @@ async function montar(papel = "admin", respostas: Response[] = []) {
       userId: "u",
       email: "sessao@exemplo.com",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "bykoji", ativo: true, admin: papel === "admin" }],
+      vinculos: [
+        {
+          gatewayTenantId: "bykoji",
+          ativo: true,
+          admin: papel === "gestor",
+          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+        },
+      ],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway:8000/admin/v1",
       chave: "sintetica-nao-segredo-real-123456",
+      chavePlataforma: "sintetica-nao-segredo-real-123456",
       fetch: (async (url: URL, init: RequestInit) => {
         chamadas.push({
           url: String(url),
@@ -99,23 +107,23 @@ test("G1 isolamento: empresa alheia recusada em todas as ações", async () => {
   }
 });
 test("G1 membro lê unidade/agenda e pausa/reabre, sem grade nem configurações privadas", async () => {
-  for (const op of [
-    { acao: "obter", id: "uni" },
-    { acao: "agenda", id: "uni" },
-    { acao: "pausar", id: "uni", indefinida: true },
-    { acao: "reabrir", id: "uni" },
-  ]) {
-    const c = await montar("membro");
+  for (const [papel, op] of [
+    ["funcionario", { acao: "obter", id: "uni" }],
+    ["funcionario", { acao: "agenda", id: "uni" }],
+    ["supervisor", { acao: "pausar", id: "uni", indefinida: true }],
+    ["supervisor", { acao: "reabrir", id: "uni" }],
+  ] as const) {
+    const c = await montar(papel);
     const r = await executarGestao(c.sessao, { ...op, empresa: "bykoji" });
     expect(r.ok).toBe(true);
-    if (op.acao !== "agenda") {
+    if (papel === "funcionario" && op.acao !== "agenda") {
       expect(JSON.stringify(r)).not.toContain("horarios");
       expect(JSON.stringify(r)).not.toContain("whatsapp_pedidos");
       expect(JSON.stringify(r)).not.toContain("taxa_entrega");
     }
   }
 });
-test("G1 membro não altera unidade, grade, exceções nem lê histórico", async () => {
+test("G1 funcionário não altera unidade, grade nem exceções; o histórico ele lê", async () => {
   for (const op of [
     { acao: "editar", id: "uni", dados: { nome: "x" } },
     { acao: "criar", dados: { nome: "x" } },
@@ -123,29 +131,33 @@ test("G1 membro não altera unidade, grade, exceções nem lê histórico", asyn
     { acao: "excecoes", id: "uni" },
     { acao: "excecao", id: "uni", data: "2026-12-25", fechado: true },
     { acao: "excluir_excecao", id: "uni", eid: 1 },
-    { acao: "historico" },
     { acao: "fuso_empresa" },
     { acao: "aplicar_pausas", ids: ["uni"], indefinida: true },
     { acao: "aplicar_excecoes", itens: [{ id: "uni", data: "2026-12-25", fechado: true }] },
   ]) {
-    const c = await montar("membro");
+    const c = await montar("funcionario");
     await expect(executarGestao(c.sessao, { ...op, empresa: "bykoji" })).rejects.toThrow();
     expect(c.chamadas).toHaveLength(0);
   }
+  const leitura = await montar("funcionario");
+  expect((await executarGestao(leitura.sessao, { acao: "historico", empresa: "bykoji" })).ok).toBe(
+    true,
+  );
 });
 test("G1 Actor forjado recusado; GET e POST usam sessão", async () => {
-  const c = await montar("membro");
+  const c = await montar("funcionario");
   expect((await executarGestao(c.sessao, { acao: "obter", id: "uni", actor: "forjado" })).ok).toBe(
     false,
   );
   expect(c.chamadas).toHaveLength(0);
   await executarGestao(c.sessao, { acao: "obter", id: "uni" });
-  await executarGestao(c.sessao, { acao: "pausar", id: "uni", indefinida: true });
-  for (const r of c.chamadas)
+  const sup = await montar("supervisor");
+  await executarGestao(sup.sessao, { acao: "pausar", id: "uni", indefinida: true });
+  for (const r of [...c.chamadas, ...sup.chamadas])
     expect(new Headers(r.headers).get("X-Actor")).toBe("sessao@exemplo.com");
   expect(
     (
-      await executarGestao(c.sessao, {
+      await executarGestao(sup.sessao, {
         acao: "pausar",
         id: "uni",
         indefinida: true,
@@ -179,7 +191,7 @@ test("G1 grade HH:MM, meia-noite e sobreposição inclusive domingo/segunda", ()
     expect(problemaGrade(g as Parameters<typeof problemaGrade>[0])).not.toBeNull();
 });
 test("G1 envia grade inteira; rejeição 400 aparece no campo", async () => {
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     Response.json(
       {
         erro: {
@@ -298,7 +310,7 @@ test("CAL1 cidade e UF: gravadas pelo PATCH, UF só das 27, lidas por qualquer p
   for (const dados of [{ uf: "XX" }, { uf: "sp" }, { cidade: "a".repeat(81) }, { cidade: "  " }])
     expect((await executarGestao(c.sessao, { acao: "editar", id: "uni", dados })).ok).toBe(false);
   expect(c.chamadas.filter((x) => x.method === "PATCH")).toHaveLength(2);
-  const m = await montar("membro", [
+  const m = await montar("funcionario", [
     Response.json({
       itens: [{ id: "uni", nome: "T", cidade: "São Paulo", uf: "SP", situacao: s }],
     }),
@@ -311,7 +323,7 @@ test("CAL1 cidade e UF: gravadas pelo PATCH, UF só das 27, lidas por qualquer p
   expect(UFS).toHaveLength(27);
 });
 test("G1 histórico só parâmetros publicados, máscara preservada", async () => {
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     Response.json({
       itens: [{ antes: { whatsapp_pedidos: "5511****9999" }, depois: { whatsapp_pedidos: null } }],
       proximo_cursor: 5,
@@ -406,19 +418,19 @@ test("G1 pausa rápida, feriados, alertas, cópia de grade e retomada sem repeti
   expect(pendentesDe([{ chave: "a" }, { chave: "b" }], ["a"]).map((i) => i.chave)).toEqual(["b"]);
 });
 test("G1 fuso da empresa só devolve o fuso; lote não repete chamada e o atendente é recusado", async () => {
-  const fuso = await montar("admin", [
+  const fuso = await montar("gestor", [
     Response.json({ timezone: "America/Manaus", retencao_dias: 90, nome: "Segredo visual" }),
   ]);
   const lido = await executarGestao(fuso.sessao, { acao: "fuso_empresa" });
   expect(lido).toEqual({ ok: true, dados: { timezone: "America/Manaus", origem: "empresa" } });
   expect(JSON.stringify(lido)).not.toContain("retencao");
   expect(JSON.stringify(lido)).not.toContain("Segredo");
-  const invalido = await montar("admin", [Response.json({ timezone: "nao-e-fuso" })]);
+  const invalido = await montar("gestor", [Response.json({ timezone: "nao-e-fuso" })]);
   expect(await executarGestao(invalido.sessao, { acao: "fuso_empresa" })).toEqual({
     ok: true,
     dados: { timezone: "America/Sao_Paulo", origem: "padrao" },
   });
-  const membro = await montar("membro");
+  const membro = await montar("funcionario");
   await expect(executarGestao(membro.sessao, { acao: "fuso_empresa" })).rejects.toThrow();
   await expect(
     executarGestao(membro.sessao, { acao: "aplicar_pausas", ids: ["uni"], indefinida: true }),
@@ -430,14 +442,14 @@ test("G1 fuso da empresa só devolve o fuso; lote não repete chamada e o atende
     }),
   ).rejects.toThrow();
   expect(membro.chamadas).toHaveLength(0);
-  const pausa = await montar("membro");
+  const pausa = await montar("supervisor");
   const ate = instanteDaqui(30, "America/Sao_Paulo");
   expect(
     (await executarGestao(pausa.sessao, { acao: "pausar", id: "uni", ate, motivo: "pausa rápida" }))
       .ok,
   ).toBe(true);
   expect(pausa.chamadas[0]?.body).toEqual({ ate, motivo: "pausa rápida" });
-  const lote = await montar("admin", [
+  const lote = await montar("gestor", [
     Response.json({ id: "a" }),
     new Response(
       JSON.stringify({ erro: { codigo: "VALIDATION_ERROR", mensagem: "Recusada", detalhes: {} } }),
@@ -463,7 +475,7 @@ test("G1 fuso da empresa só devolve o fuso; lote não repete chamada e o atende
     resultados.resultados.filter((r) => r.ok).map((r) => r.chave),
   );
   expect(deNovo.map((r) => r.chave)).toEqual(["b"]);
-  const ex = await montar("admin", [Response.json({ id: 1 }), Response.json({ id: 2 })]);
+  const ex = await montar("gestor", [Response.json({ id: 1 }), Response.json({ id: 2 })]);
   const criado = await executarGestao(ex.sessao, {
     acao: "aplicar_excecoes",
     itens: [

@@ -1,3 +1,34 @@
+## USUARIOS1 — ajustes antes da publicação (28/10/2026, 16:15 Brasília)
+
+- Sem SMTP, o convite mostra o link uma vez para quem convidou. Vale 24 horas, é de uso único e pode ser revogado na lista. Com `SMTP_HOST`, volta a ser por e-mail.
+- Enquanto `GATEWAY_PLATFORM_KEY` estiver vazia, a sessão de plataforma usa a chave da empresa. O log avisa uma vez por dia, sem registrar a chave.
+- `admin@luxtia.local` foi marcada como conta de emergência. O papel continua `super_admin`. A senha não foi alterada: o Marco troca. A segunda etapa passa a ser obrigatória no primeiro login da versão publicada, sem os 7 dias. Cada login dela gera alerta na auditoria.
+- A migração `20261028183000_usuarios1_ajustes.sql` foi aplicada. A imagem do painel não foi recriada. A publicação segue junto com o PAPEL1 do gateway.
+
+## USUARIOS1 — papéis e unidades no painel, sem publicar (28/10/2026, 15:50 Brasília)
+
+- A especificação foi aprovada. O painel passou a ter papéis (`plataforma`, `gestor`, `supervisor`, `funcionario`), unidades por usuário e a tela Usuários no lugar de Equipe. A imagem em produção não foi recriada. O gateway não foi alterado.
+- O servidor monta `X-Role` e `X-Unidades` (`*` para plataforma e gestor; códigos para os outros dois). A chave `GATEWAY_PLATFORM_KEY` fica só no servidor e só entra quando o papel é plataforma. Recurso de outra unidade chega como “Não encontrado.”. Para o funcionário, a conversa usa o apelido `cv_<hash>` e o telefone mostra só os 4 últimos dígitos.
+- A migração `20261028160000_usuarios1.sql` foi aplicada. O vínculo de quem era administrador da empresa virou gestor. O `tenant_admin` órfão de `cesar.almeida@ticway.com.br` saiu, com auditoria; a conta permanece. `admin@luxtia.local` não foi alterada e não tem prazo de segunda etapa gravado.
+- Relatórios não entrou no menu. O convite por e-mail depende de SMTP, que o painel ainda não tem configurado.
+- Prints em `docs/prints-usuarios/`. Publicação junto com o gateway, por `sh docker/publicar-painel.sh`.
+
+## USUARIOS1 — especificação de papéis e unidades (28/10/2026, 14:07 Brasília)
+
+- Só especificação, em `docs/ESPEC_USUARIOS1.md`. Nada implementado. Gateway intocado.
+- Hoje o `X-Role` sai no servidor: `super_admin` vira `plataforma`; `is_tenant_admin` vira `admin`; o resto vira `membro`. Não existe papel `atendente` no banco. “Atendente” na conversa é estado da sessão.
+- Contas em produção: 3 plataforma (`admin@luxtia.local`, `cesar.almeida@luxtia.ia.br`, `marco.santos@ticway.com.br`). Zero admin e zero membro no fio. O César da Ticway tem `tenant_admin` órfão, sem empresa, e não vira gestor.
+- Papéis propostos: plataforma, gestor, supervisor, funcionário, como conjunto de permissões. Gestor vê todas as unidades. Supervisor e funcionário ficam na lista usuário × unidades. Ninguém concede papel acima do próprio.
+- Cabeçalhos propostos para quando o gateway aceitar: `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades` (`*` ou códigos), junto com as chaves do CHAVES1. Até lá o painel continuaria mandando `admin`/`membro`.
+
+## Comportamento — um caminho por campo (26/10/2026, 17:20 Brasília)
+
+- Os seis campos que existiam na ficha (efeito imediato) e no atendimento (rascunho) eram: espera (`debounce_s`), espera máxima (`max_wait_s`), pausa (`pause_minutes`), aviso de demora em segundos (`slow_notice_s`), mensagem de falha (`fallback`) e texto do aviso de demora (`aviso_demora`). Os cinco primeiros ficam só em Configurações → Comportamento do agente. O texto do aviso de demora some das duas telas, junto com a espera de áudio/imagem (`media_wait_s`) e “aceita agendado fora do horário” (`fora_do_horario_aceita_agendado`).
+- Envio, piloto, contatos do piloto, telefone de alerta, limites, URL e credencial do Skyone, provedor e instruções só aparecem para a plataforma. Na ficha a plataforma ainda grava na hora, porque o gateway recusa esses campos dentro do rascunho. Admin e atendente não veem o grupo Operação nem os itens Skyone, Respostas e Envio aos clientes na prontidão.
+- Com rascunho não publicado, a faixa diz “Há alterações não publicadas desde dd/mm — o agente ainda usa a versão em uso”. “Ver diferenças” mostra a tabela do rascunho e a prévia publicada (`perfil_atendimento`, o que o agente recebe hoje). “Publicar” abre a aba que já pede nota e confirmação. O atendente vê a faixa e as diferenças, sem o botão de publicar.
+- Botões, reações, emojis e o limite do dia ficam desabilitados com “Disponível só em canal WhatsApp” quando o agente escolhido não tem canal uazapi. No escopo da empresa continuam editáveis.
+- Conferido numa prévia com dados fictícios e o esquema real (sem segredos). Nada foi publicado. A imagem no ar continua `painel:conversas-20261026`.
+
 ## Bootstrap sem senha no código (26/10/2026, 12:52 Brasília)
 
 - A conta que o bootstrap criava é `admin@luxtia.local` (nome Super Admin, papel `super_admin`). Ela já existe no banco de produção: criada em 07/10/2026 18:30 e último acesso em 23/10/2026 09:07 (Brasília). Tem senha. O valor não foi exibido.

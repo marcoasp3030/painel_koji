@@ -14,7 +14,7 @@ function PaginaCardapio() {
     <PaginaGateway
       titulo="Cardápio"
       descricao="Organize os itens e seus horários de disponibilidade, unidade por unidade."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor", "funcionario"]}
     >
       {(ctx) => <Cardapio key={ctx.empresa ?? "vinculada"} ctx={ctx} />}
     </PaginaGateway>

@@ -1,3 +1,78 @@
+## [2026-10-28 16:15] — Ajustes do USUARIOS1 antes de publicar
+- **Autor:** Grok 4.7
+- **Objetivo:** Convite sem SMTP, chave de plataforma vazia sem quebrar a sessão, e conta de emergência, sem publicar.
+- **Arquivos alterados:**
+ - `supabase/migrations/20261028183000_usuarios1_ajustes.sql` — criado — convite com hash, marca de emergência e revogação do token do GoTrue
+ - `src/lib/usuarios.functions.ts`, `src/components/luxtia/Usuarios.tsx`, `src/routes/index.tsx`, `src/routes/_authenticated/equipe.tsx` — modificados — link único, aceite da senha e revogação
+ - `src/lib/gateway/cliente.server.ts` — modificado — plataforma usa a chave da empresa enquanto a de plataforma estiver vazia
+ - `src/lib/seguranca.functions.ts`, `src/components/luxtia/Seguranca.tsx`, `src/routes/_authenticated/auditoria.tsx` — modificados — bloqueio imediato e alerta de login
+ - `docker-compose.yml`, `.env.example` — modificados — `SMTP_HOST` vazio e o aviso da chave
+ - `docs/prints-usuarios/05-link-convite.png` — criado — o aviso do link
+- **Resumo das mudanças:** Sem e-mail configurado, quem convida vê o link uma vez. Ele vale 24 horas, serve uma vez e sai da lista ao ser revogado. A sessão de plataforma continua com a chave da empresa e o log avisa uma vez por dia. `admin@luxtia.local` ficou marcada como emergência, sem mudar papel nem senha.
+- **Decisões e justificativas:** O token do convite fica só como hash, no fragmento da URL, para não ir ao log de acesso. O prazo de 7 dias das outras contas de plataforma não começa nesta sessão. A conta de emergência bloqueia quando o código novo rodar no próximo login.
+- **Comandos executados:** `tsc --noEmit` → OK. `bun test` de acesso e gateway → 178 OK. `docker compose run --rm migracoes` → OK. Prévia do link → print gravado.
+- **Erros e resoluções:** A comparação do hash da senha foi interrompida de propósito; a migração só grava a marca no cadastro e não escreve na coluna da senha. O papel conferido depois continua `super_admin`.
+- **Pendências / TODO:** Publicar junto com o PAPEL1. `SMTP_HOST` e `GATEWAY_PLATFORM_KEY` continuam vazios. O Marco troca a senha da conta de emergência.
+- **Próximos passos:** publicar o painel com `sh docker/publicar-painel.sh` no mesmo momento do gateway.
+
+## [2026-10-28 15:50] — USUARIOS1 no painel, sem publicar
+- **Autor:** Grok 4.7
+- **Objetivo:** Implementar a especificação aprovada, com as decisões da seção 8 e o contrato do PAPEL1, sem publicar e sem alterar o gateway.
+- **Arquivos alterados:**
+ - `supabase/migrations/20261028160000_usuarios1.sql` — criado — papéis, unidades, prazo de segunda etapa e a limpeza do César
+ - `src/lib/acesso/papeis.ts` — criado — papéis, unidades, telefone e apelido da conversa
+ - `src/lib/usuarios.functions.ts`, `src/components/luxtia/Usuarios.tsx`, `src/routes/_authenticated/equipe.tsx` — criados ou modificados — tela Usuários
+ - `src/lib/seguranca.functions.ts`, `src/components/luxtia/Seguranca.tsx`, `src/components/luxtia/AppShell.tsx` — criados ou modificados — segunda etapa
+ - `src/lib/gateway/cliente.server.ts`, `modulo.server.ts`, `painel.server.ts` — modificados — X-Role, X-Unidades e chave de plataforma
+ - `docker-compose.yml`, `.env.example` — modificados — `GATEWAY_PLATFORM_KEY` vazio
+ - `docs/prints-usuarios/` — criado — prints das telas
+ - `docs/ESPEC_USUARIOS1.md`, `instrucoes.md`, `README.md` — modificados — decisões aprovadas e o que ficou no código
+- **Resumo das mudanças:** O painel deixa de mandar admin/membro. Gestor e plataforma saem com X-Unidades `*`; supervisor e funcionário saem com os códigos do cadastro. A tela Usuários convida sem senha. O funcionário vê telefone mascarado e conversa pelo apelido. A segunda etapa é obrigatória para plataforma, com 7 dias a partir do próximo login desta versão, e opcional para o gestor.
+- **Decisões e justificativas:** Sem meio-tempo, porque a publicação sai junto com o gateway. Histórico fica visível ao funcionário, como a decisão 1 pediu, mesmo o PAPEL1 do gateway citando supervisor. Relatórios não entrou no menu. A conta admin@luxtia.local não recebeu prazo.
+- **Comandos executados:** `tsc --noEmit` → OK. `bun test` de acesso e gateway → 166 OK. `docker compose run --rm migracoes` → OK. Prévia em 127.0.0.1:18176 → 4 prints.
+- **Erros e resoluções:** Os testes ainda esperavam admin/membro e as rotas antigas do atendente. Foram alinhados à matriz. A leitura de um canal passou a valer para abrir conversa; a lista e a edição de canais continuam com o gestor.
+- **Pendências / TODO:** SMTP do convite não está configurado. `GATEWAY_PLATFORM_KEY` está vazia até a publicação. Relatórios espera o AN1.
+- **Próximos passos:** publicar o painel junto com o gateway (CHAVES1 e PAPEL1), com `sh docker/publicar-painel.sh`, e preencher a chave de plataforma só no servidor.
+
+## [2026-10-28 14:07] — Especificação de papéis e unidades (USUARIOS1)
+- **Autor:** Grok 4.7
+- **Objetivo:** Especificar o controle de usuários por papel e por unidade, sem implementar e sem alterar o gateway.
+- **Arquivos alterados:**
+  - `docs/ESPEC_USUARIOS1.md` — criado — inventário, matriz, telas, segurança, migração e cabeçalhos
+  - `instrucoes.md` — modificado — registro da fase
+  - `README.md` — modificado — ponteiro da especificação
+  - `docs/worklog.md` — modificado — esta entrada; entradas de 11/10 e 10/10 foram para o arquivo
+  - `docs/worklog-arquivo/2026-10.md` — modificado — entradas antigas
+- **Resumo das mudanças:** O papel que o painel manda hoje sai do servidor: super_admin vira plataforma, is_tenant_admin vira admin, o resto vira membro. Não há atendente no banco. Em produção há 3 plataformas e zero admin ou membro no fio. A proposta troca isso por permissões em tabela, escopo por unidade e os cabeçalhos X-Role e X-Unidades, sem enviá-los enquanto o gateway só aceita os três nomes atuais.
+- **Decisões e justificativas:** O César da Ticway fica de fora da migração porque o tenant_admin dele não tem empresa. Supervisor, no meio-tempo, continua saindo como admin só nas chamadas que a matriz permite. Relatórios entram como tela vazia.
+- **Comandos executados:** consulta ao Postgres do painel (papéis, vínculos, sessões, MFA, auditoria) → inventário da seção 1
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** revisão desta especificação; as seis decisões da seção 8
+- **Próximos passos:** esperar a revisão antes de criar tabela ou tela
+
+## [2026-10-26 17:20] — Comportamento: um caminho por campo
+- **Autor:** Grok 4.7
+- **Objetivo:** Esconder o que não tem efeito, restringir o que é só da plataforma e deixar um único caminho para os campos que estavam na ficha e no rascunho.
+- **Arquivos alterados:**
+  - `src/lib/gateway/atendimento.ts` — modificado — lista do que some, do que exige WhatsApp e a data dd/mm
+  - `src/components/luxtia/comportamento/ComportamentoAgente.tsx` — modificado — faixa do rascunho, diferenças e campos ocultos
+  - `src/components/luxtia/comportamento/CampoAtendimento.tsx` — modificado — campo travado com a frase do canal
+  - `src/components/luxtia/agente/Comportamento.tsx` — modificado — ficha só com nome, piloto e alerta, e só para a plataforma
+  - `src/lib/gateway-agentes.functions.ts` — modificado — a empresa não grava mais comportamento na ficha
+  - `src/lib/gateway/modulo.server.ts` — modificado — a empresa só altera situação e módulos do agente
+  - `src/lib/gateway/prontidao.ts` — modificado — checklist sem Skyone, respostas e envio para a empresa
+  - `src/components/luxtia/agente/VisaoGeral.tsx` — modificado — usa a lista filtrada
+  - `src/routes/_authenticated/ia/agentes.$agenteId.tsx` — modificado — subtítulo sem respostas e envio para a empresa
+  - `src/lib/gateway/atendimento.test.ts`, `modulo.test.ts`, `prontidao.test.ts` — modificados — os casos novos
+  - `README.md` — modificado — o parágrafo do comportamento
+  - `tests/visual/comportamento/` — criado — prévia com dados fictícios para os prints
+- **Resumo das mudanças:** Some o texto do aviso de demora, a espera de áudio/imagem e “aceita agendado fora do horário”. Espera, espera máxima, pausa, aviso de demora em segundos e mensagem de falha ficam só no rascunho. Envio, piloto, contatos, alerta, limites, Skyone, provedor e instruções só aparecem para a plataforma. A faixa avisa o rascunho não publicado e abre a prévia do que está em uso. Botões e reações travam sem canal WhatsApp.
+- **Decisões e justificativas:** A ficha gravava na hora e criava versão, o que desatualizava o rascunho. Esses campos passam a ter um caminho só. O que não tem efeito continua no esquema do gateway e some só na tela. A empresa inteira continua editável nos botões, porque um agente com WhatsApp herda o valor. “Publicar” da faixa abre a aba que já confirma avisos e nota.
+- **Comandos executados:** `tsc --noEmit` → OK. `eslint` nos arquivos mexidos → OK. `bun test` de atendimento, módulo, prontidão e agentes → 55 OK. Prévia em `127.0.0.1:18175` com dados fictícios.
+- **Erros e resoluções:** `restricao` opcional quebrava o tipo estrito; a prop só entra no objeto quando há a frase. O servidor de prévia precisava do gancho do React Refresh, senão a tela ficava vazia.
+- **Pendências / TODO:** não publicado. `package.json`, `bun.lock` e `src/routes/__root.tsx` já estavam alterados por outra tarefa (versões do TanStack) e não entram aqui.
+- **Próximos passos:** publicar só quando pedirem, com `sh docker/publicar-painel.sh`
+
 ## [2026-10-26 12:52] — Senha de bootstrap fora do código
 - **Autor:** Grok 4.7
 - **Objetivo:** Tirar a senha fixa do bootstrap e impedir imagem nova com árvore suja.
@@ -413,165 +488,4 @@
 - **Pendências / TODO:** não commitado (regra do painel). Backup do arquivo anterior em `/home/twadmin/backups/painel/pre-healthops-20261011T194613Z/Caddyfile`.
 - **Próximos passos:** depois das credenciais do B2 e do Telegram no `.env`, conferir `{"ok":true}` 200 por fora e apontar o UptimeRobot. Volta: `cat <backup>/Caddyfile > docker/Caddyfile` + `docker exec painel_koji-proxy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
 
-## [2026-10-11 12:49] — CFG1-a no painel: tela "Comportamento do agente"
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Implementar a tela de `docs/ESPEC_TELAS_CFG1.md` sobre o contrato `gateway/docs/ESPEC_CFG1.md` §13.
-- **Arquivos alterados:**
-  - `src/lib/gateway/atendimento.ts` — criado — schema de entrada, tipos do contrato, rótulos, origem/Personalizado por campo, corpo do rascunho, trechos
-  - `src/lib/gateway/atendimento.server.ts` — criado — ler, salvar, descartar, publicar, versões, restaurar, prévia; tradução de erros
-  - `src/lib/gateway-atendimento.functions.ts` — criado — função de servidor
-  - `src/lib/gateway/modulo.server.ts` — modificado — `regrasAtendimento` (empresa e agente)
-  - `src/components/luxtia/comportamento/{ComportamentoAgente,CampoAtendimento,HistoricoVersoes,PreviaAtendimento}.tsx` — criados
-  - `src/routes/_authenticated/ia/configuracoes.comportamento.tsx`, `src/routeTree.gen.ts`, `src/lib/nav.ts` — criado/modificados — rota e menu
-  - `src/lib/gateway/atendimento.test.ts` — criado; `modulo.test.ts` — modificado
-  - `instrucoes.md`, `README.md` — modificados
-- **Resumo das mudanças:** Escopo empresa ou agente. Abas Personalidade, Comportamentos (com Operação só leitura), Publicar, Prévia e Histórico. Cada campo mostra o valor em uso, a origem, "Personalizado" e "Voltar ao padrão" (null). Barra fixa de rascunho; publicação com nota, bloqueios e avisos; histórico com antes/depois e Restaurar com confirmação; atalho "Testar no Simular".
-- **Decisões e justificativas:** Tipo, limites, opções e `editavel`/`disponivel` vêm só do esquema; no painel ficam apenas os textos (rótulo desconhecido vira a chave legível). Membro é barrado nas escritas antes de chamar o gateway, e o gateway também recusa. Rascunho desatualizado é rebaseado com PUT só de `baseado_em`. O Simular testa o publicado; a tela avisa isso. Nome do segmento por mapa local, porque não há rota global para empresa.
-- **Comandos executados:** ESLint → OK; `bun test` → 99 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; build + `up -d --no-deps painel` → OK; `verificar-chave-no-bundle.sh` → OK; rotas 200 e `/gateway/admin/v1/tenants` 404; logs sem segredos; leitura no gateway real como membro (atendimento empresa e agente, versões, prévia) → 200, `pode_editar` false
-- **Erros e resoluções:** `tsc` TS2322 em `situacaoCampo` (`valor` podia ser `undefined`) → `?? null` no valor final. TS2345 na rota nova → entrada adicionada em `routeTree.gen.ts`, como no Pedidos. A primeira leitura de conferência deu 404 porque o script repetia `/admin/v1` (já faz parte de `GATEWAY_ADMIN_URL`). Nela foi mandado um PUT como membro, que voltou 404 sem gravar nada; a segunda leitura foi só GET e prévia.
-- **Pendências / TODO:** escritas (rascunho, publicar, restaurar) não exercitadas em produção, só nos testes; conferência visual autenticada como admin pelo Marco; atalho na aba do agente não feito.
-- **Próximos passos:** validação do Marco; volta: `docker tag painel:ped1c-20261011 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
-
-## [2026-10-11 12:32] — PED1-c no painel: nome de exibição, estado único, filtros e "Editar nome"
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Usar o contrato PED1-c (`gateway/docs/ESPEC_PED1.md` §14) em Conversas e Pedidos e permitir editar o nome de cadastro do contato.
-- **Arquivos alterados:**
-  - `src/lib/gateway/conversas.ts` — modificado — tipos PED1-c (`nome_exibicao`, `nome_origem`, `nomes`, `canal_info`, `estado`, `ultima`, `unidade_preferida(_nome)`, `pedido_aberto`, `ContatoPainel`); `estadoConversa` prefere o estado do gateway; selo de origem; `resumoUltima` (autor e tipo); `canalDaConversa`; `validarNomeCadastro` (mesma regra do gateway) e `nomeSemCadastro`; `ordenarConversas` com opção de manter a ordem do servidor
-  - `src/lib/gateway-conversas.functions.ts` — modificado — `estado` (lista) e `ordem` em `listarConversas`; nova `editarNomeContato` (conversa visível + contato da própria conversa, PATCH só `{nome}`, motivos traduzidos, 409 anonimizado)
-  - `src/lib/gateway/modulo.server.ts` — modificado — regra `PATCH contatos/*` para admin e membro, corpo só com `nome` (texto ou null)
-  - `src/lib/gateway/pedidos.server.ts`, `src/lib/gateway/pedidos.ts` — modificados — nome atual da conversa juntado ao pedido (lista e detalhe) e `nomeClientePedido`
-  - `src/components/luxtia/Conversas.tsx` — modificado — filtros Estado (inclui Encerrada) e Ordenar; busca pelos três nomes; selos de origem e "teste"; última com autor/tipo; unidade preferida; atalho do pedido aberto; "Editar nome" no cabeçalho
-  - `src/components/luxtia/Pedidos.tsx`, `src/routes/_authenticated/ia/pedidos.tsx` — modificados — mesmo nome no cartão, na lista e no detalhe; `?pedido=` abre o detalhe
-  - `src/lib/gateway/{conversas,pedidos,modulo}.test.ts` — modificados — testes PED1-c
-- **Resumo das mudanças:** Conversas mostram o nome de exibição com selo discreto (cadastro, informado, perfil, telefone), telefone formatado, canal do `canal_info` com selo "teste", estado único, última mensagem com autor e tipo, unidade preferida e o pedido aberto (atalho no cabeçalho). Filtro de estado e ordem por atividade recente (padrão). Qualquer papel edita o nome de cadastro; vazio apaga e volta ao próximo da prioridade. Pedidos exibem o mesmo nome da conversa.
-- **Decisões e justificativas:** O gateway grava `cliente.nome` no fechamento e não atualiza; para mostrar o mesmo nome, o servidor do painel junta o `nome_exibicao` da conversa (uma leitura `ordem=recentes` em cache de 30 s por empresa, até 5 buscas pelo telefone para o que faltar; falha não quebra, fica o nome do pedido; cache limpo ao editar nome). A edição confere que o contato é o da conversa visível, para o ID não servir de atalho a contatos de agentes ocultos. "Só aguardando" virou a opção "Aguardando atendente" do filtro de estado (mesma fila global). Selo "telefone" em vez de esconder, para o atendente saber que falta nome.
-- **Comandos executados:** `bun test` → 94 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; ESLint nos arquivos alterados → OK; `docker compose build painel` + `up -d --no-deps painel` → OK; `verificar-chave-no-bundle.sh` → OK; rotas públicas 200, `/gateway/admin/v1/tenants` 404; logs sem segredos; leitura de conferência no gateway real (campos PED1-c, `ordem=recentes`, `estado=encerrada`, estado inválido 400) → OK
-- **Erros e resoluções:** `tsc` TS2379 em `editarNomeContato` (`mensagem: string | undefined` com `exactOptionalPropertyTypes`, índice de `MOTIVO_NOME`) → fallback "Nome inválido." e checagem antes do uso.
-- **Pendências / TODO:** PATCH de nome não exercitado em produção (escrita; coberto por testes); conferência visual autenticada pelo Marco. Tela própria de Contatos não existe no painel (edição só no cabeçalho da conversa).
-- **Próximos passos:** validação do Marco; volta: `docker tag painel:9afa7b3 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
-
-## [2026-10-11 10:55] — Especificação da tela "Comportamento do agente" (CFG1)
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Especificar, sem implementar, as telas de Personalidade, Comportamentos, Base de conhecimento, Publicar e Histórico a partir de `gateway/docs/ESPEC_CFG1.md`.
-- **Arquivos alterados:**
-  - `docs/ESPEC_TELAS_CFG1.md` — criado — cinco telas, permissões, selos de origem, "em breve", motivos travados, bloqueio das regras da casa e 19 pendências do contrato
-  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
-- **Resumo das mudanças:** Página única com escopo empresa ou agente e cinco abas. Cada campo mostra "Padrão do segmento" ou "Personalizado", com "voltar ao padrão" (campo `null` no rascunho). Itens `disponivel=false` ficam desabilitados com selo "em breve". `pediu_humano` e `reclamacao` ficam ligados e travados. Regras da casa com contador de caracteres e de quebras de linha, bloqueio destacando o trecho e confirmação nos casos duvidosos.
-- **Decisões e justificativas:** Nenhum campo ou rota inventado; o que falta virou pendência P1–P19. "Testar no Simular" avisa que testa a versão publicada (não existe simulação de rascunho) e fica desabilitado com envio real. Base de conhecimento só depois do CFG1-b, conforme a ordem do Marco. Piloto e operação continuam fora da versão.
-- **Comandos executados:** leitura de `ESPEC_CFG1.md`, da aba Comportamento do agente, do Simular e das permissões → especificação escrita
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** aprovação do Marco; pendências P1–P19 dependem do gateway (CFG1-a ainda não implementado)
-- **Próximos passos:** aguardar aprovação; implementar telas 1, 2, 4 e 5 só depois do CFG1-a publicado no gateway
-
-## PED1-b — avisos de pedido (11/10/2026)
-
-- Publicado `painel:6027ea7`: X-Role da sessão em todas as chamadas administrativas; Configurações → Avisos de pedido por status/modalidade, prévia e padrão; reenvio na linha do tempo com confirmação e tratamento de entrega incerta. Contador existente preservado.
-- 87 testes aprovados, 6 integrações REST antigas ignoradas, zero falhas. TypeScript, lint, builds e bundle aprovados. Validação autenticada: 12 avisos, prévia e contagem; zero escritas/envios em produção.
-- Imagem de volta `painel:54188e4` conferida antes do build. Backup validado em `/home/twadmin/backups/painel/pre-ped1b-20261011T030002Z`, permissões 700/600. Só painel recriado; zero segredos nos logs, gateway intocado, nenhum prune.
-- Relatório completo, volta e conferência visual: `docs/VALIDACAO_PED1B_PAINEL.md`. Alterações locais anteriores preservadas separadamente no commit `54188e4`. Parar para validação do Marco; PED1-c não iniciado.
-
-## [2026-10-10 22:50] — Pedidos: layout mais compacto e moderno
-- **Autor:** Grok 4.7
-- **Objetivo:** Deixar a tela de Pedidos mais compacta, moderna e intuitiva, com menos espaço vazio.
-- **Arquivos alterados:**
-  - `src/components/luxtia/Pedidos.tsx` — modificado — indicadores clicáveis, barra única, filtros recolhíveis, colunas com rolagem, cartões densos, lista em tabela, detalhe em painel lateral
-  - `instrucoes.md`, `README.md` — modificados
-- **Resumo das mudanças:** Contagem virou cinco indicadores que levam à coluna. Busca, Quadro/Lista, Filtros (com número de ativos e fichas removíveis) e som ficam numa linha. Cartão com cor por status, tempo de espera, canal, entrega/retirada, itens, aviso e total. Detalhe em painel lateral com ações fixas no rodapé e atalhos de previsão (20/30/45/60 min).
-- **Decisões e justificativas:** Nenhuma regra ou chamada mudou; as ações continuam saindo de `proximos_status`. O destaque de espera (borda dourada e tempo em vermelho a partir de 15 min) é só visual. Os números das colunas contam o que foi carregado (“+” se há mais), porque a contagem do gateway ignora filtros.
-- **Comandos executados:** `bun test` → 81 aprovados, 6 ignorados; `tsc` e ESLint → OK; build, verificação da chave, recriação só do painel → OK; rotas públicas 200 e admin do gateway 404; segredos nos logs: zero
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** conferência visual autenticada, inclusive no celular
-- **Próximos passos:** Marco revisar o layout logado
-
-## [2026-10-10 22:41] — Tela de Pedidos (PED1-a)
-- **Autor:** Grok 4.7
-- **Objetivo:** Publicar a tela de Pedidos só com o contrato PED1-a já em produção.
-- **Arquivos alterados:**
-  - `src/lib/gateway/pedidos.ts` — criado — status, ações, avisos e validação
-  - `src/lib/gateway/pedidos.server.ts` — criado — lista, contagem, detalhe e mudança de status
-  - `src/lib/gateway/pedidos.test.ts` — criado — 409, cancelamento, isolamento e atendente
-  - `src/lib/gateway-pedidos.functions.ts` — criado — função de servidor
-  - `src/components/luxtia/Pedidos.tsx` — criado — quadro, lista, detalhe e ações
-  - `src/components/luxtia/ContadorPedidos.tsx` — criado — contador e som
-  - `src/lib/pedidos-som.ts` — criado — preferência local do som
-  - `src/routes/_authenticated/ia/pedidos.tsx` — criado — rota do menu
-  - `src/lib/nav.ts`, `src/components/luxtia/AppShell.tsx`, `src/lib/gateway/modulo.server.ts`, `src/lib/gateway/modulo.test.ts` — modificados — menu e permissão
-  - `src/components/luxtia/Conversas.tsx`, `src/routes/_authenticated/ia/conversas.tsx` — modificados — atalho da conversa
-  - `src/routeTree.gen.ts`, `docs/ESPEC_TELAS_PEDIDOS.md`, `instrucoes.md`, `README.md` — modificados
-- **Resumo das mudanças:** O quadro e a lista leem os pedidos da empresa. O detalhe mostra itens, entrega, cliente, aviso e linha do tempo. As ações usam só `proximos_status`. O 409 recarrega o pedido e avisa que ele já foi atualizado.
-- **Decisões e justificativas:** Textos de aviso, reenvio, `X-Role`, nome por prioridade e filtro de encerradas ficam de fora. O motivo da recusa continua opcional; o do cancelamento exige 3 caracteres antes da chamada. O som começa desligado.
-- **Comandos executados:** `bun test` → 81 aprovados, 6 ignorados; `tsc` e ESLint → OK; verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
-- **Erros e resoluções:** O ator da sessão é o e-mail do perfil, não o id; o teste passou a esperar esse e-mail. `exactOptionalPropertyTypes` recusou filtro com `undefined`; o objeto só inclui o que foi preenchido.
-- **Pendências / TODO:** conferência visual autenticada; PED1-b, PED1-c e pagamento G4
-- **Próximos passos:** Marco revisar Pedidos logado, inclusive o celular e o som
-
-## [2026-10-10 22:11] — Conversas: estado, canal e telefone
-- **Autor:** Grok 4.7
-- **Objetivo:** Corrigir a lista e o cabeçalho de Conversas com os campos que o gateway já devolve.
-- **Arquivos alterados:**
-  - `src/lib/gateway/conversas.ts` — modificado — estado, telefone legível, rótulo do canal e nome de exibição
-  - `src/lib/gateway/conversas.test.ts` — modificado — cobre a ordem do estado e a máscara
-  - `src/components/luxtia/Conversas.tsx` — modificado — lista e cabeçalho
-  - `docs/ESPEC_TELAS_PEDIDOS.md`, `instrucoes.md`, `README.md` — modificados
-- **Resumo das mudanças:** Cada conversa mostra Encerrada, Aguardando atendente, Atendente ou Bot, o tipo do canal com o nome cadastrado e o celular no formato +55 11 9xxxx-xxxx. O nome continua o campo atual.
-- **Decisões e justificativas:** Pedidos e os campos do PED1-c ficam de fora até o contrato ser publicado. O filtro de encerrada não foi inventado. `nome_exibicao` e `telefone_formatado`, se um dia vierem, passam na frente.
-- **Comandos executados:** `bun test` → 76 aprovados, 6 ignorados; `tsc --noEmit` → OK; build e verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
-- **Erros e resoluções:** TypeScript recusou `canal={undefined}` com `exactOptionalPropertyTypes`; a prop passou a aceitar `undefined` explicitamente
-- **Pendências / TODO:** conferência visual autenticada; Pedidos, avisos e nome por prioridade esperam o PED1
-- **Próximos passos:** Marco revisar Conversas logado; Pedidos só depois do contrato publicado
-
-## [2026-10-10 22:04] — Especificação de pedidos e conversas
-- **Autor:** Grok 4.7
-- **Objetivo:** Levantar Pedidos e o defeito de Conversas e escrever a especificação, sem implementar.
-- **Arquivos alterados:**
-  - `docs/ESPEC_TELAS_PEDIDOS.md` — criado — telas, pendências do PED1 e o que Conversas já pode corrigir
-  - `docs/ESPEC_TELAS_GESTAO.md` — modificado — a tela 8 aponta para a especificação nova
-  - `instrucoes.md`, `README.md` — modificados
-- **Resumo das mudanças:** A lista de conversas lê `nome`, `telefone` e ignora canal e encerramento. Nome, unidade preferida e os status novos de pedido dependem do PED1, que ainda não está publicado.
-- **Decisões e justificativas:** Nada de rota ou campo inventado. Pagamento e troco continuam no G4. A correção parcial de Conversas fica separada da tela de Pedidos.
-- **Comandos executados:** leitura de `ESPEC_PED1.md`, `API_ADMIN.md` e da tela de Conversas → especificação escrita
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** aprovação desta especificação; horário do pedido na lista não está no contrato; motivo da recusa opcional no PED1
-- **Próximos passos:** esperar o Marco aprovar antes de implementar
-
-## [2026-10-10 19:27] — Operação do dia nas unidades
-- **Autor:** Grok 4.7
-- **Objetivo:** Visão Hoje, pausa rápida, aplicação em várias unidades, feriados, cópia de grade, alertas e período do histórico no fuso da empresa, sem rota nova no gateway.
-- **Arquivos alterados:**
-  - `src/lib/gateway/gestao.ts` — modificado — prazos, feriados, alertas, cópia e ações de lote
-  - `src/lib/gateway/gestao.server.ts` — modificado — fuso projetado e uma chamada por unidade
-  - `src/lib/gateway/gestao.test.ts` — modificado — atendente, lote e feriados
-  - `src/lib/gateway/modulo.server.ts` — modificado — admin pode ler a raiz do tenant
-  - `src/lib/gateway/modulo.test.ts` — modificado — leitura da raiz para admin e recusa para atendente
-  - `src/components/luxtia/GestaoOperacao.tsx` — criado — Hoje, seleção e feriados
-  - `src/components/luxtia/gestao-base.tsx` — criado — hook e pausa rápida
-  - `src/components/luxtia/GestaoUnidades.tsx` — modificado — alertas, atalhos e cópia de grade
-  - `src/components/luxtia/HistoricoGestao.tsx` — modificado — período no fuso da empresa
-  - `instrucoes.md`, `README.md`, `docs/ESPEC_TELAS_GESTAO.md` — modificados
-- **Resumo das mudanças:** O topo mostra situação, pausas e exceções de sete dias. A pausa rápida vale para o atendente. Lote e feriados só existem para admin/plataforma e não repetem sucesso. A grade copiada fica no rascunho até salvar. O histórico usa o timezone do tenant.
-- **Decisões e justificativas:** O campo `timezone` já existe no tenant, então não há pendência de contrato. Brasília só entra se o valor vier ausente ou inválido, com aviso na tela. A leitura da raiz devolve ao navegador apenas o fuso.
-- **Comandos executados:** `bun test` → 75 aprovados, 6 ignorados; `tsc --noEmit` → OK; eslint → 0 erros, avisos Fast Refresh; build e verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** conferência visual autenticada; fallback de Brasília só se o fuso do tenant não vier válido
-- **Próximos passos:** Marco revisar Hoje, pausa rápida, lote e feriados numa empresa de teste, sem alterar unidades reais
-
-## [2026-10-10 21:50] — Uso de unidades e histórico
-- **Autor:** Grok 4.7
-- **Objetivo:** Deixar Unidades e horários e Histórico de gestão mais diretos, com menos cliques para achar cada função.
-- **Arquivos alterados:**
-  - `src/components/luxtia/GestaoUnidades.tsx` — modificado — lista com ações visíveis, detalhe ao lado e grade/exceção mais curtas
-  - `src/components/luxtia/HistoricoGestao.tsx` — modificado — filtro por nome e período; resumo da alteração sem abrir o detalhe
-  - `src/routes/_authenticated/ia/unidades.tsx` — modificado — unidade e seção no endereço
-  - `src/routes/_authenticated/ia/gestao.alteracoes.tsx` — modificado — unidade no endereço
-  - `src/lib/gateway/gestao.ts` — modificado — período com fuso de Brasília e filtros publicados
-  - `src/lib/gateway/gestao.server.ts` — modificado — envia `unidade_id`, `desde` e `ate`; recusa a combinação proibida
-  - `src/lib/gateway/gestao.test.ts` — modificado — cobre o período e a combinação
-  - `instrucoes.md`, `README.md`, `docs/ESPEC_TELAS_GESTAO.md`, `docs/VALIDACAO_G1_PAINEL.md` — modificados
-- **Resumo das mudanças:** Agenda, horários e exceções abrem no primeiro clique. A grade mostra a semana resumida. O histórico escolhe a unidade pelo nome e inclui as exceções dela.
-- **Decisões e justificativas:** Os filtros `unidade_id`, `desde` e `ate` já estão no contrato publicado. O identificador exato não vai junto com a unidade. A data da linha continua com o offset recebido; só o filtro usa Brasília.
-- **Comandos executados:** `bun test` → 73 aprovados, 6 ignorados; `tsc --noEmit` → OK; eslint → 0 erros, 1 aviso Fast Refresh já existente; build e verificação da chave → OK; recriação só do painel → OK; rotas públicas 200 e admin do gateway 404
-- **Erros e resoluções:** nenhum
-- **Pendências / TODO:** conferência visual autenticada; a sessão de revisão caiu na tela de acesso
-- **Próximos passos:** Marco revisar pausa, grade, exceção e o filtro de histórico numa unidade real, só em leitura se não houver unidade de teste
-
-Entradas anteriores (até 10/10/2026) estão em `docs/worklog-arquivo/2026-10.md`.
+Entradas anteriores (até 11/10/2026) estão em `docs/worklog-arquivo/2026-10.md`.

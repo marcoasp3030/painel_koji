@@ -1,3 +1,4 @@
+import { peloMenos } from "@/lib/acesso/papeis";
 import { avisoSchema } from "./avisos";
 import type { ModuloGateway } from "./modulo.server";
 import { GatewayErro, mensagemParaUsuario } from "./erros";
@@ -20,13 +21,22 @@ export async function executarAvisos(sessao: Sessao, entrada: unknown): Promise<
   try {
     const d = p.data;
     const t = await sessao.tenant(d.empresa);
-    if (d.acao !== "reenviar" && t.papel === "membro")
+    if (t.papel === "funcionario")
       return {
         ok: false,
         erro: {
           status: 403,
           campo: "corpo",
-          mensagem: "Somente administradores podem configurar os avisos de pedido.",
+          mensagem: "Os avisos de pedido ficam com o supervisor e o gestor.",
+        },
+      };
+    if (d.acao === "salvar" && !peloMenos(t.papel, "gestor"))
+      return {
+        ok: false,
+        erro: {
+          status: 403,
+          campo: "corpo",
+          mensagem: "Gravar o aviso fica com o gestor.",
         },
       };
     let r;

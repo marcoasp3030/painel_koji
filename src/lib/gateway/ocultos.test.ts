@@ -49,7 +49,7 @@ describe("agentes de teste escondidos da empresa", () => {
   });
 
   test("listas: empresa não vê agente de teste nem o canal dele; plataforma vê tudo", async () => {
-    for (const papel of ["admin", "membro"] as const) {
+    for (const papel of ["gestor", "funcionario"] as const) {
       expect(filtrarAgentes(papel, AGENTES).map((a) => a.id)).toEqual(["bykoji_atendimento"]);
       const ocultos = await agentesOcultos(escopo(papel));
       expect(filtrarCanais(papel, CANAIS, ocultos).map((c) => c.id)).toEqual(["can_real"]);
@@ -59,7 +59,7 @@ describe("agentes de teste escondidos da empresa", () => {
   });
 
   test("acesso direto ao agente de teste responde não encontrado para a empresa", async () => {
-    for (const papel of ["admin", "membro"] as const) {
+    for (const papel of ["gestor", "funcionario"] as const) {
       expect(await naoEncontrado(exigirAgenteVisivel(escopo(papel), "ag_bench"))).toBe(true);
       expect(await naoEncontrado(exigirAgenteVisivel(escopo(papel), "bykoji_atendimento"))).toBe(false);
     }
@@ -69,8 +69,8 @@ describe("agentes de teste escondidos da empresa", () => {
   });
 
   test("histórico de conversa de canal de agente de teste também some", async () => {
-    expect(await naoEncontrado(exigirConversaVisivel(escopo("admin"), "bykoji:can_bench:marco"))).toBe(true);
-    expect(await naoEncontrado(exigirConversaVisivel(escopo("admin"), "bykoji:can_real:marco"))).toBe(false);
+    expect(await naoEncontrado(exigirConversaVisivel(escopo("gestor"), "bykoji:can_bench:marco"))).toBe(true);
+    expect(await naoEncontrado(exigirConversaVisivel(escopo("gestor"), "bykoji:can_real:marco"))).toBe(false);
     expect(await naoEncontrado(exigirConversaVisivel(escopo("plataforma"), "bykoji:can_bench:marco"))).toBe(false);
   });
 });

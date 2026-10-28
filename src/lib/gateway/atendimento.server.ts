@@ -1,4 +1,5 @@
 import { atendimentoSchema, type ErroAtendimento, type ResultadoAtendimento } from "./atendimento";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { AcessoNegado, type ModuloGateway } from "./modulo.server";
 import { GatewayErro, mensagemParaUsuario } from "./erros";
 import type { Json } from "./tipos";
@@ -7,7 +8,7 @@ type Sessao = Awaited<ReturnType<ModuloGateway["sessao"]>>;
 
 const ESCRITAS = new Set(["salvar", "descartar", "publicar", "restaurar"]);
 const SEM_PERMISSAO =
-  "Sem permissão para alterar o comportamento do agente. Só administradores da empresa e da plataforma editam.";
+  "Sem permissão para alterar o comportamento do agente. O gestor e a plataforma editam e publicam.";
 const CONFLITOS: Record<string, string> = {
   sem_rascunho: "Não há rascunho para publicar. A tela foi atualizada.",
   sem_alteracoes: "Nada a publicar: o rascunho é igual ao que está em vigor.",
@@ -31,7 +32,7 @@ export async function executarAtendimento(
   const d = p.data;
   const t = await sessao.tenant(d.empresa);
   try {
-    if (ESCRITAS.has(d.acao) && t.papel === "membro")
+    if (ESCRITAS.has(d.acao) && !peloMenos(t.papel, "gestor"))
       return { ok: false, erro: { status: 403, mensagem: SEM_PERMISSAO } };
     if (d.agente) await (await import("./ocultos")).exigirAgenteVisivel(t, d.agente);
     const escopo = d.agente ? ["agentes", d.agente, "atendimento"] : ["atendimento"];

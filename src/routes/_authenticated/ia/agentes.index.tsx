@@ -40,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/ia/agentes/")({
     <PaginaGateway
       titulo="Agentes"
       descricao="Escolha um agente para ver se está pronto, ajustar o comportamento e testar."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
     >
       {(ctx) => <Agentes key={ctx.empresa ?? "empresa"} ctx={ctx} />}
     </PaginaGateway>

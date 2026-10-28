@@ -467,6 +467,7 @@ type ErroCampo = { campo: string; mensagem: string };
 export function ItemCat2({
   item,
   admin,
+  grade = false,
   itens,
   unidadeNome,
   servicos,
@@ -475,6 +476,7 @@ export function ItemCat2({
 }: {
   item: ItemCardapio;
   admin: boolean;
+  grade?: boolean;
   itens: ItemCardapio[];
   unidadeNome: string;
   servicos: ServicosCat2;
@@ -497,7 +499,9 @@ export function ItemCat2({
     textos: string[];
   } | null>(null);
   const regraMudou = JSON.stringify(r) !== JSON.stringify(rascunhoDe(base.disponibilidade));
-  const sujo = admin && (JSON.stringify(v) !== JSON.stringify(dadosDe(base)) || regraMudou);
+  const sujo =
+    (admin && (JSON.stringify(v) !== JSON.stringify(dadosDe(base)) || regraMudou)) ||
+    (!admin && grade && regraMudou);
   const problema = problemaRascunho(r);
   const digitado = precoDigitado(v.preco);
   const some =
@@ -556,10 +560,10 @@ export function ItemCat2({
   };
 
   async function gravar(atual = base, pendente?: CamposItem, confirmado = false) {
-    if (!admin || busy || carregando) return;
+    if ((!admin && !grade) || busy || carregando) return;
     let c: CamposItem;
     try {
-      c = pendente ?? diferencaItem(base, v);
+      c = !admin && grade ? { disponibilidade: corpoDisponibilidade(r) } : (pendente ?? diferencaItem(base, v));
     } catch (e) {
       setErro({ campo: "preco", mensagem: (e as Error).message });
       return;
@@ -757,7 +761,7 @@ export function ItemCat2({
               </p>
             </section>
           )}
-          {admin ? (
+          {admin || grade ? (
             <div>
               <DisponibilidadeEditor
                 r={r}
@@ -812,7 +816,7 @@ export function ItemCat2({
             <Button variant="outline" disabled={busy} onClick={sair}>
               {admin ? "Cancelar" : "Fechar"}
             </Button>
-            {admin && (
+            {(admin || grade) && (
               <Button
                 disabled={
                   busy ||

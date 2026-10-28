@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { ChavesFormularioTela } from "@/components/luxtia/documentos/ChavesFormulario";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/ia/chaves-formulario")({
     <PaginaGateway
       titulo="Chaves de formulário"
       descricao="Chaves para um site enviar documentos a um agente. O valor aparece uma única vez."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor"]}
     >
       {(ctx) => <Tela key={ctx.empresa ?? "empresa"} ctx={ctx} />}
     </PaginaGateway>
@@ -32,7 +33,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
   const listarAg = useServerFn(listarAgentes);
   const cache = useQueryClient();
   const [chaveNova, setChaveNova] = useState<string | null>(null);
-  const podeCriar = ctx.papel === "plataforma" || ctx.papel === "admin";
+  const podeCriar = peloMenos(ctx.papel, "gestor");
   const lista = useQuery({
     queryKey: ["chaves-formulario", ctx.empresa],
     queryFn: () => listar({ data: { empresa: ctx.empresa, acao: "listar" } }),

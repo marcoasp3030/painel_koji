@@ -132,7 +132,7 @@ export async function executarGestao(
   try {
     let comPedidos = false;
     if (
-      t.papel !== "membro" &&
+      t.papel !== "funcionario" &&
       ["listar", "obter", "criar", "editar", "pausar", "reabrir", "horarios"].includes(d.acao)
     ) {
       try {
@@ -179,8 +179,8 @@ export async function executarGestao(
         "uf",
         "situacao",
         "pausa_motivo",
-        ...(t.papel !== "membro" ? ["horarios", "whatsapp_pedidos"] : []),
-        ...(comPedidos && t.papel !== "membro"
+        ...(t.papel !== "funcionario" ? ["horarios", "whatsapp_pedidos"] : []),
+        ...(comPedidos && t.papel !== "funcionario"
           ? ["taxa_entrega", "pedido_minimo", "area_entrega", "aceita_retirada", "formas_pagamento"]
           : []),
       ])
@@ -226,7 +226,7 @@ async function operacoesEmLote(
   t: Awaited<ReturnType<Sessao["tenant"]>>,
   d: Extract<PedidoGestao, { acao: "fuso_empresa" | "aplicar_pausas" | "aplicar_excecoes" }>,
 ) {
-  if (t.papel === "membro")
+  if (t.papel === "funcionario")
     throw new AcessoNegado(
       d.acao === "fuso_empresa"
         ? "O histórico é restrito ao administrador da empresa."

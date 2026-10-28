@@ -4,20 +4,29 @@
  * esse perfil. Tudo que não está na tabela de regras é recusado para
  * usuários de empresa, antes de qualquer chamada ao gateway.
  */
+import { cabecalhoUnidades, type PapelAcesso } from "@/lib/acesso/papeis";
 import type { ClienteGateway, MetodoGateway, RequisicaoGateway } from "./cliente.server";
 import { GatewayErro } from "./erros";
 
 export const FORMATO_TENANT = /^[a-z0-9_]{3,40}$/;
 
-/** plataforma = super_admin; admin = admin da empresa; membro = atendente. */
-export type PapelGateway = "plataforma" | "admin" | "membro";
+/** Os quatro papéis que o gateway passa a aceitar com o PAPEL1. */
+export type PapelGateway = PapelAcesso;
 
 export type PerfilGateway = {
   userId: string;
   email: string | null;
   superAdmin: boolean;
   /** Tenants do gateway vinculados às empresas do usuário. */
-  vinculos: { gatewayTenantId: string; ativo: boolean; admin: boolean }[];
+  vinculos: {
+    gatewayTenantId: string;
+    ativo: boolean;
+    /** Legado do cadastro anterior. Sem `papel`, verdadeiro vira gestor. */
+    admin: boolean;
+    papel?: PapelGateway;
+    /** "*" no gestor. Lista de códigos no supervisor e no funcionário. */
+    unidades?: "*" | string[];
+  }[];
 };
 
 export type UsuarioSessao = { userId: string; email: string | null };
@@ -31,17 +40,12 @@ export class AcessoNegado extends GatewayErro {
   }
 }
 
-/** Campos do agente que o admin da empresa pode alterar. */
+/**
+ * Campos do agente que o admin da empresa pode alterar.
+ * Comportamento versionado (espera, pausa, falha, demora) só entra pelo rascunho
+ * de atendimento. Piloto, alerta e Skyone são da plataforma.
+ */
 export const CAMPOS_AGENTE_EMPRESA = [
-  "aviso_demora",
-  "fallback",
-  "modo_piloto",
-  "contatos_permitidos",
-  "debounce_s",
-  "max_wait_s",
-  "pause_minutes",
-  "slow_notice_s",
-  "alerta_telefone",
   "status",
   // Lista ou null (= padrão do modelo). Fora dos permitidos o gateway recusa.
   "modulos_ligados",
@@ -94,11 +98,12 @@ type Regra = {
   /** Segmentos após /tenants/{tenant}; "*" vale qualquer segmento. */
   caminho: string[];
   papeis: Exclude<PapelGateway, "plataforma">[];
-  corpo?: (corpo: unknown) => void;
+  corpo?: (corpo: unknown, papel: PapelGateway) => void;
 };
 
-const AMBOS: Regra["papeis"] = ["admin", "membro"];
-const ADMIN: Regra["papeis"] = ["admin"];
+const FUNC: Regra["papeis"] = ["gestor", "supervisor", "funcionario"];
+const SUP: Regra["papeis"] = ["gestor", "supervisor"];
+const GEST: Regra["papeis"] = ["gestor"];
 
 function soChaves(permitidas: string[], mensagem: string) {
   return (c: unknown) => {
@@ -114,35 +119,35 @@ function soChaves(permitidas: string[], mensagem: string) {
 function regrasAtendimento(prefixo: string[]): Regra[] {
   const a = [...prefixo, "atendimento"];
   return [
-    { metodo: "GET", caminho: a, papeis: AMBOS },
+    { metodo: "GET", caminho: a, papeis: SUP },
     {
       metodo: "PUT",
       caminho: [...a, "rascunho"],
-      papeis: ADMIN,
+      papeis: GEST,
       corpo: soChaves(["baseado_em", "perfil", "comportamentos"], "Campos de rascunho inválidos."),
     },
-    { metodo: "DELETE", caminho: [...a, "rascunho"], papeis: ADMIN },
+    { metodo: "DELETE", caminho: [...a, "rascunho"], papeis: GEST },
     {
       metodo: "POST",
       caminho: [...a, "publicar"],
-      papeis: ADMIN,
+      papeis: GEST,
       corpo: soChaves(
         ["baseado_em", "nota", "confirmar_avisos"],
         "Campos de publicação inválidos.",
       ),
     },
-    { metodo: "GET", caminho: [...a, "versoes"], papeis: AMBOS },
-    { metodo: "GET", caminho: [...a, "versoes", "*"], papeis: AMBOS },
+    { metodo: "GET", caminho: [...a, "versoes"], papeis: SUP },
+    { metodo: "GET", caminho: [...a, "versoes", "*"], papeis: SUP },
     {
       metodo: "POST",
       caminho: [...a, "versoes", "*", "restaurar"],
-      papeis: ADMIN,
+      papeis: GEST,
       corpo: soChaves(["nota"], "Campos de restauração inválidos."),
     },
     {
       metodo: "POST",
       caminho: [...a, "previa"],
-      papeis: AMBOS,
+      papeis: SUP,
       corpo: soChaves(["fonte"], "Campos de prévia inválidos."),
     },
   ];
@@ -150,37 +155,39 @@ function regrasAtendimento(prefixo: string[]): Regra[] {
 
 const REGRAS: Regra[] = [
   // Leitura do tenant só para o fuso (`timezone`). A função de gestão devolve apenas esse campo.
-  { metodo: "GET", caminho: [], papeis: ADMIN },
+  { metodo: "GET", caminho: [], papeis: FUNC },
   // Agentes: leitura para todos; edição restrita; testar e simular só admin.
-  { metodo: "GET", caminho: ["agentes"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["agentes", "*"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["agentes", "*", "circuito"], papeis: AMBOS },
-  { metodo: "PATCH", caminho: ["agentes", "*"], papeis: ADMIN, corpo: validarPatchAgenteEmpresa },
-  // Testar como a empresa: sem corpo. Opções de teste (ex.: provedor real) são da plataforma.
-  { metodo: "POST", caminho: ["agentes", "*", "testar"], papeis: ADMIN, corpo: semCorpo },
-  { metodo: "POST", caminho: ["agentes", "*", "simular"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["agentes", "*", "capacidades"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["agentes"], papeis: SUP },
+  { metodo: "GET", caminho: ["agentes", "*"], papeis: SUP },
+  { metodo: "GET", caminho: ["agentes", "*", "circuito"], papeis: SUP },
+  { metodo: "PATCH", caminho: ["agentes", "*"], papeis: GEST, corpo: validarPatchAgenteEmpresa },
+  // Testar e simular: supervisor e gestor. Opções de teste (provedor real) são da plataforma.
+  { metodo: "POST", caminho: ["agentes", "*", "testar"], papeis: SUP, corpo: semCorpo },
+  { metodo: "POST", caminho: ["agentes", "*", "simular"], papeis: SUP },
+  { metodo: "GET", caminho: ["agentes", "*", "capacidades"], papeis: SUP },
   {
     metodo: "POST",
     caminho: ["agentes", "*", "simular-documento"],
-    papeis: ADMIN,
+    papeis: SUP,
     corpo: soChaves(["identificador", "canal_id", "mensagem"], "Campos do documento inválidos."),
   },
   // Canais e consumo: só leitura.
-  { metodo: "GET", caminho: ["canais"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["canais", "*"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["consumo"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["canais"], papeis: GEST },
+  // A conversa precisa do canal para saber se o agente é de teste. Não é a tela de canais.
+  { metodo: "GET", caminho: ["canais", "*"], papeis: FUNC },
+  { metodo: "PATCH", caminho: ["canais", "*"], papeis: GEST },
+  { metodo: "GET", caminho: ["consumo"], papeis: GEST },
   // Unidades e horários: admin da empresa.
-  { metodo: "GET", caminho: ["unidades"], papeis: AMBOS },
-  { metodo: "POST", caminho: ["unidades"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["unidades", "*"], papeis: AMBOS },
-  { metodo: "PATCH", caminho: ["unidades", "*"], papeis: ADMIN },
-  { metodo: "DELETE", caminho: ["unidades", "*"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["unidades", "*", "agenda"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["unidades"], papeis: FUNC },
+  { metodo: "POST", caminho: ["unidades"], papeis: GEST },
+  { metodo: "GET", caminho: ["unidades", "*"], papeis: FUNC },
+  { metodo: "PATCH", caminho: ["unidades", "*"], papeis: GEST },
+  { metodo: "DELETE", caminho: ["unidades", "*"], papeis: GEST },
+  { metodo: "GET", caminho: ["unidades", "*", "agenda"], papeis: FUNC },
   {
     metodo: "POST",
     caminho: ["unidades", "*", "pausar"],
-    papeis: AMBOS,
+    papeis: SUP,
     corpo: (c) => {
       if (
         !c ||
@@ -190,23 +197,23 @@ const REGRAS: Regra[] = [
         throw new AcessoNegado("Campos de pausa inválidos.");
     },
   },
-  { metodo: "POST", caminho: ["unidades", "*", "reabrir"], papeis: AMBOS, corpo: semCorpo },
-  { metodo: "PUT", caminho: ["unidades", "*", "horarios"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["unidades", "*", "excecoes"], papeis: ADMIN },
-  { metodo: "POST", caminho: ["unidades", "*", "excecoes"], papeis: ADMIN },
-  { metodo: "DELETE", caminho: ["unidades", "*", "excecoes", "*"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["gestao", "alteracoes"], papeis: ADMIN },
+  { metodo: "POST", caminho: ["unidades", "*", "reabrir"], papeis: SUP, corpo: semCorpo },
+  { metodo: "PUT", caminho: ["unidades", "*", "horarios"], papeis: GEST },
+  { metodo: "GET", caminho: ["unidades", "*", "excecoes"], papeis: SUP },
+  { metodo: "POST", caminho: ["unidades", "*", "excecoes"], papeis: SUP },
+  { metodo: "DELETE", caminho: ["unidades", "*", "excecoes", "*"], papeis: SUP },
+  { metodo: "GET", caminho: ["gestao", "alteracoes"], papeis: FUNC },
   // Conversas e atendimento humano.
-  { metodo: "GET", caminho: ["conversas"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["conversas", "*", "mensagens"], papeis: AMBOS },
-  { metodo: "POST", caminho: ["conversas", "*", "mensagens"], papeis: AMBOS },
-  { metodo: "POST", caminho: ["conversas", "*", "assumir"], papeis: AMBOS },
-  { metodo: "POST", caminho: ["conversas", "*", "devolver"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["conversas"], papeis: FUNC },
+  { metodo: "GET", caminho: ["conversas", "*", "mensagens"], papeis: FUNC },
+  { metodo: "POST", caminho: ["conversas", "*", "mensagens"], papeis: FUNC },
+  { metodo: "POST", caminho: ["conversas", "*", "assumir"], papeis: FUNC },
+  { metodo: "POST", caminho: ["conversas", "*", "devolver"], papeis: SUP },
   // Nome de cadastro do contato (PED1-c): qualquer papel, só a chave `nome`.
   {
     metodo: "PATCH",
     caminho: ["contatos", "*"],
-    papeis: AMBOS,
+    papeis: FUNC,
     corpo: (c) => {
       const nome = c && typeof c === "object" ? (c as Record<string, unknown>)["nome"] : undefined;
       if (
@@ -218,19 +225,19 @@ const REGRAS: Regra[] = [
         throw new AcessoNegado("Só o nome do contato pode ser alterado.");
     },
   },
-  { metodo: "GET", caminho: ["eventos"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["eventos", "cursor"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["eventos"], papeis: FUNC },
+  { metodo: "GET", caminho: ["eventos", "cursor"], papeis: FUNC },
   // ARQ1-a1: ler documentos, qualquer papel; apagar e chave de formulário, só admin.
-  { metodo: "GET", caminho: ["anexos"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["anexos", "*"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["anexos", "*", "texto"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["anexos", "*", "original"], papeis: AMBOS },
-  { metodo: "DELETE", caminho: ["anexos", "*"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["chaves-formulario"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["anexos"], papeis: GEST },
+  { metodo: "GET", caminho: ["anexos", "*"], papeis: GEST },
+  { metodo: "GET", caminho: ["anexos", "*", "texto"], papeis: GEST },
+  { metodo: "GET", caminho: ["anexos", "*", "original"], papeis: GEST },
+  { metodo: "DELETE", caminho: ["anexos", "*"], papeis: GEST },
+  { metodo: "GET", caminho: ["chaves-formulario"], papeis: GEST },
   {
     metodo: "POST",
     caminho: ["chaves-formulario"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(
       [
         "nome",
@@ -245,64 +252,64 @@ const REGRAS: Regra[] = [
       "Campos da chave de formulário inválidos.",
     ),
   },
-  { metodo: "DELETE", caminho: ["chaves-formulario", "*"], papeis: ADMIN },
+  { metodo: "DELETE", caminho: ["chaves-formulario", "*"], papeis: GEST },
   // Webhooks de saída: admin escolhe os eventos. Membro não configura.
-  { metodo: "GET", caminho: ["webhooks-saida"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["webhooks-saida", "*"], papeis: ADMIN },
-  { metodo: "GET", caminho: ["webhooks-saida", "*", "entregas"], papeis: ADMIN },
+  { metodo: "GET", caminho: ["webhooks-saida"], papeis: GEST },
+  { metodo: "GET", caminho: ["webhooks-saida", "*"], papeis: GEST },
+  { metodo: "GET", caminho: ["webhooks-saida", "*", "entregas"], papeis: GEST },
   {
     metodo: "POST",
     caminho: ["webhooks-saida"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["url", "eventos", "ativo"], "Campos do webhook inválidos."),
   },
   {
     metodo: "PATCH",
     caminho: ["webhooks-saida", "*"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["url", "eventos", "ativo"], "Campos do webhook inválidos."),
   },
-  { metodo: "DELETE", caminho: ["webhooks-saida", "*"], papeis: ADMIN },
+  { metodo: "DELETE", caminho: ["webhooks-saida", "*"], papeis: GEST },
   {
     metodo: "POST",
     caminho: ["webhooks-saida", "*", "testar"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: semCorpo,
   },
   {
     metodo: "POST",
     caminho: ["webhooks-saida", "*", "rotacionar-segredo"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: semCorpo,
   },
   // FUP1-a: ver e cancelar, admin e membro. Reativar o contato, só admin.
-  { metodo: "GET", caminho: ["conversas", "*", "follow-ups"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["conversas", "*", "follow-ups"], papeis: FUNC },
   {
     metodo: "POST",
     caminho: ["conversas", "*", "follow-ups", "cancelar"],
-    papeis: AMBOS,
+    papeis: SUP,
     corpo: soChaves(["motivo"], "Campos de cancelamento inválidos."),
   },
-  { metodo: "GET", caminho: ["contatos", "*", "opt-out-follow-up"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["contatos", "*", "opt-out-follow-up"], papeis: SUP },
   {
     metodo: "DELETE",
     caminho: ["contatos", "*", "opt-out-follow-up"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["motivo"], "Campos de reativação inválidos."),
   },
   // MULTI1-a: módulos da empresa e do agente; webhook uazapi.
-  { metodo: "GET", caminho: ["modulos"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["agentes", "*", "modulos"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["modulos"], papeis: GEST },
+  { metodo: "GET", caminho: ["agentes", "*", "modulos"], papeis: SUP },
   {
     metodo: "POST",
     caminho: ["canais", "*", "webhook"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: semCorpo,
   },
   {
     metodo: "PUT",
     caminho: ["pedidos", "avisos", "*"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: (c) => {
       if (
         !c ||
@@ -313,11 +320,11 @@ const REGRAS: Regra[] = [
         throw new AcessoNegado("Campos de aviso inválidos.");
     },
   },
-  { metodo: "POST", caminho: ["pedidos", "avisos", "*", "previa"], papeis: ADMIN },
+  { metodo: "POST", caminho: ["pedidos", "avisos", "*", "previa"], papeis: SUP },
   {
     metodo: "POST",
     caminho: ["pedidos", "*", "avisos", "*", "reenviar"],
-    papeis: AMBOS,
+    papeis: SUP,
     corpo: (c) => {
       if (c && (typeof c !== "object" || Object.keys(c).some((k) => k !== "mesmo_incerto")))
         throw new AcessoNegado("Campos de reenvio inválidos.");
@@ -327,12 +334,12 @@ const REGRAS: Regra[] = [
   ...regrasAtendimento([]),
   ...regrasAtendimento(["agentes", "*"]),
   // CAT2: consulta e prévia para todos; edição e histórico apenas administradores.
-  { metodo: "GET", caminho: ["catalogo", "itens", "*"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["catalogo", "categorias"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["catalogo", "itens", "*"], papeis: FUNC },
+  { metodo: "GET", caminho: ["catalogo", "categorias"], papeis: FUNC },
   {
     metodo: "POST",
     caminho: ["catalogo", "disponibilidade", "previa"],
-    papeis: AMBOS,
+    papeis: SUP,
     corpo: (c) => {
       if (
         !c ||
@@ -342,12 +349,19 @@ const REGRAS: Regra[] = [
         throw new AcessoNegado("Campos de prévia inválidos.");
     },
   },
-  { metodo: "GET", caminho: ["catalogo", "itens"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["catalogo", "itens"], papeis: FUNC },
   {
     metodo: "PATCH",
     caminho: ["catalogo", "itens", "*"],
-    papeis: ADMIN,
-    corpo: (c) => {
+    papeis: SUP,
+    corpo: (c, papel) => {
+      if (papel === "supervisor") {
+        soChaves(
+          ["disponibilidade", "atualizado_em"],
+          "O supervisor altera a disponibilidade e os horários do item.",
+        )(c);
+        return;
+      }
       if (
         !c ||
         typeof c !== "object" ||
@@ -380,7 +394,7 @@ const REGRAS: Regra[] = [
   {
     metodo: "POST",
     caminho: ["catalogo", "itens"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(
       [
         "unidade",
@@ -403,7 +417,7 @@ const REGRAS: Regra[] = [
   ...["esgotar", "repor"].map((op): Regra => ({
     metodo: "POST",
     caminho: ["catalogo", "itens", "*", op],
-    papeis: AMBOS,
+    papeis: FUNC,
     corpo: soChaves(
       op === "esgotar" ? ["ate", "motivo", "aplicar_em"] : ["aplicar_em"],
       "Campos inválidos.",
@@ -412,7 +426,7 @@ const REGRAS: Regra[] = [
   ...["arquivar", "desarquivar", "duplicar"].map((op): Regra => ({
     metodo: "POST",
     caminho: ["catalogo", "itens", "*", op],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(
       op === "duplicar" ? ["unidade", "categoria_id", "nome"] : [],
       "Campos inválidos.",
@@ -421,74 +435,76 @@ const REGRAS: Regra[] = [
   {
     metodo: "POST",
     caminho: ["catalogo", "categorias"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["unidade", "nome", "posicao"], "Campos de categoria inválidos."),
   },
   {
     metodo: "PATCH",
     caminho: ["catalogo", "categorias", "*"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["nome"], "Campos de categoria inválidos."),
   },
   {
     metodo: "PUT",
     caminho: ["catalogo", "categorias", "ordem"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["unidade", "categorias"], "Ordem inválida."),
   },
   {
     metodo: "PUT",
     caminho: ["catalogo", "categorias", "*", "ordem"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["itens"], "Ordem inválida."),
   },
   {
     metodo: "POST",
     caminho: ["catalogo", "categorias", "*", "arquivar"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["itens", "destino"], "Campos inválidos."),
   },
   {
     metodo: "POST",
     caminho: ["catalogo", "copiar"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(["itens", "destino", "ligar"], "Campos de cópia inválidos."),
   },
   {
     metodo: "POST",
     caminho: ["catalogo", "lote"],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(
       ["itens", "acao", "simulacao", "percentual", "valor", "categoria_id", "ate", "motivo"],
       "Campos do lote inválidos.",
     ),
   },
-  { metodo: "GET", caminho: ["catalogo", "pratos", "sugestoes"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["catalogo", "pratos", "sugestoes"], papeis: FUNC },
   ...["confirmar", "ignorar", "restaurar"].map((op): Regra => ({
     metodo: "POST",
     caminho: ["catalogo", "pratos", "sugestoes", op],
-    papeis: ADMIN,
+    papeis: GEST,
     corpo: soChaves(op === "confirmar" ? ["grupos"] : ["chaves"], "Campos de sugestão inválidos."),
   })),
-  { metodo: "GET", caminho: ["conversas", "*", "atendimentos"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["conversas", "*", "atendimentos"], papeis: FUNC },
   {
     metodo: "POST",
     caminho: ["conversas", "*", "encerrar"],
-    papeis: AMBOS,
+    papeis: SUP,
     corpo: soChaves(["motivo"], "Campos inválidos."),
   },
-  { metodo: "POST", caminho: ["conversas", "*", "reabrir"], papeis: AMBOS, corpo: semCorpo },
+  { metodo: "POST", caminho: ["conversas", "*", "reabrir"], papeis: SUP, corpo: semCorpo },
   // Pedidos PED1-a: leitura e mudança de status para admin e atendente.
-  { metodo: "GET", caminho: ["pedidos"], papeis: AMBOS },
-  { metodo: "GET", caminho: ["pedidos", "*"], papeis: AMBOS },
+  { metodo: "GET", caminho: ["pedidos"], papeis: FUNC },
+  { metodo: "GET", caminho: ["pedidos", "*"], papeis: FUNC },
   {
     metodo: "POST",
     caminho: ["pedidos", "*", "status"],
-    papeis: AMBOS,
-    corpo: (c) => {
+    papeis: FUNC,
+    corpo: (c, papel) => {
       if (!c || typeof c !== "object" || Array.isArray(c))
         throw new AcessoNegado("Informe o status do pedido.");
       const status = (c as { status?: unknown }).status;
+      if (status === "cancelado" && papel === "funcionario")
+        throw new AcessoNegado("Cancelar o pedido fica com o supervisor e o gestor.");
       if (
         typeof status !== "string" ||
         Object.keys(c).some((k) => !["status", "motivo", "previsao_min"].includes(k))
@@ -517,25 +533,25 @@ export function autorizar(
   const regra = REGRAS.find((r) => casa(r, metodo, partes));
   if (!regra || !regra.papeis.includes(papel)) {
     throw new AcessoNegado(
-      papel === "membro"
-        ? "Seu acesso permite apenas consultar agentes, canais e consumo e atender conversas."
-        : "Esta operação é restrita ao admin da plataforma.",
+      papel === "funcionario"
+        ? "Seu acesso não inclui esta operação."
+        : "Esta operação pede um papel maior.",
     );
   }
-  regra.corpo?.(corpo);
+  regra.corpo?.(corpo, papel);
 }
 
 /** Decide o tenant efetivo e o papel a partir do perfil e do tenant pedido. */
 export function resolverTenant(
   perfil: PerfilGateway,
   solicitado?: string | null,
-): { id: string; papel: PapelGateway } {
+): { id: string; papel: PapelGateway; unidades: "*" | string[] } {
   if (solicitado != null && !FORMATO_TENANT.test(solicitado)) {
     throw new AcessoNegado("Empresa inválida.");
   }
   if (perfil.superAdmin) {
     if (!solicitado) throw new AcessoNegado("Escolha a empresa.");
-    return { id: solicitado, papel: "plataforma" };
+    return { id: solicitado, papel: "plataforma", unidades: "*" };
   }
 
   const permitidos = perfil.vinculos.filter((v) => v.ativo);
@@ -552,7 +568,15 @@ export function resolverTenant(
   } else if (permitidos.length > 1) {
     throw new AcessoNegado("Escolha a empresa.");
   }
-  return { id: vinculo.gatewayTenantId, papel: vinculo.admin ? "admin" : "membro" };
+  const papel = vinculo.papel ?? (vinculo.admin ? "gestor" : "funcionario");
+  // Sem a lista (só em teste antigo) usa uma unidade fictícia. O cadastro real sempre manda o array.
+  const unidades: "*" | string[] =
+    papel === "gestor"
+      ? "*"
+      : Array.isArray(vinculo.unidades)
+        ? vinculo.unidades
+        : ["centro"];
+  return { id: vinculo.gatewayTenantId, papel, unidades };
 }
 
 export function criarModuloGateway(deps: {
@@ -590,14 +614,16 @@ export function criarModuloGateway(deps: {
         async tenant(solicitado?: string | null) {
           let id: string;
           let papel: PapelGateway;
+          let unidades: "*" | string[];
           try {
-            ({ id, papel } = resolverTenant(perfil, solicitado));
+            ({ id, papel, unidades } = resolverTenant(perfil, solicitado));
           } catch (erro) {
             return negar(solicitado ?? null, erro);
           }
           return {
             id,
             papel,
+            unidades,
             async chamar<T = unknown>(
               metodo: MetodoGateway,
               partes: string[] = [],
@@ -605,14 +631,17 @@ export function criarModuloGateway(deps: {
             ) {
               try {
                 autorizar(papel, metodo, partes, opcoes.corpo);
+                const lista = cabecalhoUnidades(papel, unidades);
+                if (!lista) throw new AcessoNegado("Nenhuma unidade no seu acesso.");
+                // Empresa, papel e unidades saem do cadastro. O texto do navegador não entra.
+                return await chamar<T>(papel, metodo, ["tenants", id, ...partes], {
+                  ...opcoes,
+                  unidades: lista,
+                  ...(papel === "plataforma" ? {} : { escopoEmpresa: id }),
+                });
               } catch (erro) {
                 return negar(id, erro);
               }
-              // Escopo = empresa já conferida na sessão; não reusa o texto do navegador.
-              return chamar<T>(papel, metodo, ["tenants", id, ...partes], {
-                ...opcoes,
-                ...(papel === "plataforma" ? {} : { escopoEmpresa: id }),
-              });
             },
           };
         },
@@ -625,7 +654,7 @@ export function criarModuloGateway(deps: {
           return {
             chamar<T = unknown>(metodo: MetodoGateway, partes: string[], opcoes: Opcoes = {}) {
               // Plataforma não envia X-Tenant-Scope (vê todas as empresas).
-              return chamar<T>("plataforma", metodo, partes, opcoes);
+              return chamar<T>("plataforma", metodo, partes, { ...opcoes, unidades: "*" });
             },
           };
         },

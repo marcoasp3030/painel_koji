@@ -155,6 +155,8 @@ const AJUDA_POR_CAMPO: Record<string, string> = {
 
 /** Texto curto para o usuário: motivo real quando o gateway aponta o campo, e a espera em 429. */
 export function mensagemParaUsuario(erro: GatewayErro): string {
+  // Recurso de outra unidade chega como 404. Não confirma que existe nem fala em permissão.
+  if (erro.status === 404 || erro.codigo === "NOT_FOUND") return "Não encontrado.";
   if (erro.codigo === "RATE_LIMITED" && erro.tentarApos) {
     return `${erro.message} Tente em ${erro.tentarApos} s.`;
   }

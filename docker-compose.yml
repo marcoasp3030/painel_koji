@@ -108,6 +108,11 @@ services:
       # API administrativa do gateway: somente o servidor do painel usa.
       GATEWAY_ADMIN_URL: ${GATEWAY_ADMIN_URL}
       GATEWAY_PANEL_KEY: ${GATEWAY_PANEL_KEY}
+      # Chave de plataforma (CHAVES1). Vazia: a sessão de plataforma usa a chave da empresa e o log avisa uma vez por dia.
+      GATEWAY_PLATFORM_KEY: ${GATEWAY_PLATFORM_KEY:-}
+      # Vazio: o convite mostra um link de uso único. Preenchido: o convite sai por e-mail (o GoTrue precisa do SMTP correspondente).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SITE_URL: ${SITE_URL:-https://painel.luxbrain.com.br}
       PORT: "3000"
       HOST: 0.0.0.0
       TZ: America/Sao_Paulo

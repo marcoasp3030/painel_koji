@@ -217,7 +217,10 @@ export const testarConexaoSkyone = createServerFn({ method: "POST" })
     });
   });
 
-/** Formulário de comportamento: erro de fallback como dado seguro junto ao campo. */
+/**
+ * Ficha do agente: nome, piloto e telefone de alerta, na hora, só plataforma.
+ * Espera, pausa, falha e demora não passam mais por aqui — ficam no rascunho de atendimento.
+ */
 export const salvarComportamento = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -225,44 +228,27 @@ export const salvarComportamento = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
-    const { problemaFallback, erroDoFallback } = await import("./gateway/fallback");
     const { autorizar } = await import("./gateway/modulo.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
-      const permitidos = new Set([
-        "nome",
-        "aviso_demora",
-        "fallback",
-        "slow_notice_s",
-        "debounce_s",
-        "max_wait_s",
-        "pause_minutes",
-        "modo_piloto",
-        "contatos_permitidos",
-        "alerta_telefone",
-      ]);
-      if (Object.keys(data.dados).some((k) => !permitidos.has(k)))
+      const permitidos = new Set(
+        t.papel === "plataforma"
+          ? ["nome", "modo_piloto", "contatos_permitidos", "alerta_telefone"]
+          : [],
+      );
+      if (
+        Object.keys(data.dados).length === 0 ||
+        Object.keys(data.dados).some((k) => !permitidos.has(k))
+      )
         throw new Error("Campo não permitido no comportamento.");
       autorizar(t.papel, "PATCH", ["agentes", data.agente], data.dados);
       await (await import("./gateway/ocultos")).exigirAgenteVisivel(t, data.agente);
-      const problema = problemaFallback(data.dados["fallback"]);
-      if (problema)
-        return { ok: false as const, erro: { campo: "fallback" as const, mensagem: problema } };
-      const corpo = { ...data.dados };
-      if (typeof corpo["fallback"] === "string")
-        corpo["fallback"] = corpo["fallback"].trim() || null;
       const a = await import("./gateway/agentes");
-      if (a.tocaPiloto(corpo)) {
+      if (a.tocaPiloto(data.dados)) {
         const atual = (await t.chamar<AgenteDetalhe>("GET", ["agentes", data.agente])).dados;
-        a.conferirPiloto(atual.configuracao_efetiva ?? {}, corpo);
+        a.conferirPiloto(atual.configuracao_efetiva ?? {}, data.dados);
       }
-      try {
-        await t.chamar("PATCH", ["agentes", data.agente], { corpo });
-        return { ok: true as const };
-      } catch (e) {
-        const erro = erroDoFallback(e);
-        if (erro) return { ok: false as const, erro };
-        throw e;
-      }
+      await t.chamar("PATCH", ["agentes", data.agente], { corpo: data.dados });
+      return { ok: true as const };
     });
   });

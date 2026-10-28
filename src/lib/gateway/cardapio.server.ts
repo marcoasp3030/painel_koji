@@ -1,3 +1,4 @@
+import { peloMenos } from "@/lib/acesso/papeis";
 import type { Json } from "./tipos";
 import { cardapioSchema, type ItemCardapio } from "./cardapio";
 import { autorizar, type ModuloGateway } from "./modulo.server";
@@ -119,7 +120,7 @@ export async function executarCardapio(
     };
   const d = parsed.data;
   const t = await sessao.tenant(d.empresa);
-  const item = (v: unknown) => projetarItem(v, t.papel !== "membro");
+  const item = (v: unknown) => projetarItem(v, peloMenos(t.papel, "gestor"));
   try {
     if (
       d.acao === "obter" ||

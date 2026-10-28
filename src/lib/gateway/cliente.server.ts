@@ -3,6 +3,7 @@
  * Roda só no servidor: a chave vem do ambiente e nunca é registrada em log,
  * em mensagem de erro nem em resposta ao navegador.
  */
+import { readFileSync, writeFileSync } from "node:fs";
 import { LIMITE_ARQUIVO_BYTES } from "./documentos";
 import { GatewayErro, interpretarErro } from "./erros";
 
@@ -14,7 +15,12 @@ export type RequisicaoGateway = {
   caminho: string[];
   /** Usuário logado no painel, enviado em X-Actor. */
   ator: string;
-  papel: "plataforma" | "admin" | "membro";
+  papel: "plataforma" | "gestor" | "supervisor" | "funcionario";
+  /**
+   * X-Unidades montado no servidor. "*" para plataforma e gestor.
+   * Códigos separados por vírgula para supervisor e funcionário.
+   */
+  unidades?: string;
   /**
    * Empresa da sessão (MULTI1-a). Obrigatório para quem não é plataforma.
    * Vem de resolverTenant — nunca do texto cru enviado pelo navegador.
@@ -45,12 +51,45 @@ export type ClienteGateway = {
 
 type Dependencias = {
   url: string;
+  /** Chave de empresa (CHAVES1). A plataforma usa esta chave só enquanto a de plataforma estiver vazia. */
   chave: string;
+  /** Chave de plataforma. Quando preenchida, só ela entra no Bearer do papel plataforma. */
+  chavePlataforma?: string;
   fetch?: typeof fetch;
   esperar?: (ms: number) => Promise<void>;
   /** Esperas de 429 até este limite são feitas no servidor, uma única vez. */
   esperaMaximaS?: number;
   tempoLimitePadraoMs?: number;
+  /** Aviso de chave ausente. O texto não pode incluir a chave. */
+  avisar?: (mensagem: string) => void;
+  /** Lembra o dia do último aviso, para não repetir no mesmo dia em Brasília. */
+  avisoChave?: { ler: () => string | null; gravar: (dia: string) => void };
+};
+
+const ARQUIVO_AVISO_CHAVE = "/tmp/painel-aviso-chave-plataforma";
+const AVISO_CHAVE_PLATAFORMA =
+  "[gateway] GATEWAY_PLATFORM_KEY vazia; a sessão de plataforma está usando a chave da empresa.";
+
+export function diaEmBrasilia(agora = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(agora);
+}
+
+const avisoChaveEmArquivo = {
+  ler: () => {
+    try {
+      return readFileSync(ARQUIVO_AVISO_CHAVE, "utf8").trim() || null;
+    } catch {
+      return null;
+    }
+  },
+  gravar: (dia: string) => {
+    writeFileSync(ARQUIVO_AVISO_CHAVE, dia, { mode: 0o600 });
+  },
 };
 
 const SEGMENTO_PROIBIDO = new Set(["", ".", ".."]);
@@ -139,16 +178,44 @@ export function criarClienteGateway(deps: Dependencias): ClienteGateway {
   const esperar = deps.esperar ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const esperaMaximaS = deps.esperaMaximaS ?? 5;
   const tempoLimitePadraoMs = deps.tempoLimitePadraoMs ?? 30_000;
+  const avisar = deps.avisar ?? ((mensagem: string) => console.error(mensagem));
+  const avisoChave = deps.avisoChave ?? avisoChaveEmArquivo;
+  let diaAvisado: string | null = null;
+
+  function avisarChaveAusente() {
+    const hoje = diaEmBrasilia();
+    if (diaAvisado === hoje) return;
+    diaAvisado = hoje;
+    if (avisoChave.ler() === hoje) return;
+    try {
+      avisoChave.gravar(hoje);
+    } catch {
+      // A memória deste processo evita repetir o aviso.
+    }
+    avisar(AVISO_CHAVE_PLATAFORMA);
+  }
 
   return {
     async requisitar<T>(req: RequisicaoGateway) {
       const url = montarUrl(deps.url, req);
+      const chavePlataforma = deps.chavePlataforma?.trim() ?? "";
+      const chaveEmpresa = deps.chave?.trim() ?? "";
+      if (req.papel === "plataforma" && !chavePlataforma) avisarChaveAusente();
+      const chave = req.papel === "plataforma" && chavePlataforma ? chavePlataforma : chaveEmpresa;
+      if (!chave) {
+        throw new GatewayErro({
+          codigo: "UNAVAILABLE",
+          status: 503,
+          mensagem: "A chave da empresa não está configurada neste servidor.",
+        });
+      }
       const cabecalhos: Record<string, string> = {
-        Authorization: `Bearer ${deps.chave}`,
+        Authorization: `Bearer ${chave}`,
         "X-Actor": atorSeguro(req.ator),
-        "X-Role": ["plataforma", "admin", "membro"].includes(req.papel) ? req.papel : "membro",
+        "X-Role": req.papel,
         Accept: "application/json",
       };
+      if (req.unidades) cabecalhos["X-Unidades"] = req.unidades;
       // Escopo da sessão: o gateway confere a empresa; plataforma pode omitir.
       if (req.escopoEmpresa) cabecalhos["X-Tenant-Scope"] = req.escopoEmpresa;
       if (req.arquivo) cabecalhos["Accept"] = "application/octet-stream";
@@ -234,10 +301,15 @@ export function clienteGatewayPadrao(): ClienteGateway {
   if (padrao) return padrao;
   const url = process.env["GATEWAY_ADMIN_URL"];
   const chave = process.env["GATEWAY_PANEL_KEY"];
+  const chavePlataforma = process.env["GATEWAY_PLATFORM_KEY"]?.trim();
   if (!url || !chave) {
     console.error("[gateway] GATEWAY_ADMIN_URL ou GATEWAY_PANEL_KEY ausente no servidor.");
     throw new GatewayErro({ codigo: "UNAVAILABLE", status: 503 });
   }
-  padrao = criarClienteGateway({ url, chave });
+  padrao = criarClienteGateway({
+    url,
+    chave,
+    ...(chavePlataforma ? { chavePlataforma } : {}),
+  });
   return padrao;
 }

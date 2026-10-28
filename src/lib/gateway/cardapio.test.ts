@@ -33,7 +33,7 @@ const ITEM = {
   },
 };
 
-async function montar(papel: PapelGateway = "admin", respostas: Response[] = []) {
+async function montar(papel: PapelGateway = "gestor", respostas: Response[] = []) {
   const chamadas: {
     url: string;
     role: string | null;
@@ -46,11 +46,12 @@ async function montar(papel: PapelGateway = "admin", respostas: Response[] = [])
       userId: "u",
       email: "sessao@teste.com",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "teste", ativo: true, admin: papel === "admin" }],
+      vinculos: [{ gatewayTenantId: "teste", ativo: true, admin: papel === "gestor" }],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway/admin/v1",
       chave: "chave-sintetica-testes",
+      chavePlataforma: "chave-sintetica-testes",
       fetch: (async (url: URL, init: RequestInit) => {
         const h = new Headers(init.headers);
         chamadas.push({
@@ -128,7 +129,7 @@ test("DISP1 validação: pelo menos um dia; faixas HH:MM sem sobreposição; mad
 });
 
 test("DISP1 lista: membro lê, projeção com descrição e sem observação interna, filtros e paginação", async () => {
-  const c = await montar("membro", [Response.json({ itens: [ITEM], proximo_cursor: 42 })]);
+  const c = await montar("funcionario", [Response.json({ itens: [ITEM], proximo_cursor: 42 })]);
   const r = await executarCardapio(c.sessao, {
     acao: "listar",
     q: " executivo ",
@@ -142,7 +143,7 @@ test("DISP1 lista: membro lê, projeção com descrição e sem observação int
   expect(url.searchParams.get("unidade")).toBe("patio_guedala");
   expect(url.searchParams.get("cursor")).toBe("10");
   expect(url.searchParams.get("limite")).toBe("100");
-  expect(c.chamadas[0]?.role).toBe("membro");
+  expect(c.chamadas[0]?.role).toBe("funcionario");
   expect(c.chamadas[0]?.method).toBe("GET");
   const dados = (r as { dados: { itens: Record<string, unknown>[]; proximo_cursor: number } })
     .dados;
@@ -153,7 +154,7 @@ test("DISP1 lista: membro lê, projeção com descrição e sem observação int
 });
 
 test("DISP1 PATCH: admin e plataforma enviam {disponibilidade, atualizado_em}; null tira a restrição", async () => {
-  for (const papel of ["admin", "plataforma"] as const) {
+  for (const papel of ["gestor", "plataforma"] as const) {
     const c = await montar(papel);
     const corpo = corpoDisponibilidade(base);
     const r = await executarCardapio(c.sessao, {
@@ -187,7 +188,7 @@ test("DISP1 PATCH: admin e plataforma enviam {disponibilidade, atualizado_em}; n
 });
 
 test("DISP1 PATCH: membro recusado antes do gateway; corpo inválido não sai do painel", async () => {
-  const m = await montar("membro");
+  const m = await montar("funcionario");
   const r = await executarCardapio(m.sessao, {
     acao: "disponibilidade",
     item_id: 42,
@@ -196,7 +197,7 @@ test("DISP1 PATCH: membro recusado antes do gateway; corpo inválido não sai do
   });
   expect(r.ok).toBe(false);
   expect(m.chamadas).toHaveLength(0);
-  const a = await montar("admin");
+  const a = await montar("gestor");
   for (const disponibilidade of [
     { dias_semana: ["xyz"], exceto_feriado: false, horario: [] },
     { dias_semana: ["seg"], exceto_feriado: false, horario: [["25:00", "26:00"]] },
@@ -235,10 +236,10 @@ test("DISP1 PATCH: membro recusado antes do gateway; corpo inválido não sai do
 });
 
 test("DISP1 isolamento: empresa alheia recusada; erro do gateway vira mensagem do campo", async () => {
-  const c = await montar("admin");
+  const c = await montar("gestor");
   await expect(executarCardapio(c.sessao, { empresa: "outra", acao: "listar" })).rejects.toThrow();
   expect(c.chamadas).toHaveLength(0);
-  const e = await montar("admin", [
+  const e = await montar("gestor", [
     Response.json(
       {
         erro: {
@@ -263,12 +264,12 @@ test("DISP1 isolamento: empresa alheia recusada; erro do gateway vira mensagem d
 });
 
 test("DISP1 menu: Cardápio para admin e atendente da empresa", () => {
-  for (const papel of ["admin", "membro"] as const)
+  for (const papel of ["gestor", "funcionario"] as const)
     expect(filtrarMenu(TENANT_NAV, papel).some((i) => i.to === "/ia/cardapio")).toBe(true);
 });
 
 test("Cardápio UX panorama atravessa todas as páginas para contagem e busca completas", async () => {
-  const c = await montar("membro", [
+  const c = await montar("funcionario", [
     Response.json({ itens: [ITEM], proximo_cursor: 42 }),
     Response.json({ itens: [{ ...ITEM, item_id: 43 }], proximo_cursor: null }),
   ]);
@@ -279,7 +280,7 @@ test("Cardápio UX panorama atravessa todas as páginas para contagem e busca co
   expect(new URL(c.chamadas[1]!.url).searchParams.get("cursor")).toBe("42");
 });
 test("Cardápio UX panorama recusa cursor parado, nunca retorna contagem parcial", async () => {
-  const c = await montar("membro", [Response.json({ itens: [ITEM], proximo_cursor: 0 })]);
+  const c = await montar("funcionario", [Response.json({ itens: [ITEM], proximo_cursor: 0 })]);
   expect((await executarCardapio(c.sessao, { acao: "panorama" })).ok).toBe(false);
   expect(c.chamadas).toHaveLength(1);
   const outro = await montar();

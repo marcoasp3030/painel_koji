@@ -23,7 +23,7 @@ function PaginaUnidades() {
     <PaginaGateway
       titulo="Unidades e horários"
       descricao="Abra a agenda, os horários ou as exceções direto em cada unidade. A situação vem do gateway."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
     >
       {(ctx) => (
         <GestaoUnidades

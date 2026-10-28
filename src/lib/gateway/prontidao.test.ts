@@ -1,6 +1,6 @@
 // Executar: bun test src/lib/gateway
 import { describe, expect, test } from "bun:test";
-import { acaoPermitida, prontidao, resumoProntidao } from "./prontidao";
+import { acaoPermitida, itensDaVisao, prontidao, resumoProntidao } from "./prontidao";
 import type { AgenteDetalhe, CanalGateway } from "./tipos";
 
 const base = {
@@ -100,6 +100,16 @@ describe("checklist de prontidão", () => {
   });
 });
 
+test("admin e membro não veem envio, respostas nem Skyone na visão geral", () => {
+  const itens = prontidao(base, [canal(true)]);
+  const admin = itensDaVisao(itens, "gestor").map((i) => i.chave);
+  expect(admin).not.toContain("skyone");
+  expect(admin).not.toContain("respostas");
+  expect(admin).not.toContain("envio");
+  expect(admin).toContain("modelo");
+  expect(itensDaVisao(itens, "plataforma").map((i) => i.chave)).toEqual(itens.map((i) => i.chave));
+});
+
 describe("quem vê o botão de cada pendência", () => {
   test("plataforma resolve tudo", () => {
     for (const a of [
@@ -114,18 +124,18 @@ describe("quem vê o botão de cada pendência", () => {
   });
 
   test("admin da empresa: ativa pausado, vê canais; nada de IA, canal novo ou rascunho", () => {
-    expect(acaoPermitida("ativar", "admin", "pausado")).toBe(true);
-    expect(acaoPermitida("ativar", "admin", "rascunho")).toBe(false);
-    expect(acaoPermitida("ver_canais", "admin", "ativo")).toBe(true);
+    expect(acaoPermitida("ativar", "gestor", "pausado")).toBe(true);
+    expect(acaoPermitida("ativar", "gestor", "rascunho")).toBe(false);
+    expect(acaoPermitida("ver_canais", "gestor", "ativo")).toBe(true);
     for (const a of ["criar_canal", "configurar_ia", "ativar_ia"] as const) {
-      expect(acaoPermitida(a, "admin", "ativo")).toBe(false);
+      expect(acaoPermitida(a, "gestor", "ativo")).toBe(false);
     }
   });
 
-  test("membro só vê canais", () => {
-    expect(acaoPermitida("ver_canais", "membro", "ativo")).toBe(true);
+  test("funcionário não resolve pendência de canal nem de IA", () => {
+    expect(acaoPermitida("ver_canais", "funcionario", "ativo")).toBe(false);
     for (const a of ["ativar", "criar_canal", "configurar_ia", "ativar_ia"] as const) {
-      expect(acaoPermitida(a, "membro", "pausado")).toBe(false);
+      expect(acaoPermitida(a, "funcionario", "pausado")).toBe(false);
     }
   });
 });

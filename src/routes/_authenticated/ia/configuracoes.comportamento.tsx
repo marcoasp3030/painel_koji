@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/ia/configuracoes/comportam
       sobretitulo="Configurações"
       titulo="Comportamento do agente"
       descricao="Jeito de falar, regras da casa e comportamentos do atendimento. Edite em rascunho e publique quando estiver pronto."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
     >
       {(ctx) => <ComportamentoAgente key={ctx.empresa ?? "vinculada"} ctx={ctx} />}
     </PaginaGateway>

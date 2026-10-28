@@ -5,6 +5,7 @@ import { GatewayErro } from "./erros";
 import { AcessoNegado, criarModuloGateway, type PerfilGateway } from "./modulo.server";
 
 const CHAVE = "chave-de-teste-nao-usar-0123456789";
+const CHAVE_PLATAFORMA = "chave-plataforma-teste-nao-usar-9876543210";
 const URL_BASE = "http://luxbrain-gateway:8000/admin/v1";
 
 type Chamada = { url: URL; init: RequestInit };
@@ -40,6 +41,7 @@ function montar(respostas?: Response[]) {
     cliente: criarClienteGateway({
       url: URL_BASE,
       chave: CHAVE,
+      chavePlataforma: CHAVE_PLATAFORMA,
       fetch: rede.fn,
       esperar: async () => undefined,
     }),
@@ -172,11 +174,11 @@ describe("acesso entre empresas", () => {
   test("usuário da empresa A usa o próprio tenant, com ou sem pedir", async () => {
     const { modulo, rede } = montar();
     const sessao = await modulo.sessao({ userId: "membroA", email: null });
-    await (await sessao.tenant()).chamar("GET", ["agentes"]);
-    await (await sessao.tenant("bykoji")).chamar("GET", ["agentes"]);
+    await (await sessao.tenant()).chamar("GET", ["conversas"]);
+    await (await sessao.tenant("bykoji")).chamar("GET", ["conversas"]);
     expect(rede.chamadas.map((c) => c.url.pathname)).toEqual([
-      "/admin/v1/tenants/bykoji/agentes",
-      "/admin/v1/tenants/bykoji/agentes",
+      "/admin/v1/tenants/bykoji/conversas",
+      "/admin/v1/tenants/bykoji/conversas",
     ]);
   });
 
@@ -251,13 +253,21 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], { timeout_s: 30 }],
       ["PATCH", ["agentes", "ag_1"], { instrucoes_agente: "x" }],
       ["PATCH", ["agentes", "ag_1"], { skyone_auth: "x", skyone_auth_usuario: "y" }],
+      ["PATCH", ["agentes", "ag_1"], { aviso_demora: "Um instante" }],
+      ["PATCH", ["agentes", "ag_1"], { fallback: "Tente de novo" }],
+      ["PATCH", ["agentes", "ag_1"], { modo_piloto: true }],
+      ["PATCH", ["agentes", "ag_1"], { contatos_permitidos: ["5511999999999"] }],
+      ["PATCH", ["agentes", "ag_1"], { debounce_s: 4 }],
+      ["PATCH", ["agentes", "ag_1"], { max_wait_s: 12 }],
+      ["PATCH", ["agentes", "ag_1"], { pause_minutes: 60 }],
+      ["PATCH", ["agentes", "ag_1"], { slow_notice_s: 15 }],
+      ["PATCH", ["agentes", "ag_1"], { alerta_telefone: "5511988887777" }],
       ["PATCH", ["agentes", "ag_1"], { nome: "Outro" }],
       ["PATCH", ["agentes", "ag_1"], { status: "rascunho" }],
       ["PATCH", ["agentes", "ag_1"], null],
       ["POST", ["agentes", "ag_1", "testar"], { usar_provedor_real: true }],
       ["POST", ["agentes"], { modelo_id: "m", nome: "n" }],
       ["POST", ["canais"], { tipo: "api" }],
-      ["PATCH", ["canais", "can_1"], { ativo: true }],
       ["POST", ["canais", "can_1", "rotacionar-segredo"]],
       ["GET", ["api-keys"]],
       ["POST", ["api-keys"], { nome: "k" }],
@@ -277,22 +287,7 @@ describe("papéis", () => {
   test("admin da empresa: campos permitidos, unidades, testar, simular, canais, consumo e conversas", async () => {
     const { t, rede } = await tenantDe("adminA");
     const permitidas: Op[] = [
-      [
-        "PATCH",
-        ["agentes", "ag_1"],
-        {
-          aviso_demora: "Um instante",
-          fallback: "Tente de novo",
-          modo_piloto: true,
-          contatos_permitidos: ["5511999999999"],
-          debounce_s: 4,
-          max_wait_s: 12,
-          pause_minutes: 60,
-          slow_notice_s: 15,
-          alerta_telefone: "5511988887777",
-          status: "pausado",
-        },
-      ],
+      ["PATCH", ["agentes", "ag_1"], { status: "pausado" }],
       ["PATCH", ["agentes", "ag_1"], { status: "ativo" }],
       ["GET", ["agentes"]],
       ["GET", ["agentes", "ag_1"]],
@@ -310,6 +305,7 @@ describe("papéis", () => {
       ],
       ["GET", ["canais"]],
       ["GET", ["canais", "can_1"]],
+      ["PATCH", ["canais", "can_1"], { ativo: true }],
       ["GET", ["consumo"]],
       ["GET", []],
       ["GET", ["unidades"]],
@@ -367,7 +363,7 @@ describe("papéis", () => {
     expect(rede.chamadas).toHaveLength(permitidas.length);
   });
 
-  test("membro não faz PATCH em agente, nem testar, simular ou unidades", async () => {
+  test("funcionário não altera agente, canal, documento nem cancela follow-up", async () => {
     const { t, rede } = await tenantDe("membroA");
     const proibidas: Op[] = [
       ["PATCH", ["agentes", "ag_1"], { fallback: "x" }],
@@ -376,7 +372,7 @@ describe("papéis", () => {
       ["POST", ["agentes", "ag_1", "simular"], {}],
       ["GET", ["agentes", "ag_1", "capacidades"]],
       ["POST", ["agentes", "ag_1", "simular-documento"], { identificador: "teste" }],
-      ["GET", []],
+      ["GET", ["agentes"]],
       ["POST", ["unidades"], { nome: "Loja" }],
       ["POST", ["canais"], {}],
       ["GET", ["api-keys"]],
@@ -399,37 +395,24 @@ describe("papéis", () => {
     expect(rede.chamadas).toHaveLength(0);
   });
 
-  test("membro lê agentes, canais e consumo e atende conversas", async () => {
+  test("funcionário lê conversas, pedidos e unidades da própria lista", async () => {
     const { t, rede } = await tenantDe("membroA");
     const permitidas: Op[] = [
-      ["GET", ["agentes"]],
-      ["GET", ["agentes", "ag_1"]],
-      ["GET", ["agentes", "ag_1", "circuito"]],
-      ["GET", ["canais"]],
-      ["GET", ["consumo"]],
+      ["GET", []],
       ["GET", ["conversas"]],
       ["GET", ["conversas", "c", "mensagens"]],
       ["POST", ["conversas", "c", "assumir"], { minutos: 30 }],
-      ["POST", ["conversas", "c", "devolver"]],
       ["POST", ["conversas", "c", "mensagens"], { texto: "Olá" }],
       ["GET", ["eventos"]],
       ["GET", ["eventos", "cursor"]],
-      ["GET", ["modulos"]],
-      ["GET", ["agentes", "ag_1", "modulos"]],
       ["GET", ["pedidos"]],
       ["GET", ["pedidos", "contagem"]],
       ["POST", ["pedidos", "59859", "status"], { status: "em_preparo", previsao_min: 40 }],
       ["PATCH", ["contatos", "ct_1"], { nome: "Ana Paula" }],
       ["PATCH", ["contatos", "ct_1"], { nome: null }],
-      ["GET", ["atendimento"]],
-      ["GET", ["agentes", "ag_1", "atendimento", "versoes", "2"]],
-      ["POST", ["atendimento", "previa"], { fonte: "rascunho" }],
-      ["GET", ["anexos"]],
-      ["GET", ["anexos", "anx_1", "original"]],
-      ["GET", ["chaves-formulario"]],
+      ["GET", ["unidades"]],
       ["GET", ["conversas", "c", "follow-ups"]],
-      ["POST", ["conversas", "c", "follow-ups", "cancelar"], {}],
-      ["GET", ["contatos", "ct_1", "opt-out-follow-up"]],
+      ["GET", ["gestao", "alteracoes"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
@@ -498,7 +481,9 @@ describe("cliente HTTP", () => {
     ).chamar("GET", ["conversas", "bykoji:can_1:a/b", "mensagens"]);
     const { url, init } = rede.chamadas[0]!;
     const cab = init.headers as Record<string, string>;
-    expect(cab["Authorization"]).toBe(`Bearer ${CHAVE}`);
+    expect(cab["Authorization"]).toBe(`Bearer ${CHAVE_PLATAFORMA}`);
+    expect(cab["X-Unidades"]).toBe("*");
+    expect(cab["X-Role"]).toBe("plataforma");
     expect(cab["X-Actor"]).toBe("admin@luxtia.local");
     expect(cab["X-Tenant-Scope"]).toBeUndefined();
     expect(url.pathname).toBe(
@@ -512,7 +497,8 @@ describe("cliente HTTP", () => {
       await t.chamar("GET", ["conversas"]);
       const cab = rede.chamadas[0]!.init.headers as Record<string, string>;
       expect(cab["X-Tenant-Scope"]).toBe("bykoji");
-      expect(cab["X-Role"]).toBe(papel === "adminA" ? "admin" : "membro");
+      expect(cab["X-Role"]).toBe(papel === "adminA" ? "gestor" : "funcionario");
+      expect(cab["X-Unidades"]).toBe(papel === "adminA" ? "*" : "centro");
       expect(bloqueios).toHaveLength(0);
     }
     const { modulo, rede, bloqueios } = montar();
@@ -575,6 +561,7 @@ describe("cliente HTTP", () => {
     const cliente = criarClienteGateway({
       url: URL_BASE,
       chave: CHAVE,
+      chavePlataforma: CHAVE,
       fetch: rede.fn,
       esperar: async (ms) => {
         esperas.push(ms);
@@ -598,7 +585,8 @@ describe("cliente HTTP", () => {
         { status: 429, headers: { "Retry-After": "30" } },
       ),
     ]);
-    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE, fetch: rede.fn });
+    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE,
+      chavePlataforma: CHAVE, fetch: rede.fn });
     const erro = (await cliente
       .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a", papel: "plataforma" })
       .catch((e) => e)) as GatewayErro;
@@ -618,10 +606,12 @@ describe("cliente HTTP", () => {
       throw new Error(`falha com ${CHAVE}`);
     }) as unknown as typeof fetch;
     const clientes = [
-      criarClienteGateway({ url: URL_BASE, chave: CHAVE, fetch: quebrado }),
+      criarClienteGateway({ url: URL_BASE, chave: CHAVE,
+      chavePlataforma: CHAVE, fetch: quebrado }),
       criarClienteGateway({
         url: URL_BASE,
         chave: CHAVE,
+      chavePlataforma: CHAVE,
         fetch: fetchFalso([
           new Response("erro", { status: 500 }),
           new Response("", { status: 401 }),
@@ -645,12 +635,13 @@ describe("cliente HTTP", () => {
 
   test("documento do simulador sai como multipart, sem JSON", async () => {
     const rede = fetchFalso([Response.json({ anexo_id: "anx_1", estado: "processando" })]);
-    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE, fetch: rede.fn });
+    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE,
+      chavePlataforma: CHAVE, fetch: rede.fn });
     await cliente.requisitar({
       metodo: "POST",
       caminho: ["tenants", "bykoji", "agentes", "ag_1", "simular-documento"],
       ator: "ana@koji.com",
-      papel: "admin",
+      papel: "gestor",
       corpo: { identificador: "teste" },
       formulario: {
         arquivo: {
@@ -666,5 +657,69 @@ describe("cliente HTTP", () => {
     expect(cabecalhos.get("content-type")).toBeNull();
     expect(init.body).toBeInstanceOf(FormData);
     expect(JSON.stringify(init.body)).not.toContain("JVBERi0");
+  });
+
+  test("plataforma sem chave própria usa a chave da empresa e avisa uma vez no dia", async () => {
+    let dia: string | null = null;
+    const memoria = {
+      ler: () => dia,
+      gravar: (valor: string) => {
+        dia = valor;
+      },
+    };
+    const avisos: string[] = [];
+    const rede = fetchFalso([Response.json({ ok: 1 }), Response.json({ ok: 2 })]);
+    const cliente = criarClienteGateway({
+      url: URL_BASE,
+      chave: CHAVE,
+      fetch: rede.fn,
+      avisar: (mensagem) => avisos.push(mensagem),
+      avisoChave: memoria,
+    });
+    const req = { metodo: "GET" as const, caminho: ["tenants"], ator: "a", papel: "plataforma" as const };
+    await cliente.requisitar(req);
+    await cliente.requisitar(req);
+    const bearer = rede.chamadas.map((c) => (c.init.headers as Record<string, string>)["Authorization"]);
+    expect(bearer).toEqual([`Bearer ${CHAVE}`, `Bearer ${CHAVE}`]);
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toContain("GATEWAY_PLATFORM_KEY");
+    expect(avisos[0]).not.toContain(CHAVE);
+    const avisos2: string[] = [];
+    const rede2 = fetchFalso([Response.json({ ok: 3 })]);
+    const outro = criarClienteGateway({
+      url: URL_BASE,
+      chave: CHAVE,
+      fetch: rede2.fn,
+      avisar: (mensagem) => avisos2.push(mensagem),
+      avisoChave: memoria,
+    });
+    await outro.requisitar(req);
+    expect(avisos2).toHaveLength(0);
+    expect((rede2.chamadas[0]!.init.headers as Record<string, string>)["Authorization"]).toBe(
+      `Bearer ${CHAVE}`,
+    );
+  });
+
+  test("chave de plataforma preenchida não cai na chave da empresa", async () => {
+    const avisos: string[] = [];
+    const rede = fetchFalso([Response.json({ ok: true })]);
+    const cliente = criarClienteGateway({
+      url: URL_BASE,
+      chave: CHAVE,
+      chavePlataforma: CHAVE_PLATAFORMA,
+      fetch: rede.fn,
+      avisar: (mensagem) => avisos.push(mensagem),
+      avisoChave: { ler: () => null, gravar: () => undefined },
+    });
+    await cliente.requisitar({
+      metodo: "GET",
+      caminho: ["tenants"],
+      ator: "a",
+      papel: "plataforma",
+    });
+    expect((rede.chamadas[0]!.init.headers as Record<string, string>)["Authorization"]).toBe(
+      `Bearer ${CHAVE_PLATAFORMA}`,
+    );
+    expect(avisos).toHaveLength(0);
   });
 });

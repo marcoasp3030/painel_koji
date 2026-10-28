@@ -47,6 +47,7 @@ export function CampoAtendimento({
   avisos,
   mudar,
   voltarAoPadrao,
+  restricao,
 }: {
   parte: Parte;
   campo: string;
@@ -59,9 +60,11 @@ export function CampoAtendimento({
   avisos: Trecho[];
   mudar: (valor: Json) => void;
   voltarAoPadrao: () => void;
+  /** Quando preenchido, o campo fica travado e a frase aparece no lugar da edição. */
+  restricao?: string;
 }) {
   const disponivel = campoDisponivel(def);
-  const desabilitado = !podeEditar || !def.editavel || !disponivel;
+  const desabilitado = !podeEditar || !def.editavel || !disponivel || Boolean(restricao);
   const id = `campo-${parte}-${campo}`;
   const ajuda = AJUDA_CAMPO[campo];
   const temProblema = erros.length > 0 || bloqueios.length > 0;
@@ -98,7 +101,7 @@ export function CampoAtendimento({
             <span className="size-1.5 rounded-full bg-purple-700" aria-hidden /> no rascunho
           </span>
         ) : null}
-        {situacao.personalizado && podeEditar && def.editavel && disponivel ? (
+        {situacao.personalizado && podeEditar && def.editavel && disponivel && !restricao ? (
           <Button
             type="button"
             variant="ghost"
@@ -125,6 +128,7 @@ export function CampoAtendimento({
         mudar={mudar}
         trechos={[...bloqueios, ...avisos].map((t) => t.trecho)}
       />
+      {restricao ? <p className="text-xs text-ink-500">{restricao}</p> : null}
       {ajuda ? <p className="text-xs text-ink-500">{ajuda}</p> : null}
       {!disponivel ? (
         <p className="text-xs text-ink-500">

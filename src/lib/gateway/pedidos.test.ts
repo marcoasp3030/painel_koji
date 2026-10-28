@@ -10,7 +10,7 @@ import {
   type PedidoLista,
 } from "./pedidos";
 
-async function montar(papel = "admin", respostas: Response[] = []) {
+async function montar(papel = "gestor", respostas: Response[] = []) {
   const chamadas: {
     url: string;
     method: string | undefined;
@@ -22,11 +22,12 @@ async function montar(papel = "admin", respostas: Response[] = []) {
       userId: "u",
       email: "sessao@exemplo.com",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "bykoji", ativo: true, admin: papel === "admin" }],
+      vinculos: [{ gatewayTenantId: "bykoji", ativo: true, admin: papel === "gestor" }],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway:8000/admin/v1",
       chave: "sintetica-nao-segredo-real-123456",
+      chavePlataforma: "sintetica-nao-segredo-real-123456",
       fetch: (async (url: URL, init: RequestInit) => {
         const headers = new Headers(init.headers);
         chamadas.push({
@@ -80,7 +81,7 @@ test("PED1-a isolamento: outra empresa não chama o gateway", async () => {
 });
 
 test("PED1-a membro muda o status e lê pedidos da própria empresa", async () => {
-  const c = await montar("membro", [Response.json({ numero: "59859", status: "em_preparo" })]);
+  const c = await montar("funcionario", [Response.json({ numero: "59859", status: "em_preparo" })]);
   const r = await executarPedidos(c.sessao, {
     acao: "status",
     numero: "59859",
@@ -93,7 +94,7 @@ test("PED1-a membro muda o status e lê pedidos da própria empresa", async () =
   );
   expect(c.chamadas[0]?.body).toEqual({ status: "em_preparo" });
   expect(c.chamadas[0]?.ator).toBe("sessao@exemplo.com");
-  const lista = await montar("membro");
+  const lista = await montar("funcionario");
   await executarPedidos(lista.sessao, {
     acao: "listar",
     status: ["pronto_retirada", "saiu_entrega"],
@@ -111,7 +112,7 @@ test("PED1-a membro muda o status e lê pedidos da própria empresa", async () =
 });
 
 test("LGPD1 contagem so_reais lista pedidos com origem=real", async () => {
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     Response.json({
       itens: [
         { numero: "1", criado_em: "2026-10-16T12:00:00-03:00" },
@@ -183,7 +184,7 @@ test("PED1-a 409 recarrega a frase e guarda o status atual", async () => {
     "modalidade_incompativel",
     "recusa_so_aguardando",
   ]) {
-    const c = await montar("admin", [
+    const c = await montar("gestor", [
       Response.json(
         {
           erro: {
@@ -218,7 +219,7 @@ const pedidoBase = {
 
 test("PED1-c cartão e detalhe usam o nome_exibicao atual da conversa", async () => {
   esquecerNomesRecentes("bykoji");
-  const c = await montar("membro", [
+  const c = await montar("funcionario", [
     Response.json({ itens: [pedidoBase, { ...pedidoBase, numero: "2", conversation_id: null }] }),
     Response.json({
       itens: [
@@ -245,7 +246,7 @@ test("PED1-c cartão e detalhe usam o nome_exibicao atual da conversa", async ()
 
   // Detalhe: aproveita os nomes recentes e não repete a leitura.
   c.chamadas.length = 0;
-  const d = await montar("membro", [Response.json(pedidoBase)]);
+  const d = await montar("funcionario", [Response.json(pedidoBase)]);
   const det = await executarPedidos(d.sessao, { acao: "detalhe", numero: "59859" });
   expect((det as { dados: PedidoLista }).dados.cliente.nome_exibicao).toBe("Marco Silva");
   expect(d.chamadas).toHaveLength(1);
@@ -253,7 +254,7 @@ test("PED1-c cartão e detalhe usam o nome_exibicao atual da conversa", async ()
 
 test("PED1-c conversa fora das recentes: busca pelo telefone; falha mantém o nome do pedido", async () => {
   esquecerNomesRecentes("bykoji");
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     Response.json(pedidoBase),
     Response.json({ itens: [], proximo_cursor: null }),
     Response.json({
@@ -277,7 +278,7 @@ test("PED1-c conversa fora das recentes: busca pelo telefone; falha mantém o no
   });
 
   esquecerNomesRecentes("bykoji");
-  const falha = await montar("admin", [
+  const falha = await montar("gestor", [
     Response.json(pedidoBase),
     Response.json({ erro: { codigo: "UNAVAILABLE" } }, { status: 503 }),
   ]);

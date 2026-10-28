@@ -1,3 +1,4 @@
+import { peloMenos } from "@/lib/acesso/papeis";
 import type { ServicosCat2 } from "@/lib/gateway/cardapio-cat2";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -112,7 +113,8 @@ export function Cardapio({ ctx }: { ctx: ContextoGateway }) {
       unidades={lista}
       filtros={filtros}
       mudarFiltros={(f) => void navigate({ search: f, replace: true })}
-      admin={ctx.papel !== "membro"}
+      admin={peloMenos(ctx.papel, "gestor")}
+      grade={peloMenos(ctx.papel, "supervisor")}
       executar={executar}
       servicos={servicos}
       proteger={proteger}

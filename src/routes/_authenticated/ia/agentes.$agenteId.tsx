@@ -10,6 +10,7 @@ import { Comportamento } from "@/components/luxtia/agente/Comportamento";
 import { ConexaoIA } from "@/components/luxtia/agente/ConexaoIA";
 import { ModulosDoAgente } from "@/components/luxtia/agente/ModulosDoAgente";
 import { VisaoGeral } from "@/components/luxtia/agente/VisaoGeral";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { Etiqueta, PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { CabecalhoPagina, Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +43,7 @@ function PaginaAgente() {
   return (
     <PaginaGateway
       titulo="Agente"
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
       empresaFixa={empresa ?? null}
       semCabecalho
     >
@@ -63,7 +64,7 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const plataforma = ctx.papel === "plataforma";
   const [criandoCanal, setCriandoCanal] = useState(false);
 
-  const adminOuPlataforma = ctx.papel === "admin" || plataforma;
+  const adminOuPlataforma = peloMenos(ctx.papel, "gestor");
   const aba: Aba =
     (abaPedida === "conexao" || abaPedida === "avancado") && !plataforma
       ? "visao"
@@ -151,7 +152,11 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
       <CabecalhoPagina
         sobretitulo="Agente"
         titulo={agente.nome}
-        descricao={`Modelo: ${nomeModelo ?? agente.modelo_id.replace(/_/g, " ")} · Respostas: ${respostas} · Envio aos clientes: ${envio}`}
+        descricao={
+          plataforma
+            ? `Modelo: ${nomeModelo ?? agente.modelo_id.replace(/_/g, " ")} · Respostas: ${respostas} · Envio aos clientes: ${envio}`
+            : `Modelo: ${nomeModelo ?? agente.modelo_id.replace(/_/g, " ")}`
+        }
       />
       <div className="flex flex-wrap gap-1.5">
         <Etiqueta tom={situacaoAtual?.tom ?? "neutro"}>

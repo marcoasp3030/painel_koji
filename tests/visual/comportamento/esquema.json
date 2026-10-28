@@ -1,0 +1,503 @@
+{
+  "perfil": {
+    "nome_empresa": {
+      "tipo": "texto",
+      "editavel": true,
+      "min": 2,
+      "max": 60,
+      "linhas": 0,
+      "opcional": true,
+      "padrao": "Exemplo"
+    },
+    "descricao_negocio": {
+      "tipo": "texto",
+      "editavel": true,
+      "max": 300,
+      "linhas": 3,
+      "padrao": ""
+    },
+    "nome_atendente": {
+      "tipo": "texto",
+      "editavel": true,
+      "min": 2,
+      "max": 30,
+      "opcional": true
+    },
+    "apresentacao_inicial": {
+      "tipo": "booleano",
+      "editavel": true,
+      "padrao": true
+    },
+    "tom": {
+      "tipo": "escolha",
+      "editavel": true,
+      "opcoes": [
+        "formal",
+        "equilibrado",
+        "descontraido"
+      ],
+      "padrao": "equilibrado"
+    },
+    "emojis": {
+      "tipo": "escolha",
+      "editavel": true,
+      "opcoes": [
+        "nenhum",
+        "moderado",
+        "bastante"
+      ],
+      "padrao": "moderado"
+    },
+    "tamanho_respostas": {
+      "tipo": "escolha",
+      "editavel": true,
+      "opcoes": [
+        "curtas",
+        "medias"
+      ],
+      "padrao": "curtas"
+    },
+    "tratamento": {
+      "tipo": "escolha",
+      "editavel": true,
+      "opcoes": [
+        "voce",
+        "senhor_senhora"
+      ],
+      "padrao": "voce"
+    },
+    "pedir_nome": {
+      "tipo": "booleano",
+      "editavel": true,
+      "padrao": false
+    },
+    "sugestoes": {
+      "tipo": "escolha",
+      "editavel": true,
+      "opcoes": [
+        "desligado",
+        "leve"
+      ],
+      "padrao": "leve"
+    },
+    "regras_da_casa": {
+      "tipo": "texto",
+      "editavel": true,
+      "max": 1500,
+      "linhas": 20,
+      "padrao": ""
+    },
+    "assuntos_proibidos": {
+      "tipo": "lista_assuntos",
+      "editavel": true,
+      "padrao": []
+    },
+    "motivos_transferencia": {
+      "tipo": "lista_escolhas",
+      "editavel": true,
+      "opcoes": [
+        "pediu_humano",
+        "reclamacao",
+        "pagamento",
+        "restricao_alimentar",
+        "evento_ou_encomenda",
+        "catering",
+        "fora_do_escopo",
+        "assunto_proibido"
+      ],
+      "fixos": [
+        "pediu_humano",
+        "reclamacao"
+      ],
+      "padrao": [
+        "pediu_humano",
+        "reclamacao",
+        "pagamento",
+        "restricao_alimentar",
+        "evento_ou_encomenda",
+        "catering"
+      ]
+    },
+    "mensagem_boas_vindas": {
+      "tipo": "texto",
+      "editavel": true,
+      "max": 300,
+      "opcional": true
+    },
+    "mensagem_despedida": {
+      "tipo": "texto",
+      "editavel": true,
+      "max": 300,
+      "opcional": true
+    }
+  },
+  "comportamentos": {
+    "debounce_s": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "ritmo",
+      "min": 1,
+      "max": 15,
+      "padrao": 4
+    },
+    "debounce_curto_s": {
+      "tipo": "decimal",
+      "editavel": true,
+      "grupo": "ritmo",
+      "min": 0.5,
+      "max": 15,
+      "padrao": 1.5
+    },
+    "debounce_incompleta_s": {
+      "tipo": "decimal",
+      "editavel": true,
+      "grupo": "ritmo",
+      "min": 1,
+      "max": 15
+    },
+    "debounce_palavras": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "ritmo",
+      "min": 1,
+      "max": 50,
+      "padrao": 6
+    },
+    "max_wait_s": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "ritmo",
+      "min": 1,
+      "max": 30,
+      "padrao": 12
+    },
+    "media_wait_s": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "ritmo",
+      "disponivel": false,
+      "min": 0,
+      "max": 60,
+      "padrao": 30
+    },
+    "refazer_turno": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "ritmo",
+      "opcoes": [
+        "on",
+        "off"
+      ],
+      "padrao": "off"
+    },
+    "history_turns": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "ritmo",
+      "min": 0,
+      "max": 100,
+      "padrao": 20
+    },
+    "slow_notice_s": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "mensagens",
+      "min": 0,
+      "max": 300,
+      "padrao": 30
+    },
+    "aviso_demora": {
+      "tipo": "texto",
+      "editavel": true,
+      "grupo": "mensagens",
+      "disponivel": false,
+      "min": 0,
+      "max": 300,
+      "padrao": "Só um instante, estou verificando."
+    },
+    "aviso_demora_janela_s": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "mensagens",
+      "min": 0,
+      "max": 3600,
+      "padrao": 120
+    },
+    "aviso_espera_modo": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "mensagens",
+      "opcoes": [
+        "off",
+        "presenca",
+        "presenca_e_texto_contextual"
+      ],
+      "padrao": "presenca"
+    },
+    "aviso_espera_textos": {
+      "tipo": "lista_textos",
+      "editavel": true,
+      "grupo": "mensagens",
+      "min": 1,
+      "max": 6,
+      "padrao": [
+        "Já te respondo 😊",
+        "Só mais um instantinho",
+        "Um momento, por favor"
+      ]
+    },
+    "fallback": {
+      "tipo": "texto",
+      "editavel": true,
+      "grupo": "mensagens",
+      "min": 15,
+      "max": 500
+    },
+    "botoes_interativos": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "mensagens",
+      "opcoes": [
+        "on",
+        "off"
+      ],
+      "padrao": "off"
+    },
+    "pause_minutes": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "atendimento_humano",
+      "min": 0,
+      "max": 1440,
+      "padrao": 60
+    },
+    "encerrar_vazia_min": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "atendimento_humano",
+      "min": 1,
+      "max": 1440,
+      "padrao": 30
+    },
+    "reacoes": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "reacoes",
+      "opcoes": [
+        "on",
+        "off"
+      ],
+      "padrao": "off"
+    },
+    "reacoes_emojis": {
+      "tipo": "lista_escolhas",
+      "editavel": true,
+      "grupo": "reacoes",
+      "min": 1,
+      "max": 8,
+      "opcoes": [
+        "👍",
+        "❤️",
+        "🙏",
+        "😊",
+        "😂",
+        "👏",
+        "🎉",
+        "✅"
+      ],
+      "padrao": [
+        "❤️",
+        "😊",
+        "👍",
+        "🙏"
+      ]
+    },
+    "reacoes_max_dia": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "reacoes",
+      "min": 0,
+      "max": 10,
+      "padrao": 2
+    },
+    "fora_do_horario": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "fora_do_horario",
+      "opcoes": [
+        "atender",
+        "so_avisar"
+      ],
+      "padrao": "atender"
+    },
+    "fora_do_horario_mensagem": {
+      "tipo": "texto",
+      "editavel": true,
+      "grupo": "fora_do_horario",
+      "min": 1,
+      "max": 500
+    },
+    "fora_do_horario_aceita_agendado": {
+      "tipo": "booleano",
+      "editavel": true,
+      "grupo": "fora_do_horario",
+      "disponivel": false,
+      "padrao": false
+    },
+    "transbordo_alerta": {
+      "tipo": "telefone",
+      "editavel": true,
+      "grupo": "transbordo",
+      "min": 10,
+      "max": 15
+    },
+    "transbordo_horario_equipe": {
+      "tipo": "horarios",
+      "editavel": true,
+      "grupo": "transbordo"
+    },
+    "transbordo_fora_do_horario": {
+      "tipo": "texto",
+      "editavel": true,
+      "grupo": "transbordo",
+      "min": 1,
+      "max": 500
+    },
+    "notificar_equipe": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "transbordo",
+      "opcoes": [
+        "on",
+        "off"
+      ],
+      "padrao": "off"
+    },
+    "transbordo_destino_externo": {
+      "tipo": "booleano",
+      "editavel": true,
+      "grupo": "transbordo",
+      "padrao": false
+    },
+    "follow_up_ativo": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "follow_up",
+      "opcoes": [
+        "on",
+        "off"
+      ],
+      "padrao": "off"
+    },
+    "follow_up_escopo": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "follow_up",
+      "opcoes": [
+        "pedido_em_andamento",
+        "pergunta_pendente"
+      ],
+      "padrao": "pedido_em_andamento"
+    },
+    "follow_up_maximo": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "follow_up",
+      "min": 0,
+      "max": 2,
+      "padrao": 2
+    },
+    "follow_up_primeiro_min": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "follow_up",
+      "min": 5,
+      "max": 1440,
+      "padrao": 15
+    },
+    "follow_up_segundo_min": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "follow_up",
+      "min": 5,
+      "max": 1440,
+      "padrao": 60
+    },
+    "follow_up_janela": {
+      "tipo": "horarios",
+      "editavel": true,
+      "grupo": "follow_up"
+    },
+    "follow_up_fora_unidade": {
+      "tipo": "escolha",
+      "editavel": true,
+      "grupo": "follow_up",
+      "opcoes": [
+        "cancelar",
+        "adiar_abertura"
+      ],
+      "padrao": "cancelar"
+    },
+    "follow_up_limite_dia": {
+      "tipo": "inteiro",
+      "editavel": true,
+      "grupo": "follow_up",
+      "min": 0,
+      "max": 5,
+      "padrao": 2
+    },
+    "send_mode": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": "dry"
+    },
+    "agente_mode": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": "mock"
+    },
+    "modo_piloto": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": true
+    },
+    "contatos_permitidos": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": []
+    },
+    "max_lotes_simultaneos": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": 5
+    },
+    "max_concorrencia": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": 5
+    },
+    "max_msgs_por_minuto_contato": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": 20
+    },
+    "skyone_dominios_permitidos": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao",
+      "padrao": []
+    },
+    "alerta_telefone": {
+      "tipo": "so_plataforma",
+      "editavel": false,
+      "grupo": "operacao"
+    }
+  }
+}

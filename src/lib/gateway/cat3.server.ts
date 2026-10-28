@@ -1,3 +1,4 @@
+import { peloMenos } from "@/lib/acesso/papeis";
 import { cat3Schema, validarLote, type RespostaCat3 } from "./cat3";
 import { autorizar, type ModuloGateway } from "./modulo.server";
 import { GatewayErro, mensagemParaUsuario } from "./erros";
@@ -106,7 +107,7 @@ export async function executarCat3(
     return {
       ok: true,
       dados: (d.acao === "criar" || d.acao === "item"
-        ? projetarItem(r.dados, t.papel !== "membro")
+        ? projetarItem(r.dados, peloMenos(t.papel, "gestor"))
         : r.dados) as Json,
     };
   } catch (e) {

@@ -15,20 +15,33 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { atendimento } from "@/lib/gateway-atendimento.functions";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
+import { listarCanais } from "@/lib/gateway-canais.functions";
 import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
 import {
+  AVISO_SO_WHATSAPP,
+  CAMPOS_SEM_EFEITO,
+  CAMPOS_SO_WHATSAPP,
   MOTIVO_AVISO,
   MOTIVO_BLOQUEIO,
   MOTIVO_CAMPO,
   SEM_EDICOES,
+  agenteTemWhatsapp,
   campoSoLeitura,
   chaveCampo,
   contarEdicoes,
   corpoRascunho,
+  diaMes,
   gruposDoEsquema,
   porCampo,
   rotuloCaminho,
@@ -41,6 +54,7 @@ import {
   type Edicoes,
   type ErroAtendimento,
   type Parte,
+  type Previa,
   type ResultadoAtendimento,
   type Trecho,
   type Visao,
@@ -63,9 +77,12 @@ export type Chamar = <T = Json>(entrada: { acao: string } & Record<string, unkno
 
 const DESCARTAR = "Descartar as alterações não salvas?";
 
+const SO_WHATSAPP = new Set<string>(CAMPOS_SO_WHATSAPP);
+
 export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
   const fn = useServerFn(atendimento),
     buscarAgentes = useServerFn(listarAgentes),
+    buscarCanais = useServerFn(listarCanais),
     buscarModulos = useServerFn(obterModulosEmpresa),
     cache = useQueryClient();
   const [agente, setAgente] = useState("");
@@ -74,6 +91,7 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
   const [problema, setProblema] = useState<ErroAtendimento | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [descartar, setDescartar] = useState(false);
+  const [verDif, setVerDif] = useState(false);
   const sujo = contarEdicoes(edicoes) > 0;
   const chave = ["atendimento", ctx.empresa ?? "vinculada", agente || "empresa"];
   const modulos = useQuery({
@@ -107,6 +125,11 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
   const agentes = useQuery({
     queryKey: ["gateway", "agentes", ctx.empresa],
     queryFn: () => buscarAgentes({ data: { empresa: ctx.empresa } }),
+  });
+  const canais = useQuery({
+    queryKey: ["gateway", "canais", ctx.empresa],
+    queryFn: () => buscarCanais({ data: { empresa: ctx.empresa } }),
+    enabled: Boolean(agente),
   });
   const q = useQuery({
     queryKey: chave,
@@ -189,6 +212,8 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
   const avisos = porCampo(r?.avisos);
   const listaAgentes = agentes.data?.itens ?? [];
   const nomeAgente = listaAgentes.find((a) => a.id === agente)?.nome;
+  const semWhatsapp =
+    Boolean(agente) && canais.isSuccess && !agenteTemWhatsapp(canais.data?.itens ?? [], agente);
 
   const renderCampos = (parte: Parte, campos: [string, CampoEsquema][]) =>
     campos.map(([campo, def]) => {
@@ -207,12 +232,14 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
           avisos={(avisos.get(k) ?? []) as Trecho[]}
           mudar={(valor) => setEdicoes((e) => ({ ...e, [parte]: { ...e[parte], [campo]: valor } }))}
           voltarAoPadrao={() => void voltarAoPadrao(parte, campo)}
+          {...(semWhatsapp && SO_WHATSAPP.has(campo) ? { restricao: AVISO_SO_WHATSAPP } : {})}
         />
       );
     });
 
-  const ocultarPedidos = pedidosEmUso(modulos.data) ? undefined : CAMPOS_PEDIDOS;
-  const gruposComp = gruposDoEsquema(v.esquema, "comportamentos", ocultarPedidos);
+  const ocultar = new Set<string>(CAMPOS_SEM_EFEITO);
+  if (!pedidosEmUso(modulos.data)) for (const campo of CAMPOS_PEDIDOS) ocultar.add(campo);
+  const gruposComp = gruposDoEsquema(v.esquema, "comportamentos", ocultar);
   const operacao = gruposComp.flatMap((g) => g.campos).filter(([, d]) => campoSoLeitura(d));
   const editaveis = gruposComp
     .map((g) => ({ ...g, campos: g.campos.filter(([, d]) => !campoSoLeitura(d)) }))
@@ -220,6 +247,25 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
 
   return (
     <div className="mt-6 space-y-4 pb-24">
+      {r && r.alteracoes.length > 0 ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-gold-500/40 bg-gold-300/20 px-4 py-3 text-sm text-ink-700"
+        >
+          <p className="min-w-0 flex-1">
+            Há alterações não publicadas desde {diaMes(r.atualizado_em)} — o agente ainda usa a
+            versão em uso
+          </p>
+          <Button type="button" size="sm" variant="outline" onClick={() => setVerDif(true)}>
+            Ver diferenças
+          </Button>
+          {v.pode_editar ? (
+            <Button type="button" size="sm" onClick={() => setAba("publicar")}>
+              Publicar
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {nomeAgente ? <h2 className="font-display text-2xl text-ink-900">{nomeAgente}</h2> : null}
       {/* Cabeçalho: escopo, segmento, versão e rascunho */}
       <Cartao className="flex flex-wrap items-end gap-x-6 gap-y-3 p-4">
@@ -358,7 +404,7 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
               </div>
             </Cartao>
           ))}
-          {operacao.length ? (
+          {ctx.papel === "plataforma" && operacao.length ? (
             <Cartao className="space-y-2 p-4">
               <h3 className="font-medium text-ink-700">{rotuloGrupo("operacao")}</h3>
               <p className="text-xs text-ink-500">
@@ -463,6 +509,66 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={verDif} onOpenChange={setVerDif}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Diferenças não publicadas</DialogTitle>
+            <DialogDescription>
+              O que está no rascunho ainda não vale. Abaixo, o que o agente recebe hoje.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-ink-700">O que muda ao publicar</h3>
+              <TabelaAlteracoes alteracoes={r?.alteracoes ?? []} />
+            </div>
+            <PreviaPublicada chave={chave} chamar={chamar} aberto={verDif} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/** Prévia publicada: o bloco que o agente recebe hoje, pela rota que o gateway já tem. */
+function PreviaPublicada({
+  chave,
+  chamar,
+  aberto,
+}: {
+  chave: unknown[];
+  chamar: Chamar;
+  aberto: boolean;
+}) {
+  const q = useQuery({
+    queryKey: [...chave, "previa", "publicado", "faixa"],
+    enabled: aberto,
+    queryFn: () => chamar<Previa>({ acao: "previa", fonte: "publicado" }),
+  });
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-ink-700">O que o agente recebe hoje</h3>
+      {q.isPending ? <p role="status">Consultando a versão em uso…</p> : null}
+      {q.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {q.error.message}
+        </p>
+      ) : null}
+      {q.data ? (
+        <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[minmax(0,200px)_1fr]">
+          {Object.entries(q.data.perfil_atendimento).map(([campo, valor]) => (
+            <div key={campo} className="contents">
+              <dt className="text-ink-500">{rotuloCampo(campo)}</dt>
+              <dd className="whitespace-pre-wrap break-words text-ink-700">{textoValor(valor)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      <p className="text-xs text-ink-500">
+        É o <code>perfil_atendimento</code> da versão publicada. Os comportamentos técnicos entram
+        na publicação e não vão neste bloco.
+      </p>
     </div>
   );
 }

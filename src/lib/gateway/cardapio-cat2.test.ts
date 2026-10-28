@@ -42,18 +42,26 @@ const ITEM = {
 };
 const LIDO = ITEM as unknown as ItemCardapio;
 
-async function montar(papel: PapelGateway = "admin", respostas: Response[] = []) {
+async function montar(papel: PapelGateway = "gestor", respostas: Response[] = []) {
   const chamadas: { url: URL; role: string | null; method?: string; body: unknown }[] = [];
   const modulo = criarModuloGateway({
     carregarPerfil: async () => ({
       userId: "u",
       email: "ana@teste.com",
       superAdmin: papel === "plataforma",
-      vinculos: [{ gatewayTenantId: "teste", ativo: true, admin: papel === "admin" }],
+      vinculos: [
+        {
+          gatewayTenantId: "teste",
+          ativo: true,
+          admin: papel === "gestor",
+          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+        },
+      ],
     }),
     cliente: criarClienteGateway({
       url: "http://gateway/admin/v1",
       chave: "chave-sintetica-testes",
+      chavePlataforma: "chave-sintetica-testes",
       fetch: (async (url: URL, init: RequestInit) => {
         chamadas.push({
           url: new URL(String(url)),
@@ -171,7 +179,7 @@ test("CAT2 histórico em palavras e no horário de Brasília", () => {
 });
 
 test("CAT2 PATCH: admin e plataforma mandam só o que mudou e o atualizado_em como foi lido", async () => {
-  for (const papel of ["admin", "plataforma"] as const) {
+  for (const papel of ["gestor", "plataforma"] as const) {
     const c = await montar(papel, [Response.json({ ...ITEM, preco: 36.5 })]);
     const r = await executarCardapio(c.sessao, {
       empresa: "teste",
@@ -194,7 +202,7 @@ test("CAT2 PATCH: admin e plataforma mandam só o que mudou e o atualizado_em co
 });
 
 test("CAT2 PATCH: atendente, campo não editável e corpo vazio não saem do painel", async () => {
-  const m = await montar("membro");
+  const m = await montar("funcionario");
   const r = await executarCardapio(m.sessao, {
     acao: "editar",
     item_id: 666,
@@ -203,7 +211,7 @@ test("CAT2 PATCH: atendente, campo não editável e corpo vazio não saem do pai
   });
   expect(r.ok).toBe(false);
   expect(m.chamadas).toHaveLength(0);
-  const a = await montar("admin");
+  const a = await montar("gestor");
   for (const campos of [
     {},
     { unidade: "X" },
@@ -229,7 +237,7 @@ test("CAT2 PATCH: atendente, campo não editável e corpo vazio não saem do pai
 
 test("CAT3 409: devolve o item atual ao admin para recarregar ou reaplicar", async () => {
   const atual = { ...ITEM, preco: 38, atualizado_em: "2026-10-13T02:00:00.000001Z" };
-  const c = await montar("admin", [
+  const c = await montar("gestor", [
     Response.json(
       {
         erro: {
@@ -259,7 +267,7 @@ test("CAT3 409: devolve o item atual ao admin para recarregar ou reaplicar", asy
 
 test("CAT2 validação do servidor: detalhes.campo chega ao campo certo", async () => {
   for (const campo of ["preco", "categoria", "nome", "descricao"]) {
-    const c = await montar("admin", [
+    const c = await montar("gestor", [
       Response.json(
         {
           erro: { codigo: "VALIDATION_ERROR", mensagem: `Confira ${campo}.`, detalhes: { campo } },
@@ -277,8 +285,8 @@ test("CAT2 validação do servidor: detalhes.campo chega ao campo certo", async 
   }
 });
 
-test("CAT2 leituras: item, categorias e prévia para atendente; histórico só administradores", async () => {
-  const m = await montar("membro", [
+test("CAT2 leituras: item e categorias para o funcionário; prévia para o supervisor; histórico só o gestor", async () => {
+  const m = await montar("funcionario", [
     Response.json(ITEM),
     Response.json({ unidade: "patio_guedala", categorias: [] }),
     Response.json({ resumo: null, disponivel_agora: true }),
@@ -293,20 +301,21 @@ test("CAT2 leituras: item, categorias e prévia para atendente; histórico só a
     exceto_feriado: true,
     horario: [["11:30", "15:00"]] as [string, string][],
   };
-  await executarCardapio(m.sessao, {
+  const sup = await montar("supervisor", [Response.json({ resumo: null, disponivel_agora: true })]);
+  await executarCardapio(sup.sessao, {
     acao: "previa",
     unidade: "patio_guedala",
     disponibilidade: regra,
   });
-  expect(m.chamadas[2]?.method).toBe("POST");
-  expect(m.chamadas[2]?.url.pathname).toBe(
+  expect(sup.chamadas[0]?.method).toBe("POST");
+  expect(sup.chamadas[0]?.url.pathname).toBe(
     "/admin/v1/tenants/teste/catalogo/disponibilidade/previa",
   );
-  expect(m.chamadas[2]?.body).toEqual({ unidade: "patio_guedala", disponibilidade: regra });
-  expect((await executarCardapio(m.sessao, { acao: "historico", item_id: 666 })).ok).toBe(false);
+  expect(sup.chamadas[0]?.body).toEqual({ unidade: "patio_guedala", disponibilidade: regra });
+  expect((await executarCardapio(m.sessao, { acao: "historico", item_id: 666 })).ok).toBe(true);
   expect(m.chamadas).toHaveLength(3);
 
-  const a = await montar("admin", [
+  const a = await montar("gestor", [
     Response.json({
       itens: [
         {

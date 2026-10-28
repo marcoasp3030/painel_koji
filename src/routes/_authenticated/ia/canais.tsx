@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/ia/canais")({
     <PaginaGateway
       titulo="Canais"
       descricao="Por onde as mensagens chegam aos agentes. A URL do webhook leva um segredo e aparece uma única vez."
-      papeis={["plataforma", "admin", "membro"]}
+      papeis={["plataforma", "gestor"]}
     >
       {(ctx) => <Canais key={ctx.empresa ?? "empresa"} ctx={ctx} />}
     </PaginaGateway>

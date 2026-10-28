@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { WebhooksSaidaTela } from "@/components/luxtia/WebhooksSaida";
 import {
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/ia/webhooks-saida")({
     <PaginaGateway
       titulo="Webhooks de saída"
       descricao="Avisos para um sistema da empresa. Documentos, respostas do agente e follow-up entram na lista de eventos."
-      papeis={["plataforma", "admin"]}
+      papeis={["plataforma", "gestor"]}
     >
       {(ctx) => <Tela key={ctx.empresa ?? "empresa"} ctx={ctx} />}
     </PaginaGateway>
@@ -112,7 +113,7 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
       onDesativar={(w) => desativar.mutate(w.id)}
       onTestar={(w) => testar.mutate(w.id)}
       onEntregas={(w) => verEntregas.mutate(w.id)}
-      podeGerarSegredo={ctx.papel === "admin" || ctx.papel === "plataforma"}
+      podeGerarSegredo={peloMenos(ctx.papel, "gestor")}
       onGerarSegredo={(w) => rotacionar.mutate(w.id)}
       segredo={segredo}
       onFecharSegredo={() => setSegredo(null)}

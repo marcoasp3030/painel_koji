@@ -19,7 +19,7 @@ test("telas liberam Cardápio/Pedidos/Avisos só quando o módulo declara", () =
 
 test("menu da empresa sem pedidos esconde Cardápio, Pedidos e Avisos", () => {
   const base = filtrarMenuPorTelas(
-    TENANT_NAV.filter((i) => !i.papeis || i.papeis.includes("admin")),
+    TENANT_NAV.filter((i) => !i.papeis || i.papeis.includes("gestor")),
     [],
   );
   expect(base.map((i) => i.to)).not.toContain("/ia/cardapio");

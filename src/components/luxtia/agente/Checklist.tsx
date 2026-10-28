@@ -15,7 +15,7 @@ const ROTULO_ACAO: Record<AcaoProntidao, string> = {
 /** Texto para quando a empresa vê a pendência mas não pode resolver. */
 function semPermissao(item: ItemProntidao, papel: PapelGateway) {
   if (papel === "plataforma") return null;
-  if (item.chave === "canal" || (item.chave === "situacao" && papel === "admin")) {
+  if (item.chave === "canal" || (item.chave === "situacao" && papel === "gestor")) {
     return "Peça à administração da plataforma.";
   }
   return null;

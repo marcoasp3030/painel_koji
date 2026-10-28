@@ -186,6 +186,9 @@ export type Database = {
           full_name: string | null
           id: string
           is_tenant_admin: boolean
+          papel_id: string | null
+          ativo: boolean
+          convidado_em: string | null
           tenant_id: string
           user_id: string
         }
@@ -195,6 +198,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_tenant_admin?: boolean
+          papel_id?: string | null
+          ativo?: boolean
+          convidado_em?: string | null
           tenant_id: string
           user_id: string
         }
@@ -204,6 +210,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_tenant_admin?: boolean
+          papel_id?: string | null
+          ativo?: boolean
+          convidado_em?: string | null
           tenant_id?: string
           user_id?: string
         }
@@ -274,6 +283,117 @@ export type Database = {
         }
         Relationships: []
       }
+      papeis: {
+        Row: {
+          id: string
+          empresa_id: string | null
+          codigo: string
+          nome: string
+          nivel: number
+          sistema: boolean
+          escopo_unidades: string
+          papel_gateway: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          empresa_id?: string | null
+          codigo: string
+          nome: string
+          nivel: number
+          sistema?: boolean
+          escopo_unidades?: string
+          papel_gateway: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string | null
+          codigo?: string
+          nome?: string
+          nivel?: number
+          sistema?: boolean
+          escopo_unidades?: string
+          papel_gateway?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      usuario_unidades: {
+        Row: {
+          id: string
+          tenant_user_id: string
+          unidade_codigo: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_user_id: string
+          unidade_codigo: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_user_id?: string
+          unidade_codigo?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      conta_seguranca: {
+        Row: {
+          user_id: string
+          prazo_ate: string | null
+          emergencia: boolean
+          ultimo_login_auditado: string | null
+          atualizado_em: string
+        }
+        Insert: {
+          user_id: string
+          prazo_ate?: string | null
+          emergencia?: boolean
+          ultimo_login_auditado?: string | null
+          atualizado_em?: string
+        }
+        Update: {
+          user_id?: string
+          prazo_ate?: string | null
+          emergencia?: boolean
+          ultimo_login_auditado?: string | null
+          atualizado_em?: string
+        }
+        Relationships: []
+      }
+      convites: {
+        Row: {
+          id: string
+          tenant_user_id: string
+          token_hash: string
+          expira_em: string
+          usado_em: string | null
+          revogado_em: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_user_id: string
+          token_hash: string
+          expira_em: string
+          usado_em?: string | null
+          revogado_em?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_user_id?: string
+          token_hash?: string
+          expira_em?: string
+          usado_em?: string | null
+          revogado_em?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       webhook_events: {
         Row: {
           event_time: string | null
@@ -340,6 +460,22 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      fatores_verificados: {
+        Args: { uid: string }
+        Returns: number
+      }
+      derrubar_sessoes: {
+        Args: { uid: string }
+        Returns: undefined
+      }
+      usuario_id_por_email: {
+        Args: { alvo: string }
+        Returns: string
+      }
+      revogar_tokens_de_convite: {
+        Args: { uid: string }
+        Returns: undefined
       }
     }
     Enums: {

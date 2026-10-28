@@ -2,6 +2,7 @@
  * Liga o módulo do gateway ao banco do painel: papel e vínculo vêm do
  * Postgres, lidos no servidor a partir do usuário da sessão.
  */
+import { papelAcesso } from "@/lib/acesso/papeis";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { clienteGatewayPadrao } from "./cliente.server";
 import { GatewayErro, mensagemParaUsuario } from "./erros";
@@ -23,9 +24,28 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
 
   const { data: vinculos, error: erroVinculos } = await supabaseAdmin
     .from("tenant_users")
-    .select("is_tenant_admin, tenants(gateway_tenant_id, status)")
+    .select("id, is_tenant_admin, ativo, papel_id, tenants(gateway_tenant_id, status)")
     .eq("user_id", usuario.userId);
   if (erroVinculos) throw new Error("Não foi possível conferir suas permissões.");
+
+  const idsPapel = [
+    ...new Set((vinculos ?? []).map((v) => v.papel_id).filter((id): id is string => Boolean(id))),
+  ];
+  const idsVinculo = (vinculos ?? []).map((v) => v.id);
+  const [{ data: papeisLinha, error: erroPapel }, { data: unidadesLinha, error: erroUnidades }] =
+    await Promise.all([
+      idsPapel.length
+        ? supabaseAdmin.from("papeis").select("id, papel_gateway, escopo_unidades").in("id", idsPapel)
+        : Promise.resolve({ data: [], error: null }),
+      idsVinculo.length
+        ? supabaseAdmin
+            .from("usuario_unidades")
+            .select("tenant_user_id, unidade_codigo")
+            .in("tenant_user_id", idsVinculo)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+  if (erroPapel || erroUnidades) throw new Error("Não foi possível conferir suas permissões.");
+  const porPapel = new Map((papeisLinha ?? []).map((p) => [p.id, p]));
 
   return {
     userId: usuario.userId,
@@ -33,15 +53,24 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
     superAdmin: (papeis ?? []).some((p) => p.role === "super_admin"),
     vinculos: (vinculos ?? []).flatMap((v) => {
       const t = v.tenants as { gateway_tenant_id: string | null; status: string } | null;
-      return t?.gateway_tenant_id
-        ? [
-            {
-              gatewayTenantId: t.gateway_tenant_id,
-              ativo: t.status === "active",
-              admin: Boolean(v.is_tenant_admin),
-            },
-          ]
-        : [];
+      if (!t?.gateway_tenant_id) return [];
+      const linha = v.papel_id ? porPapel.get(v.papel_id) : undefined;
+      const papel = papelAcesso(linha?.papel_gateway);
+      // Papel que o gateway não conhece não vira chamada. O vínculo fica inativo.
+      const papelValido = Boolean(papel);
+      const codigos = (unidadesLinha ?? [])
+        .filter((u) => u.tenant_user_id === v.id)
+        .map((u) => u.unidade_codigo);
+      return [
+        {
+          gatewayTenantId: t.gateway_tenant_id,
+          ativo: t.status === "active" && v.ativo !== false && (papelValido || !v.papel_id),
+          admin: Boolean(v.is_tenant_admin),
+          ...(papel ? { papel } : {}),
+          unidades:
+            papel === "gestor" || linha?.escopo_unidades === "todas" ? "*" : codigos,
+        },
+      ];
     }),
   };
 }
@@ -106,7 +135,7 @@ export function papelDaSessao(sessao: Sessao) {
   }
 }
 
-async function auditarPainel(
+export async function auditarPainel(
   sessao: Sessao,
   entrada: { tenantId?: string | null; action: string; target: string; detail?: string },
 ) {

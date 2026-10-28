@@ -151,14 +151,14 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "Comportamento do agente",
     grupo: "Configurações",
     icone: "agentes",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor", "supervisor"],
   },
   {
     to: "/ia/configuracoes/avisos",
     label: "Avisos de pedido",
     grupo: "Configurações",
     icone: "pedidos",
-    papeis: ["admin"],
+    papeis: ["gestor", "supervisor"],
     tela: "avisos_de_pedido",
   },
   {
@@ -166,14 +166,14 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "Unidades e horários",
     grupo: "Agentes",
     icone: "empresas",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor", "supervisor"],
   },
   {
     to: "/ia/cardapio",
     label: "Cardápio",
     grupo: "Agentes",
     icone: "pedidos",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor", "supervisor", "funcionario"],
     tela: "cardapio",
   },
   {
@@ -181,21 +181,21 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "Histórico de gestão",
     grupo: "Agentes",
     icone: "conversas",
-    papeis: ["admin"],
+    papeis: ["gestor", "supervisor", "funcionario"],
   },
   {
     to: "/ia/conversas",
     label: "Conversas",
     grupo: "Agentes",
     icone: "conversas",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor", "supervisor", "funcionario"],
   },
   {
     to: "/ia/pedidos",
     label: "Pedidos",
     grupo: "Agentes",
     icone: "pedidos",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor", "supervisor", "funcionario"],
     tela: "pedidos",
   },
   {
@@ -203,52 +203,59 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "Agentes",
     grupo: "Agentes",
     icone: "agentes",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor", "supervisor"],
   },
   {
     to: "/ia/canais",
     label: "Canais",
     grupo: "Agentes",
     icone: "canais",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor"],
   },
   {
     to: "/ia/chaves-formulario",
     label: "Chaves de formulário",
     grupo: "Agentes",
     icone: "chaves",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor"],
   },
   {
     to: "/ia/documentos",
     label: "Documentos",
     grupo: "Agentes",
     icone: "documentos",
-    papeis: ["admin", "membro"],
+    papeis: ["gestor"],
   },
   {
     to: "/ia/webhooks-saida",
     label: "Webhooks de saída",
     grupo: "Configurações",
     icone: "webhooks",
-    papeis: ["admin"],
+    papeis: ["gestor"],
   },
   {
     to: "/ia/simular",
     label: "Simular conversa",
     grupo: "Agentes",
     icone: "simular",
-    papeis: ["admin"],
+    papeis: ["gestor", "supervisor"],
   },
 ];
 
 export const ADMIN_NAV: ItemMenu[] = [
   { to: "/admin", label: "Clientes", grupo: "Operação", icone: "clientes" },
+  {
+    to: "/equipe",
+    label: "Usuários",
+    grupo: "Operação",
+    icone: "equipe",
+    papeis: ["plataforma"],
+  },
   ...AGENTES_PLATAFORMA,
 ];
 
 export const TENANT_NAV: ItemMenu[] = [
-  { to: "/equipe", label: "Equipe", grupo: "Operação", icone: "equipe" },
+  { to: "/equipe", label: "Usuários", grupo: "Operação", icone: "equipe", papeis: ["gestor", "supervisor"] },
   ...AGENTES_EMPRESA,
 ];
 
