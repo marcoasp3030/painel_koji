@@ -1,31 +1,12 @@
 /**
  * MFA1 — segunda etapa (TOTP + recuperação).
  * Obrigatoriedade ampla só com MFA1_OBRIGATORIO=1 (depois do §9 da ESPEC).
+ * Imports de *.server ficam só dentro dos handlers (proteção do bundle).
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { QTD_CODIGOS_RECUPERACAO } from "@/lib/acesso/codigos-recuperacao";
-import {
-  RECUPERACAO_SESSAO_MS,
-  MAX_FATORES_TOTP,
-  mfa1ObrigatorioLigado,
-} from "@/lib/acesso/mfa";
-import {
-  auditarMfa,
-  contarFatores,
-  estadoMfaCompleto,
-  exigirAalDaSessao,
-  exigirStepUp,
-  gravarStepUp,
-  hashCodigoMfa,
-  hashesIguaisMfa,
-  lerContaSeguranca,
-  MfaErro,
-  mfaEmpresaDoTenant,
-  registrarTentativaFalha,
-  zerarFalhasMfa,
-} from "@/lib/acesso/mfa.server";
 import { contaEmergencia } from "@/lib/acesso/segunda-etapa";
 
 export type EstadoSeguranca = {
@@ -55,10 +36,12 @@ export const estadoSeguranca = createServerFn({ method: "GET" })
     let email: string | null = null;
     try {
       const g = await import("./gateway/painel.server");
+      const mfa = await import("@/lib/acesso/mfa.server");
+      const { mfa1ObrigatorioLigado } = await import("@/lib/acesso/mfa");
       const sessao = await g.sessaoGateway(context);
       email = sessao.perfil.email;
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const conta = await lerContaSeguranca(sessao.perfil.userId);
+      const conta = await mfa.lerContaSeguranca(sessao.perfil.userId);
       const emergencia = contaEmergencia(email, Boolean(conta?.emergencia));
       if (emergencia) await registrarAlertaLogin(supabaseAdmin, sessao.perfil.userId, email);
 
@@ -70,7 +53,7 @@ export const estadoSeguranca = createServerFn({ method: "GET" })
         gatewayTenantId = null;
       }
 
-      const estado = await estadoMfaCompleto({
+      const estado = await mfa.estadoMfaCompleto({
         userId: sessao.perfil.userId,
         email,
         superAdmin: sessao.perfil.superAdmin,
@@ -78,8 +61,6 @@ export const estadoSeguranca = createServerFn({ method: "GET" })
         claims: context.claims as Record<string, unknown>,
       });
 
-      // Sem cutover e sem obrigação de papel: gestor/supervisor/funcionário veem vazio
-      // (exceto se já tiverem fator — aí exige_aal2 aparece).
       if (!estado.obrigatorio && estado.fatores === 0 && !mfa1ObrigatorioLigado()) {
         return { ...vazio, exige_aal2: false, aal2: estado.aal2 };
       }
@@ -98,6 +79,7 @@ async function registrarAlertaLogin(
   email: string | null,
 ) {
   try {
+    const mfa = await import("@/lib/acesso/mfa.server");
     const { data: auth } = await supabaseAdmin.auth.admin.getUserById(userId);
     const marco = auth.user?.last_sign_in_at ?? null;
     if (!marco) return;
@@ -112,7 +94,7 @@ async function registrarAlertaLogin(
     ) {
       return;
     }
-    await auditarMfa({
+    await mfa.auditarMfa({
       userId,
       email,
       action: "Login da conta de emergência",
@@ -148,7 +130,8 @@ export const guardarCodigosRecuperacao = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => codigosSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const hashes = data.codigos.map(hashCodigoMfa);
+    const mfa = await import("@/lib/acesso/mfa.server");
+    const hashes = data.codigos.map(mfa.hashCodigoMfa);
     const { data: conta } = await supabaseAdmin
       .from("conta_seguranca")
       .select("user_id")
@@ -163,12 +146,11 @@ export const guardarCodigosRecuperacao = createServerFn({ method: "POST" })
           .from("conta_seguranca")
           .insert({ user_id: context.userId, codigos_recuperacao: hashes });
     if (escrita.error) throw new Error("Não foi possível guardar os códigos de recuperação.");
-    await auditarMfa({
+    await mfa.auditarMfa({
       userId: context.userId,
       action: "mfa.ativado",
       detail: `${QTD_CODIGOS_RECUPERACAO} códigos de recuperação guardados.`,
     });
-    // Derruba outras sessões após ativar.
     const sessionId =
       typeof context.claims?.["session_id"] === "string"
         ? (context.claims["session_id"] as string)
@@ -183,28 +165,30 @@ export const guardarCodigosRecuperacao = createServerFn({ method: "POST" })
   });
 
 /**
- * Código de recuperação no login: consome 1 hash e eleva a sessão no painel
- * (recuperacao_valida_ate). Não apaga os fatores TOTP.
+ * Código de recuperação no login: consome 1 hash e eleva a sessão no painel.
+ * Não apaga os fatores TOTP.
  */
 export const usarCodigoRecuperacao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ codigo: z.string().trim().min(8).max(32) }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const mfa = await import("@/lib/acesso/mfa.server");
+    const { RECUPERACAO_SESSAO_MS } = await import("@/lib/acesso/mfa");
     const email =
       typeof context.claims?.["email"] === "string" ? (context.claims["email"] as string) : null;
-    const conta = await lerContaSeguranca(context.userId);
+    const conta = await mfa.lerContaSeguranca(context.userId);
     const agora = new Date();
     if (conta?.mfa_bloqueado_ate && new Date(conta.mfa_bloqueado_ate).getTime() > agora.getTime()) {
-      throw new MfaErro("mfa_bloqueado", "Muitas tentativas. Aguarde alguns minutos.");
+      throw new mfa.MfaErro("mfa_bloqueado", "Muitas tentativas. Aguarde alguns minutos.");
     }
-    const hash = hashCodigoMfa(data.codigo);
+    const hash = mfa.hashCodigoMfa(data.codigo);
     const guardados = conta?.codigos_recuperacao ?? [];
-    if (!guardados.some((item) => hashesIguaisMfa(item, hash))) {
-      await registrarTentativaFalha(context.userId, email, "Código de recuperação inválido.");
+    if (!guardados.some((item) => mfa.hashesIguaisMfa(item, hash))) {
+      await mfa.registrarTentativaFalha(context.userId, email, "Código de recuperação inválido.");
       throw new Error("Código de recuperação não conferiu.");
     }
-    const restante = guardados.filter((item) => !hashesIguaisMfa(item, hash));
+    const restante = guardados.filter((item) => !mfa.hashesIguaisMfa(item, hash));
     const ate = new Date(agora.getTime() + RECUPERACAO_SESSAO_MS).toISOString();
     const { error } = await supabaseAdmin
       .from("conta_seguranca")
@@ -217,7 +201,7 @@ export const usarCodigoRecuperacao = createServerFn({ method: "POST" })
       })
       .eq("user_id", context.userId);
     if (error) throw new Error("Não foi possível usar o código de recuperação.");
-    await auditarMfa({
+    await mfa.auditarMfa({
       userId: context.userId,
       email,
       action: "mfa.recuperacao_usada",
@@ -233,21 +217,22 @@ export const regenerarCodigosRecuperacao = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => codigosSchema.parse(d))
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
+    const mfa = await import("@/lib/acesso/mfa.server");
     const sessao = await g.sessaoGateway(context);
-    await exigirAalDaSessao({
+    await mfa.exigirAalDaSessao({
       userId: context.userId,
       email: sessao.perfil.email,
       claims: context.claims as Record<string, unknown>,
       superAdmin: sessao.perfil.superAdmin,
     });
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const hashes = data.codigos.map(hashCodigoMfa);
+    const hashes = data.codigos.map(mfa.hashCodigoMfa);
     const { error } = await supabaseAdmin
       .from("conta_seguranca")
       .update({ codigos_recuperacao: hashes })
       .eq("user_id", context.userId);
     if (error) throw new Error("Não foi possível regenerar os códigos.");
-    await auditarMfa({
+    await mfa.auditarMfa({
       userId: context.userId,
       email: sessao.perfil.email,
       action: "mfa.recuperacao_regenerada",
@@ -261,28 +246,25 @@ export const regenerarCodigosRecuperacao = createServerFn({ method: "POST" })
 export const confirmarStepUp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    if (!sessaoEhAal2Claims(context.claims as Record<string, unknown>)) {
-      // Step-up também aceita recuperação elevada.
-      const conta = await lerContaSeguranca(context.userId);
+    const mfa = await import("@/lib/acesso/mfa.server");
+    const claims = context.claims as Record<string, unknown>;
+    const aal = claims["aal"];
+    if (aal !== "aal2" && aal !== "aal3") {
+      const conta = await mfa.lerContaSeguranca(context.userId);
       const ok =
         conta?.recuperacao_valida_ate &&
         new Date(conta.recuperacao_valida_ate).getTime() > Date.now();
-      if (!ok) throw new MfaErro("mfa_aal", "Confirme o código do aplicativo.");
+      if (!ok) throw new mfa.MfaErro("mfa_aal", "Confirme o código do aplicativo.");
     }
-    const ate = await gravarStepUp(context.userId);
-    await zerarFalhasMfa(context.userId);
-    await auditarMfa({
+    const ate = await mfa.gravarStepUp(context.userId);
+    await mfa.zerarFalhasMfa(context.userId);
+    await mfa.auditarMfa({
       userId: context.userId,
       action: "mfa.step_up",
       detail: `Válido até ${ate}`,
     });
     return { ok: true as const, step_up_ate: ate };
   });
-
-function sessaoEhAal2Claims(claims: Record<string, unknown>) {
-  const aal = claims["aal"];
-  return aal === "aal2" || aal === "aal3";
-}
 
 type AdminFatores = {
   _listFactors(params: { userId: string }): Promise<{
@@ -309,16 +291,17 @@ export const resetarFatorMfa = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
+    const mfa = await import("@/lib/acesso/mfa.server");
     const { peloMenos } = await import("@/lib/acesso/papeis");
     const sessao = await g.sessaoGateway(context);
-    await exigirAalDaSessao({
+    await mfa.exigirAalDaSessao({
       userId: context.userId,
       email: sessao.perfil.email,
       claims: context.claims as Record<string, unknown>,
       superAdmin: sessao.perfil.superAdmin,
       gatewayTenantId: data.empresa ?? null,
     });
-    await exigirStepUp({
+    await mfa.exigirStepUp({
       userId: context.userId,
       email: sessao.perfil.email,
       acao: "usuarios.reset_mfa",
@@ -348,7 +331,7 @@ export const resetarFatorMfa = createServerFn({ method: "POST" })
       mfa_bloqueado_ate: null,
     });
     await supabaseAdmin.rpc("derrubar_sessoes", { uid: data.user_id });
-    await auditarMfa({
+    await mfa.auditarMfa({
       userId: context.userId,
       email: sessao.perfil.email,
       action: "mfa.reset",
@@ -368,16 +351,17 @@ export const definirMfaEmpresa = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
+    const mfa = await import("@/lib/acesso/mfa.server");
     const { peloMenos } = await import("@/lib/acesso/papeis");
     const sessao = await g.sessaoGateway(context);
-    await exigirAalDaSessao({
+    await mfa.exigirAalDaSessao({
       userId: context.userId,
       email: sessao.perfil.email,
       claims: context.claims as Record<string, unknown>,
       superAdmin: sessao.perfil.superAdmin,
       gatewayTenantId: data.empresa,
     });
-    await exigirStepUp({
+    await mfa.exigirStepUp({
       userId: context.userId,
       email: sessao.perfil.email,
       acao: "empresa.mfa_obrigatorio",
@@ -392,7 +376,7 @@ export const definirMfaEmpresa = createServerFn({ method: "POST" })
       .update({ mfa_obrigatorio: data.obrigatorio })
       .eq("gateway_tenant_id", t.id);
     if (error) throw new Error("Não foi possível salvar.");
-    await auditarMfa({
+    await mfa.auditarMfa({
       userId: context.userId,
       email: sessao.perfil.email,
       action: "mfa.empresa",
@@ -409,8 +393,10 @@ export const lerMfaEmpresa = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ empresa: z.string().min(1).max(40) }).parse(d))
   .handler(async ({ data, context }) => {
     const g = await import("./gateway/painel.server");
+    const mfa = await import("@/lib/acesso/mfa.server");
+    const { MAX_FATORES_TOTP } = await import("@/lib/acesso/mfa");
     const sessao = await g.sessaoGateway(context);
-    await exigirAalDaSessao({
+    await mfa.exigirAalDaSessao({
       userId: context.userId,
       email: sessao.perfil.email,
       claims: context.claims as Record<string, unknown>,
@@ -418,23 +404,8 @@ export const lerMfaEmpresa = createServerFn({ method: "GET" })
       gatewayTenantId: data.empresa,
     });
     const t = await sessao.tenant(data.empresa);
-    return { mfa_obrigatorio: await mfaEmpresaDoTenant(t.id), max_fatores: MAX_FATORES_TOTP };
+    return {
+      mfa_obrigatorio: await mfa.mfaEmpresaDoTenant(t.id),
+      max_fatores: MAX_FATORES_TOTP,
+    };
   });
-
-export async function assertAalNoContexto(
-  context: { userId: string; claims: Record<string, unknown> },
-  gatewayTenantId?: string | null,
-) {
-  const g = await import("./gateway/painel.server");
-  const sessao = await g.sessaoGateway(context);
-  await exigirAalDaSessao({
-    userId: context.userId,
-    email: sessao.perfil.email,
-    claims: context.claims,
-    superAdmin: sessao.perfil.superAdmin,
-    gatewayTenantId: gatewayTenantId ?? null,
-  });
-  return sessao;
-}
-
-export { contarFatores, MfaErro };
