@@ -2,13 +2,15 @@
 - **Autor:** Auto
 - **Objetivo:** Publicar o MFA1 com `MFA1_OBRIGATORIO=0` (sem cutover).
 - **Arquivos alterados:**
- - (commit de entrega MFA1 + registro desta publicação)
-- **Resumo das mudanças:** Imagem nova do painel com MFA1. Cutover continua desligado. Migração já aplicada. Volta marcada no build.
-- **Decisões e justificativas:** O usuário pediu publicar. A obrigação ampla não liga até Marco e emergência terem fator + 10 códigos.
-- **Comandos executados:** (preenchido após o build)
-- **Erros e resoluções:** —
+ - `src/lib/seguranca.functions.ts` — modificado — imports de `mfa.server` só nos handlers (build)
+ - `docker-compose.yml` — modificado — `MFA1_OBRIGATORIO`
+ - `docs/worklog.md`, `instrucoes.md` — modificados — registro
+- **Resumo das mudanças:** Commit `8146e5ce65f353ecc8fed9933e1691e66e1284a2`. Imagem `painel:8146e5c…` = `sha256:cdcd8f01…`. Container recriado. `MFA1_OBRIGATORIO=0` no ar. Bundle traz o aviso de códigos. Volta imediata: `painel:bc6c695…` / `painel:volta-20261030T171856Z`.
+- **Decisões e justificativas:** Cutover continua off até Marco e emergência terem fator + 10 códigos.
+- **Comandos executados:** `sh docker/publicar-painel.sh` → OK (2ª tentativa). `docker compose up -d --no-deps --no-build painel` → OK. `verificar-chave-no-bundle.sh` → OK.
+- **Erros e resoluções:** 1º build: import estático de `mfa.server` no cliente → imports só nos handlers; commit `8146e5c`.
 - **Pendências / TODO:** Marco gerar 10 códigos; emergência ativar fator+códigos; prints; só então `MFA1_OBRIGATORIO=1`
-- **Próximos passos:** conferir aviso “sem códigos” na sessão do Marco; gerar códigos em Segurança
+- **Próximos passos:** hard refresh; Segurança → gerar códigos; volta: `docker tag painel:bc6c695dbb029ffcc17c5acf75466bf8d20bb251 painel_koji-painel && docker compose up -d --no-deps --no-build painel`
 
 ## [2026-10-30 14:15] — MFA1: estado, especificação e base
 - **Autor:** Auto
