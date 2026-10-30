@@ -351,6 +351,26 @@ export function AppShell({
               onAtivar={() => setSegurancaAberta(true)}
             />
           ) : null}
+          {seguranca.data &&
+          seguranca.data.fatores > 0 &&
+          (seguranca.data.codigos_restantes ?? 0) === 0 ? (
+            <div
+              role="status"
+              className="flex flex-wrap items-center justify-between gap-3 border-b bg-amber-50 px-4 py-2 text-sm text-amber-950"
+            >
+              <p>
+                O aplicativo está ativo, mas ainda não há códigos de recuperação. Gere-os em
+                Segurança antes que a segunda etapa vire obrigatória para todos.
+              </p>
+              <button
+                type="button"
+                className="rounded-lg bg-purple-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-900"
+                onClick={() => setSegurancaAberta(true)}
+              >
+                Segurança
+              </button>
+            </div>
+          ) : null}
           <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:py-6">
             {seguranca.data?.bloqueado ? (
               <AtivarSegundaEtapa onPronta={() => void seguranca.refetch()} />

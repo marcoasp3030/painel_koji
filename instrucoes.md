@@ -1,3 +1,10 @@
+## MFA1 — publicado com flag off (30/10/2026)
+
+- Especificação: `docs/ESPEC_MFA1.md`. **`MFA1_OBRIGATORIO=0`** (cutover desligado).
+- Marco: TOTP `Luxtia` verified, sessão aal2, **ainda 0 códigos** — gerar em Segurança.
+- Emergência: sem fator. Antes do cutover: fator + 10 códigos.
+- No ar: aal nas funções, 10 códigos, recuperação sem apagar TOTP, aviso se faltar códigos.
+
 ## Cardápio — layout publicado (30/10/2026, 14:00 Brasília)
 
 - Commit `bc6c695dbb029ffcc17c5acf75466bf8d20bb251`. Imagem `painel:bc6c695…` = `sha256:ed66a4ec…`. Só o painel recriado. Volta: `painel:volta-20261030T165734Z`.

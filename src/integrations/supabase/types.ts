@@ -237,6 +237,7 @@ export type Database = {
           slug: string
           status: Database["public"]["Enums"]["tenant_status"]
           updated_at: string
+          mfa_obrigatorio: boolean
         }
         Insert: {
           contact_email?: string | null
@@ -248,6 +249,7 @@ export type Database = {
           slug: string
           status?: Database["public"]["Enums"]["tenant_status"]
           updated_at?: string
+          mfa_obrigatorio?: boolean
         }
         Update: {
           contact_email?: string | null
@@ -259,6 +261,7 @@ export type Database = {
           slug?: string
           status?: Database["public"]["Enums"]["tenant_status"]
           updated_at?: string
+          mfa_obrigatorio?: boolean
         }
         Relationships: []
       }
@@ -348,6 +351,11 @@ export type Database = {
           ultimo_login_auditado: string | null
           atualizado_em: string
           codigos_recuperacao: string[]
+          step_up_ate: string | null
+          mfa_bloqueado_ate: string | null
+          mfa_falhas: number
+          mfa_falha_em: string | null
+          recuperacao_valida_ate: string | null
         }
         Insert: {
           user_id: string
@@ -356,6 +364,11 @@ export type Database = {
           ultimo_login_auditado?: string | null
           atualizado_em?: string
           codigos_recuperacao?: string[]
+          step_up_ate?: string | null
+          mfa_bloqueado_ate?: string | null
+          mfa_falhas?: number
+          mfa_falha_em?: string | null
+          recuperacao_valida_ate?: string | null
         }
         Update: {
           user_id?: string
@@ -364,6 +377,11 @@ export type Database = {
           ultimo_login_auditado?: string | null
           atualizado_em?: string
           codigos_recuperacao?: string[]
+          step_up_ate?: string | null
+          mfa_bloqueado_ate?: string | null
+          mfa_falhas?: number
+          mfa_falha_em?: string | null
+          recuperacao_valida_ate?: string | null
         }
         Relationships: []
       }

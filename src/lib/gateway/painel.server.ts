@@ -107,6 +107,29 @@ export function sessaoGateway(context: unknown) {
   return moduloGateway().sessao({ userId: ctx.userId, email });
 }
 
+/** Sessão do gateway + conferência MFA1 (aal2 / recuperação). */
+export async function sessaoGatewayMfa(
+  context: unknown,
+  gatewayTenantId?: string | null,
+) {
+  const ctx = context as { userId: string; claims: Record<string, unknown> };
+  const sessao = await sessaoGateway(context);
+  const { exigirAalDaSessao, MfaErro } = await import("@/lib/acesso/mfa.server");
+  try {
+    await exigirAalDaSessao({
+      userId: ctx.userId,
+      email: sessao.perfil.email,
+      claims: ctx.claims,
+      superAdmin: sessao.perfil.superAdmin,
+      gatewayTenantId: gatewayTenantId ?? null,
+    });
+  } catch (e) {
+    if (e instanceof MfaErro) throw new Error(e.message);
+    throw e;
+  }
+  return sessao;
+}
+
 /** Repassa ao navegador só a mensagem segura; o resto fica no servidor. */
 export async function comGateway<T>(acao: () => Promise<T>): Promise<T> {
   try {
@@ -122,7 +145,7 @@ type Sessao = Awaited<ReturnType<typeof sessaoGateway>>;
 
 /** Abre a sessão do usuário logado e executa a ação com erros seguros para o navegador. */
 export function executar<T>(context: unknown, acao: (sessao: Sessao) => Promise<T>): Promise<T> {
-  return comGateway(async () => acao(await sessaoGateway(context)));
+  return comGateway(async () => acao(await sessaoGatewayMfa(context)));
 }
 
 /** Papel do usuário no gateway, sem expor o tenant vinculado a quem não é da plataforma. */

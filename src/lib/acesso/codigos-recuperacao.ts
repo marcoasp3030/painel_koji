@@ -1,14 +1,16 @@
 /** Códigos de recuperação da segunda etapa. O navegador só gera o texto.
- * O servidor guarda o hash. */
+ * O servidor guarda o hash. MFA1: 10 códigos. */
 
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** Mantido aqui (sem process.env) porque o gerador roda no navegador. */
+export const QTD_CODIGOS_RECUPERACAO = 10;
 
 export function normalizarCodigo(codigo: string) {
   return codigo.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
-/** Oito códigos no formato AB3K-9Q2M. */
-export function gerarCodigosRecuperacao(quantidade = 8) {
+/** Códigos no formato AB3K-9Q2M. Padrão: 10 (MFA1). */
+export function gerarCodigosRecuperacao(quantidade = QTD_CODIGOS_RECUPERACAO) {
   const bytes = new Uint8Array(quantidade * 8);
   crypto.getRandomValues(bytes);
   const codigos: string[] = [];

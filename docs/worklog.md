@@ -1,3 +1,35 @@
+## [2026-10-30 14:20] — Publicação MFA1 (flag off)
+- **Autor:** Auto
+- **Objetivo:** Publicar o MFA1 com `MFA1_OBRIGATORIO=0` (sem cutover).
+- **Arquivos alterados:**
+ - (commit de entrega MFA1 + registro desta publicação)
+- **Resumo das mudanças:** Imagem nova do painel com MFA1. Cutover continua desligado. Migração já aplicada. Volta marcada no build.
+- **Decisões e justificativas:** O usuário pediu publicar. A obrigação ampla não liga até Marco e emergência terem fator + 10 códigos.
+- **Comandos executados:** (preenchido após o build)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** Marco gerar 10 códigos; emergência ativar fator+códigos; prints; só então `MFA1_OBRIGATORIO=1`
+- **Próximos passos:** conferir aviso “sem códigos” na sessão do Marco; gerar códigos em Segurança
+
+## [2026-10-30 14:15] — MFA1: estado, especificação e base
+- **Autor:** Auto
+- **Objetivo:** MFA1 — estado atual do Marco, especificação completa e implementação base sem ligar a obrigação.
+- **Arquivos alterados:**
+ - `docs/ESPEC_MFA1.md` — criado — estado atual + especificação MFA1
+ - `docs/prints-mfa1/README.md` — criado — roteiro de prints
+ - `supabase/migrations/20261030140000_mfa1.sql` — criado — colunas, RLS aal2, sessao_aal, derrubar_outras_sessoes (aplicada)
+ - `src/lib/acesso/mfa.ts`, `mfa.server.ts`, `mfa.test.ts` — criados — regras, aal, step-up, falhas
+ - `src/lib/acesso/codigos-recuperacao.ts` — modificado — 10 códigos
+ - `src/lib/seguranca.functions.ts` — modificado — recuperação sem apagar TOTP; regenerar; step-up; reset; flag empresa
+ - `src/lib/gateway/painel.server.ts` — modificado — `executar` passa por aal2/recuperação
+ - `src/routes/index.tsx`, `Seguranca.tsx`, `AppShell.tsx` — modificados — login com recuperação; aviso sem códigos
+ - `src/integrations/supabase/types.ts`, `.env.example`, `docker-compose.yml` — modificados — tipos e `MFA1_OBRIGATORIO=0`
+- **Resumo das mudanças:** Marco tem TOTP verified e sessão aal2, mas 0 códigos. Emergência sem fator. Spec em ESPEC_MFA1. Código com flag off; recuperação eleva sessão sem remover TOTP; funções de negócio conferem aal.
+- **Decisões e justificativas:** Cutover fica 0 até Marco e emergência terem fator+10 códigos.
+- **Comandos executados:** migração MFA1 → OK. `bun test` mfa + segunda-etapa → 14 OK.
+- **Erros e resoluções:** nenhum bloqueante
+- **Pendências / TODO:** publicados na entrada seguinte; cutover ainda off
+- **Próximos passos:** ver publicação
+
 ## [2026-10-30 14:00] — Publicação do layout do Cardápio
 - **Autor:** Auto
 - **Objetivo:** Publicar o painel para o Cardápio novo aparecer em produção.

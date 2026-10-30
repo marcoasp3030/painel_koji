@@ -118,6 +118,8 @@ services:
       TZ: America/Sao_Paulo
       # Senha de uso único do primeiro acesso. Vazia quando a conta já existe.
       BOOTSTRAP_SUPER_ADMIN_SENHA: ${BOOTSTRAP_SUPER_ADMIN_SENHA:-}
+      # MFA1 cutover. 0 até Marco e a conta de emergência terem fator + 10 códigos.
+      MFA1_OBRIGATORIO: ${MFA1_OBRIGATORIO:-0}
     networks:
       - interno
       - gateway

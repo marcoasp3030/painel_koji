@@ -113,14 +113,17 @@ function Login() {
           return;
         }
       } else {
-        await usarRecuperacao({ data: { codigo: limpo } });
-        await supabase.auth.signOut();
-        setPedeCodigo(false);
-        setCodigo("");
-        setPassword("");
+        const r = await usarRecuperacao({ data: { codigo: limpo } });
+        const restam =
+          r && typeof r === "object" && "codigos_restantes" in r
+            ? Number((r as { codigos_restantes: number }).codigos_restantes)
+            : null;
         setAviso(
-          "Código aceito. A segunda etapa foi desligada. Entre de novo com a senha. A conta de plataforma continua obrigada a ativar.",
+          restam != null && restam <= 2
+            ? `Código aceito. Restam só ${restam} códigos — regenere em Segurança.`
+            : "Código aceito. Você entrou com um código de recuperação.",
         );
+        navigate({ to: "/painel", replace: true });
         return;
       }
       navigate({ to: "/painel", replace: true });

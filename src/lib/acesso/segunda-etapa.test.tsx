@@ -88,8 +88,8 @@ describe("segunda etapa", () => {
 
   test("códigos de recuperação e a sessão que ainda precisa do código", () => {
     const codigos = gerarCodigosRecuperacao();
-    expect(codigos).toHaveLength(8);
-    expect(new Set(codigos).size).toBe(8);
+    expect(codigos).toHaveLength(10);
+    expect(new Set(codigos).size).toBe(10);
     for (const codigo of codigos) expect(codigo).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
     expect(sessaoPrecisaDoCodigo({ currentLevel: "aal1", nextLevel: "aal2" })).toBe(true);
     expect(sessaoPrecisaDoCodigo({ currentLevel: "aal2", nextLevel: "aal2" })).toBe(false);
