@@ -1,11 +1,12 @@
-## ENTRADA1 — login, MFA e senha (30/10/2026)
+## ENTRADA1 — publicado (30/10/2026, ~16:28 Brasília)
 
-- Especificação: `docs/ESPEC_ENTRADA1.md`. Migração `20261030160000_entrada1.sql` aplicada.
+- Commit `9f2a6766f10982c00305b8c6808b62b99c99ebf8`. Imagem `painel:9f2a676…` = `sha256:0c2964ac…`. Só o painel recriado. Volta: `painel:volta-20261030T192732Z` (MFA1 `8146e5c…` / `sha256:cdcd8f01…`).
+- Spec: `docs/ESPEC_ENTRADA1.md`. Migração `20261030160000_entrada1.sql` aplicada.
 - Login: mostrar/ocultar senha, Caps Lock, “Esqueci a senha”, limite de 5 falhas / 15 min.
 - MFA na entrada: 6 dígitos com colar + “Usar código de recuperação”.
 - Senha nova (convite/redefinição): mín. 12, medidor, rejeita comuns.
 - Sem SMTP: mensagem pede ao gestor. Gestor/plataforma gera “Link de nova senha” em Usuários (`#redefinir=`).
-- Prints: `docs/prints-entrada/`. Query `voltar=/rota` volta após o login.
+- Prints: `docs/prints-entrada/`. Query `voltar=/rota` volta após o login. Hard refresh se o navegador cachear o JS antigo.
 
 ## MFA1 — publicado com flag off (30/10/2026)
 

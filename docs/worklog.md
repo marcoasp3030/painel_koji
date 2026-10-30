@@ -1,20 +1,19 @@
-## [2026-10-30 16:25] — ENTRADA1: login, MFA e redefinição
+## [2026-10-30 16:28] — ENTRADA1 publicado
 - **Autor:** Auto
 - **Objetivo:** Aplicar ENTRADA1 e publicar para ficar funcionando.
 - **Arquivos alterados:**
  - `docs/ESPEC_ENTRADA1.md`, `docs/prints-entrada/` — criados — spec e prints antes/depois
  - `supabase/migrations/20261030160000_entrada1.sql` — criado — tentativas + redefinições (aplicada)
- - `src/lib/acesso/senha.ts`, `entrada.ts` (+ testes) — criados — regras
- - `src/lib/entrada.functions.ts` — criado — bloqueio, falhas, esqueci, link gestor
- - `src/components/luxtia/entrada/*`, `src/routes/index.tsx` — criados/modificados — UI de entrada
- - `src/components/luxtia/Usuarios.tsx`, `equipe.tsx`, `usuarios.functions.ts` — modificados — link nova senha; senha mín. 12 no convite
- - `src/integrations/supabase/types.ts`, `instrucoes.md`, `README.md` — modificados — tipos e docs
-- **Resumo das mudanças:** Entrada com OTP 6 dígitos, medidor de senha, esqueci, bloqueio por tentativas e reset pelo gestor. Migração já no banco. Publicação do painel em seguida.
+ - `src/lib/acesso/senha.ts`, `entrada.ts` (+ testes), `entrada.functions.ts` — criados
+ - `src/components/luxtia/entrada/*`, `src/routes/index.tsx` — UI de entrada
+ - `Usuarios.tsx`, `equipe.tsx`, `usuarios.functions.ts` — link nova senha; senha mín. 12
+ - `types.ts`, `instrucoes.md`, `README.md`, `docs/worklog.md` — tipos e registro
+- **Resumo das mudanças:** Commit `9f2a6766f10982c00305b8c6808b62b99c99ebf8`. Imagem `painel:9f2a676…` = `sha256:0c2964ac…`. Container recriado. Bundle OK (0 chave no front). Home 200. Volta: `painel:volta-20261030T192732Z`.
 - **Decisões e justificativas:** Sem SMTP o “Esqueci” orienta ao gestor; link `#redefinir=` espelha o convite. MFA1 continua com flag off.
-- **Comandos executados:** migracoes → OK. `bun test` entrada/senha → 4 OK. prints depois → 12 OK. `tsc` → (em conferência). publicar → (em seguida).
-- **Erros e resoluções:** `package.json` sujo do npm init revertido. TS exactOptional + RPCs MFA faltando nos types.
-- **Pendências / TODO:** hard refresh após publicar; Marco ainda sem 10 códigos MFA
-- **Próximos passos:** conferir login/esqueci/link em Usuários no ar
+- **Comandos executados:** migracoes → OK. `bun test` → 4 OK. prints depois → 12 OK. `tsc --noEmit` → OK. `publicar-painel.sh` → OK. `up -d --no-deps --no-build painel` → OK.
+- **Erros e resoluções:** `package.json` sujo revertido. TS exactOptional + RPCs MFA nos types.
+- **Pendências / TODO:** hard refresh; Marco ainda sem 10 códigos MFA
+- **Próximos passos:** conferir login/esqueci/link em Usuários; volta: `docker tag painel:volta-20261030T192732Z painel_koji-painel && docker compose up -d --no-deps --no-build painel`
 
 ## [2026-10-30 14:20] — Publicação MFA1 (flag off)
 

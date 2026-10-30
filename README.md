@@ -94,4 +94,4 @@ USUARIOS1 está no ar (`docs/ESPEC_USUARIOS1.md`). Sem SMTP, quem convida vê o 
 
 ## Entrada (login)
 
-ENTRADA1 (`docs/ESPEC_ENTRADA1.md`): login com mostrar/ocultar senha, Caps Lock, “Esqueci a senha”, bloqueio após 5 falhas em 15 minutos, MFA com 6 caixas e código de recuperação, senha mínima 12 no convite/redefinição, e “Link de nova senha” em Usuários. Sem SMTP o pedido de redefinição orienta a falar com o gestor. Prints em `docs/prints-entrada/`. MFA1 continua com `MFA1_OBRIGATORIO=0`.
+ENTRADA1 publicado (`docs/ESPEC_ENTRADA1.md`), imagem `painel:9f2a6766f10982c00305b8c6808b62b99c99ebf8`. Volta: `painel:volta-20261030T192732Z`. Login com mostrar/ocultar senha, Caps Lock, “Esqueci a senha”, bloqueio após 5 falhas em 15 minutos, MFA com 6 caixas e código de recuperação, senha mínima 12 no convite/redefinição, e “Link de nova senha” em Usuários. Sem SMTP o pedido de redefinição orienta a falar com o gestor. Prints em `docs/prints-entrada/`. MFA1 continua com `MFA1_OBRIGATORIO=0`.
