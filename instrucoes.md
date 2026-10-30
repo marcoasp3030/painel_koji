@@ -1,10 +1,9 @@
-## Cardápio — layout de gestão (30/10/2026)
+## Cardápio — layout publicado (30/10/2026, 14:00 Brasília)
 
-- A listagem de Cardápio foi reorganizada para facilitar localizar, editar e gerenciar itens.
-- Barra de comando fixa: busca, filtros sob demanda, indicadores compactos e ações principais.
-- Navegação por categorias com destaque da seção visível (coluna no desktop, faixa no celular); categorias recolhíveis.
-- Linha do item mais densa: selo único de status, preço, Ativo, Esgotar/Repor e editar à vista; arrastar/setas no hover.
-- Sem mudança de contrato com o gateway. Nada publicado.
+- Commit `bc6c695dbb029ffcc17c5acf75466bf8d20bb251`. Imagem `painel:bc6c695…` = `sha256:ed66a4ec…`. Só o painel recriado. Volta: `painel:volta-20261030T165734Z`.
+- Listagem reorganizada: barra fixa, filtros sob demanda, categorias com destaque e recolhíveis, linhas densas com ações à vista.
+- Também entrou: códigos de recuperação da segunda etapa (migração aplicada) e seção Pagamentos da unidade.
+- Atualize a página com hard refresh se ainda ver o layout antigo.
 
 ## Atalho da segunda etapa (29/10/2026, 22:22 Brasília)
 

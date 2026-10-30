@@ -1,3 +1,15 @@
+## [2026-10-30 14:00] — Publicação do layout do Cardápio
+- **Autor:** Auto
+- **Objetivo:** Publicar o painel para o Cardápio novo aparecer em produção.
+- **Arquivos alterados:**
+ - `docs/worklog.md`, `instrucoes.md`, `README.md` — modificados — registro da publicação
+- **Resumo das mudanças:** Commit `bc6c695dbb029ffcc17c5acf75466bf8d20bb251`. Imagem `painel:bc6c695dbb029ffcc17c5acf75466bf8d20bb251` = `sha256:ed66a4ecf151d706c112852b4f39492428a9382fe56f4a0fd371d4f08682f4a2`. Container recriado às 13:58 (Brasília). Só o painel. Migração `20261029220000_codigos_recuperacao.sql` aplicada. Volta: `painel:volta-20261030T165734Z` (= `af380cb9…` / `sha256:c52a7c65…`). Bundle do Cardápio traz "Encontre, edite e organize".
+- **Decisões e justificativas:** O usuário pediu publicar agora; a árvore local incluía também segunda etapa, telefone e pagamentos da unidade — tudo entrou no mesmo commit porque o script recusa árvore suja.
+- **Comandos executados:** `docker compose run --rm migracoes` → OK. `sh docker/publicar-painel.sh` → OK. `docker compose up -d --no-deps --no-build painel` → OK. `verificar-chave-no-bundle.sh` → OK (0 chave no front).
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** atualizar a página com hard refresh (Ctrl+Shift+R) se o navegador cachear o JS antigo.
+- **Próximos passos:** se precisar voltar: `docker tag painel:volta-20261030T165734Z painel_koji-painel && docker compose up -d --no-deps --no-build painel`
+
 ## [2026-10-30 13:50] — Layout do Cardápio para localizar e gerenciar
 - **Autor:** Auto
 - **Objetivo:** Tornar a listagem do Cardápio mais profissional, intuitiva e dinâmica para localizar, editar e gerenciar itens.
@@ -5,11 +17,11 @@
  - `src/components/luxtia/cardapio/CardapioCat3.tsx` — modificado — barra fixa, filtros sob demanda, navegação de categorias com scroll-spy, seções recolhíveis e linhas densas com ações à vista
  - `README.md`, `instrucoes.md`, `docs/worklog.md` — modificados — registro da mudança de UX
 - **Resumo das mudanças:** Os quatro cards grandes e a fileira longa de chips deram lugar a uma barra de comando sticky com busca, filtros extras recolhidos e indicadores compactos. A navegação por categoria destaca a seção visível e leva ao bloco. Cada categoria recolhe. Na linha: selo único, preço, Ativo (switch), Esgotar/Repor e lápis; arrastar e setas só no hover.
-- **Decisões e justificativas:** A dor era achar e agir rápido, não o contrato do gateway. Mantidas as mesmas operações CAT3; só a organização visual mudou, alinhada ao padrão da barra de Pedidos. Sem publicação.
+- **Decisões e justificativas:** A dor era achar e agir rápido, não o contrato do gateway. Mantidas as mesmas operações CAT3; só a organização visual mudou, alinhada ao padrão da barra de Pedidos.
 - **Comandos executados:** `tsc --noEmit` (Docker) → OK após corrigir `dataset['categoriaId']`. ESLint + prettier no arquivo → OK.
 - **Erros e resoluções:** TS4111 em `dataset.categoriaId` → acesso com `dataset['categoriaId']`.
-- **Pendências / TODO:** não publicado; vale uma prévia visual com dados reais antes de publicar.
-- **Próximos passos:** conferir no navegador com uma unidade grande e, se ok, publicar com `sh docker/publicar-painel.sh`.
+- **Pendências / TODO:** publicado em seguida.
+- **Próximos passos:** ver entrada de publicação.
 
 ## [2026-10-29 22:22] — Atalho para ativar a segunda etapa
 - **Autor:** Grok 4.7
