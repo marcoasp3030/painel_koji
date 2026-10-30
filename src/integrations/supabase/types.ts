@@ -347,6 +347,7 @@ export type Database = {
           emergencia: boolean
           ultimo_login_auditado: string | null
           atualizado_em: string
+          codigos_recuperacao: string[]
         }
         Insert: {
           user_id: string
@@ -354,6 +355,7 @@ export type Database = {
           emergencia?: boolean
           ultimo_login_auditado?: string | null
           atualizado_em?: string
+          codigos_recuperacao?: string[]
         }
         Update: {
           user_id?: string
@@ -361,6 +363,7 @@ export type Database = {
           emergencia?: boolean
           ultimo_login_auditado?: string | null
           atualizado_em?: string
+          codigos_recuperacao?: string[]
         }
         Relationships: []
       }

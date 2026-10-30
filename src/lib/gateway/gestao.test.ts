@@ -48,7 +48,9 @@ async function montar(papel = "gestor", respostas: Response[] = []) {
           gatewayTenantId: "bykoji",
           ativo: true,
           admin: papel === "gestor",
-          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+          ...(papel === "plataforma"
+            ? {}
+            : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
         },
       ],
     }),
@@ -92,6 +94,8 @@ test("G1 isolamento: empresa alheia recusada em todas as ações", async () => {
     { acao: "horarios", id: "uni", grade: {} },
     { acao: "pausar", id: "uni", indefinida: true },
     { acao: "reabrir", id: "uni" },
+    { acao: "pagamentos", id: "uni" },
+    { acao: "salvar_pagamentos", id: "uni", itens: [] },
     { acao: "excecoes", id: "uni" },
     { acao: "excecao", id: "uni", data: "2026-12-25", fechado: true },
     { acao: "excluir_excecao", id: "uni", eid: 1 },
@@ -128,6 +132,7 @@ test("G1 funcionário não altera unidade, grade nem exceções; o histórico el
     { acao: "editar", id: "uni", dados: { nome: "x" } },
     { acao: "criar", dados: { nome: "x" } },
     { acao: "horarios", id: "uni", grade: {} },
+    { acao: "salvar_pagamentos", id: "uni", itens: [] },
     { acao: "excecoes", id: "uni" },
     { acao: "excecao", id: "uni", data: "2026-12-25", fechado: true },
     { acao: "excluir_excecao", id: "uni", eid: 1 },
@@ -488,4 +493,54 @@ test("G1 fuso da empresa só devolve o fuso; lote não repete chamada e o atende
   expect(ex.chamadas[0]?.url).toContain("/unidades/a/excecoes");
   expect(ex.chamadas[1]?.url).toContain("/unidades/b/excecoes");
   expect(ex.chamadas[0]?.body).toEqual({ data: "2026-12-25", fechado: true, motivo: "Natal" });
+});
+test("pagamentos da unidade substituem a lista; troco só em dinheiro", async () => {
+  const c = await montar("gestor");
+  const r = await executarGestao(c.sessao, {
+    acao: "salvar_pagamentos",
+    id: "uni",
+    empresa: "bykoji",
+    itens: [
+      { codigo: "pix", rotulo: "Pix", ativo: true, aceita_troco: false, instrucoes: null },
+      { codigo: "dinheiro", rotulo: "Dinheiro", ativo: true, aceita_troco: true, instrucoes: "  " },
+    ],
+  });
+  expect(r.ok).toBe(true);
+  const chamada = c.chamadas.find((x) => x.url.includes("/pagamentos"));
+  expect(chamada?.method).toBe("PUT");
+  expect(chamada?.body).toEqual({
+    itens: [
+      { codigo: "pix", rotulo: "Pix", ativo: true, aceita_troco: false, instrucoes: null },
+      { codigo: "dinheiro", rotulo: "Dinheiro", ativo: true, aceita_troco: true, instrucoes: null },
+    ],
+  });
+  const leitura = await montar("funcionario");
+  const lida = await executarGestao(leitura.sessao, {
+    acao: "pagamentos",
+    id: "uni",
+    empresa: "bykoji",
+  });
+  expect(lida.ok).toBe(true);
+  expect(leitura.chamadas.some((x) => x.method === "GET" && x.url.includes("/pagamentos"))).toBe(
+    true,
+  );
+  const negado = await montar("supervisor");
+  await expect(
+    executarGestao(negado.sessao, {
+      acao: "salvar_pagamentos",
+      id: "uni",
+      empresa: "bykoji",
+      itens: [],
+    }),
+  ).rejects.toThrow();
+  expect(negado.chamadas).toHaveLength(0);
+  const troco = await montar("gestor");
+  const ruim = await executarGestao(troco.sessao, {
+    acao: "salvar_pagamentos",
+    id: "uni",
+    empresa: "bykoji",
+    itens: [{ codigo: "pix", rotulo: "Pix", ativo: true, aceita_troco: true }],
+  });
+  expect(ruim.ok).toBe(false);
+  expect(troco.chamadas).toHaveLength(0);
 });

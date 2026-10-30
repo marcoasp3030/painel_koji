@@ -7,7 +7,7 @@ import {
   problemaPiloto,
   type EstadoAgente,
 } from "./agentes";
-import { GatewayErro, interpretarErro, mensagemParaUsuario } from "./erros";
+import { GatewayErro, erroDeTelefone, interpretarErro, mensagemParaUsuario } from "./erros";
 
 const MOCK: EstadoAgente = {
   provedor: "mock",
@@ -132,6 +132,29 @@ describe("mensagens do gateway", () => {
       detalhes: { campo: "timeout_s" },
     });
     expect(mensagemParaUsuario(erro)).toBe("O campo “Tempo limite” não pode ficar vazio.");
+  });
+
+  test("400 de telefone guarda a frase do gateway no campo", () => {
+    const frase = "Use DDD + número, ex.: 11912345678";
+    for (const campo of ["contatos_permitidos", "alerta_telefone"]) {
+      const erro = interpretarErro(400, {
+        erro: { codigo: "VALIDATION_ERROR", mensagem: frase, detalhes: { campo } },
+      });
+      expect(erroDeTelefone(erro)).toEqual({ campo, mensagem: frase });
+      expect(mensagemParaUsuario(erro)).toBe(frase);
+    }
+    const generico = interpretarErro(400, {
+      erro: {
+        codigo: "VALIDATION_ERROR",
+        mensagem: "Confira os campos informados.",
+        detalhes: { campo: "alerta_telefone" },
+      },
+    });
+    expect(erroDeTelefone(generico)?.mensagem).toBe(frase);
+    const outro = interpretarErro(400, {
+      erro: { codigo: "VALIDATION_ERROR", mensagem: frase, detalhes: { campo: "nome" } },
+    });
+    expect(erroDeTelefone(outro)).toBeNull();
   });
 });
 

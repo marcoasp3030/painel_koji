@@ -64,6 +64,20 @@ export async function executarGestao(
     partes = ["unidades", d.id, "reabrir"];
     metodo = "POST";
   }
+  if (d.acao === "pagamentos") partes = ["unidades", d.id, "pagamentos"];
+  if (d.acao === "salvar_pagamentos") {
+    partes = ["unidades", d.id, "pagamentos"];
+    metodo = "PUT";
+    corpo = {
+      itens: d.itens.map((item) => ({
+        codigo: item.codigo,
+        rotulo: item.rotulo.trim(),
+        ativo: item.ativo,
+        aceita_troco: item.codigo === "dinheiro" && item.aceita_troco,
+        instrucoes: item.instrucoes?.trim() ? item.instrucoes.trim() : null,
+      })),
+    };
+  }
   if (d.acao === "excecoes") {
     partes = ["unidades", d.id, "excecoes"];
     query["desde"] = d.desde;

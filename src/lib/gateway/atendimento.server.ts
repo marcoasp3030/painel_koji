@@ -100,10 +100,17 @@ export function traduzirErro(e: GatewayErro): ErroAtendimento {
     typeof x["campo"] === "string" &&
     typeof x["motivo"] === "string" &&
     typeof x["trecho"] === "string";
-  const campos = lista<{ campo: string; motivo: string }>(
+  const campos = lista<{ campo: string; motivo: string; mensagem?: string }>(
     det["campos"],
     (x) => typeof x["campo"] === "string" && typeof x["motivo"] === "string",
-  );
+  )?.map((c) => {
+    const mensagem = typeof c.mensagem === "string" ? c.mensagem.trim() : "";
+    return {
+      campo: c.campo,
+      motivo: c.motivo,
+      ...(mensagem && mensagem.length <= 200 ? { mensagem } : {}),
+    };
+  });
   const bloqueios = lista<{ campo: string; motivo: string; trecho: string }>(
     det["bloqueios"],
     comTrecho,

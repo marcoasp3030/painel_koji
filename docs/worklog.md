@@ -1,3 +1,57 @@
+## [2026-10-30 13:50] — Layout do Cardápio para localizar e gerenciar
+- **Autor:** Auto
+- **Objetivo:** Tornar a listagem do Cardápio mais profissional, intuitiva e dinâmica para localizar, editar e gerenciar itens.
+- **Arquivos alterados:**
+ - `src/components/luxtia/cardapio/CardapioCat3.tsx` — modificado — barra fixa, filtros sob demanda, navegação de categorias com scroll-spy, seções recolhíveis e linhas densas com ações à vista
+ - `README.md`, `instrucoes.md`, `docs/worklog.md` — modificados — registro da mudança de UX
+- **Resumo das mudanças:** Os quatro cards grandes e a fileira longa de chips deram lugar a uma barra de comando sticky com busca, filtros extras recolhidos e indicadores compactos. A navegação por categoria destaca a seção visível e leva ao bloco. Cada categoria recolhe. Na linha: selo único, preço, Ativo (switch), Esgotar/Repor e lápis; arrastar e setas só no hover.
+- **Decisões e justificativas:** A dor era achar e agir rápido, não o contrato do gateway. Mantidas as mesmas operações CAT3; só a organização visual mudou, alinhada ao padrão da barra de Pedidos. Sem publicação.
+- **Comandos executados:** `tsc --noEmit` (Docker) → OK após corrigir `dataset['categoriaId']`. ESLint + prettier no arquivo → OK.
+- **Erros e resoluções:** TS4111 em `dataset.categoriaId` → acesso com `dataset['categoriaId']`.
+- **Pendências / TODO:** não publicado; vale uma prévia visual com dados reais antes de publicar.
+- **Próximos passos:** conferir no navegador com uma unidade grande e, se ok, publicar com `sh docker/publicar-painel.sh`.
+
+## [2026-10-29 22:22] — Atalho para ativar a segunda etapa
+- **Autor:** Grok 4.7
+- **Objetivo:** O aviso do prazo vira o botão "Ativar agora" e abre direto o cadastro do segundo fator, sem tirar a obrigatoriedade da plataforma.
+- **Arquivos alterados:**
+ - `src/components/luxtia/Seguranca.tsx` — modificado — o aviso ganha "Ativar agora"; o cadastro abre já no QR e, depois dos 6 dígitos, mostra os códigos de recuperação
+ - `src/components/luxtia/AppShell.tsx` — modificado — o botão abre o mesmo cadastro da barra "Segurança"
+ - `src/routes/index.tsx` — modificado — quem já tem fator digita o código do aplicativo ou um código de recuperação
+ - `src/lib/seguranca.functions.ts` — modificado — guarda só o hash e, ao usar um código, desliga o fator
+ - `src/lib/acesso/codigos-recuperacao.ts` — criado — geração e a regra da sessão que ainda precisa do código
+ - `src/lib/acesso/segunda-etapa.test.tsx` — modificado — o aviso continua obrigatório e o botão aparece
+ - `src/integrations/supabase/types.ts` — modificado — coluna `codigos_recuperacao`
+ - `supabase/migrations/20261029220000_codigos_recuperacao.sql` — criado — a coluna, ainda sem aplicar
+ - `tsconfig.json` — modificado — teste `.tsx` fora do typecheck, como os `.test.ts`
+ - `README.md`, `instrucoes.md`, `docs/worklog.md`, `docs/worklog-arquivo/2026-10.md` — modificados — registro; entradas de 12/10 foram para o arquivo
+- **Resumo das mudanças:** O aviso âmbar continua com a data e ganha "Ativar agora". O clique abre o cadastro já no QR, no código de 6 dígitos e, depois da confirmação, nos 8 códigos de recuperação. Usar um código desliga o aplicativo e pede para entrar de novo. A conta de plataforma continua obrigada a ter a segunda etapa.
+- **Decisões e justificativas:** O caminho não entrou no menu lateral. Fica no botão "Segurança" da barra de cima, à direita do título, e no aviso logo abaixo. Os códigos são nossos (hash SHA-256), porque o GoTrue 2.177 não expõe essa API. A regra de 7 dias e o bloqueio da conta de emergência não mudaram. Nada foi publicado e a migração não foi aplicada.
+- **Comandos executados:** `tsc --noEmit` → OK. `bun test` de `segunda-etapa.test.tsx` → 8 OK. ESLint nos arquivos mexidos → OK. Prévia em `127.0.0.1:18176`, com fator fictício e sem gravar nada: "Ativar agora" abriu o QR, o código de 6 dígitos e os códigos de recuperação.
+- **Erros e resoluções:** O typecheck dentro do contêiner chegou a ficar parado com o Docker sem responder. Depois que o daemon voltou, o mesmo `tsc` terminou sem erro.
+- **Pendências / TODO:** não publicado. A migração `20261029220000` precisa entrar antes ou junto da publicação; sem a coluna, o aplicativo liga e a tela avisa que os códigos de recuperação não foram guardados.
+- **Próximos passos:** publicar só quando pedirem, aplicando a migração e trocando só o painel com `sh docker/publicar-painel.sh`.
+
+## [2026-10-29 20:40] — Frase do 400 de telefone embaixo do campo
+- **Autor:** Grok 4.7
+- **Objetivo:** Quando o gateway devolver 400 num telefone (piloto ou alerta), mostrar a frase dele embaixo do campo.
+- **Arquivos alterados:**
+ - `src/components/luxtia/agente/Comportamento.tsx` — modificado — a frase fica embaixo do contato do piloto ou do telefone de alerta
+ - `src/lib/gateway-agentes.functions.ts` — modificado — o 400 desses campos volta com o nome do campo, em vez de só um aviso flutuante
+ - `src/lib/gateway/erros.ts` — modificado — `erroDeTelefone`; a ajuda antiga de 8 a 16 dígitos saiu
+ - `src/lib/gateway/atendimento.ts` — modificado — `textoErroCampo` prefere a mensagem do gateway
+ - `src/lib/gateway/atendimento.server.ts` — modificado — repassa `mensagem` de cada campo do rascunho
+ - `src/components/luxtia/comportamento/CampoAtendimento.tsx` — modificado — telefone de alerta da equipe
+ - `src/components/luxtia/comportamento/ComportamentoAgente.tsx` — modificado — o resumo usa a mesma frase
+ - `src/lib/gateway/agentes.test.ts`, `src/lib/gateway/atendimento.test.ts` — modificados — os casos do 400
+ - `README.md`, `instrucoes.md`, `docs/worklog-arquivo/2026-10.md` — modificados — registro; a entrada do CAL1 foi para o arquivo
+- **Resumo das mudanças:** Na ficha, salvar um telefone recusado mostra “Use DDD + número, ex.: 11912345678” (ou a frase que o gateway mandar) só naquele campo. No rascunho, o alerta da equipe faz o mesmo quando o item do erro traz `mensagem`. Os outros motivos continuam com o texto que a tela já usava.
+- **Decisões e justificativas:** A frase exibida é a do gateway. Se o envelope vier só com “Confira os campos informados.”, a ficha usa a frase fixa do TEL1. Editar o campo tira o aviso. Nada foi publicado.
+- **Comandos executados:** `tsc --noEmit` → OK. `bun test` de agentes e atendimento → 25 OK. ESLint nos arquivos mexidos → OK. Prévia em `127.0.0.1:18175`: 123 no alerta, 123 no piloto e 123 no alerta da equipe mostraram a frase embaixo do campo certo.
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** não publicado
+- **Próximos passos:** publicar só quando pedirem, com `sh docker/publicar-painel.sh`
+
 ## [2026-10-28 18:17] — USUARIOS1 publicado
 - **Autor:** Grok 4.7
 - **Objetivo:** Commitar o USUARIOS1, publicar o painel junto com o gateway PAPEL1-a e conferir com uma conta de plataforma.
@@ -434,58 +488,4 @@
 - **Pendências / TODO:** revisão do Marco; build Docker e publicação só depois. Não commitado. Prints autenticados de produção dependem de login.
 - **Próximos passos:** publicar do jeito de sempre (tag de volta da imagem `077a798d…`, build, troca só do painel) e conferir só com leitura.
 
-## Cardápio — revisão UX (13/10/2026, não publicada)
-
-- Nova lista por unidade/categoria, resumos e filtros, URL persistente, painel lateral de disponibilidade, atalhos/cópia e lote com progresso. Consulta do atendente sem controles de edição; PATCH segue exclusivo de admin/plataforma.
-- Prévia visual em Chromium pt-BR com dados fictícios: seis prints em `docs/prints-cardapio/`. Relatório e pendências de contrato em `docs/VALIDACAO_CARDAPIO_UX.md`.
-- 117 testes aprovados, 6 REST antigos ignorados, zero falhas; tsc, ESLint e build Vite aprovados. Nenhum item real alterado, nenhum serviço permanente recriado. Gateway somente leitura, sem commits. Aguardar revisão dos prints antes de publicar a nova versão.
-- O admin DISP1 não devolve disponibilidade avaliada agora/feriados: itens restritos aparecem “A confirmar”, sem classificação inventada. Edição de preço/nome/descrição/ativo/categoria e prévia operacional continuam pendências explícitas do gateway.
-
-## [2026-10-12 22:30] — DISP1: tela Cardápio publicada
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Publicar a tela aprovada pelo Marco e conferir só com leitura.
-- **Arquivos alterados:**
-  - `README.md` — modificado — seção Cardápio
-- **Resumo das mudanças:** Publicação do bloco da entrada abaixo, sem mudança de código. Regras aprovadas pelo Marco: sete dias viram lista vazia; com a chave desligada, pelo menos um dia. "Turno" fica nos horários das unidades.
-- **Decisões e justificativas:** Conferência da lista feita pelo mesmo `GET` que a tela usa (100 por página, papel membro), de dentro do contêiner, porque a tela real exige login. Nenhum item alterado.
-- **Comandos executados:** tag `painel:cal1-20261012` (= `85b1c122…`) → OK; `docker compose build painel` + `up -d --no-deps painel` → OK, imagem `756361eb…`; `verificar-chave-no-bundle.sh` → OK; `/`, `/ia/cardapio`, `/ia/unidades` 200; `/gateway/admin/v1/tenants` 404; logs sem erro; leitura: 9 páginas, 888 itens (808 ativos), 4 com disponibilidade = os 4 "Almoço executivo" com resumo; navegador: título "Cardápio | Luxtia" e ida ao login sem sessão; `docker rmi zenika/alpine-chrome` (autorizado) → OK
-- **Erros e resoluções:** nenhum.
-- **Pendências / TODO:** conferência visual autenticada pelo Marco (e os prints do CAL1). Não commitado.
-- **Próximos passos:** volta: `docker tag painel:cal1-20261012 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
-
-## [2026-10-12 22:25] — DISP1: tela Cardápio com disponibilidade por item (não publicada)
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Mostrar e editar a disponibilidade do item (contrato DISP1 do gateway) e o resumo na lista.
-- **Arquivos alterados:**
-  - `src/lib/gateway/cardapio.ts` — criado — tipos, rascunho do formulário, corpo do PATCH, validação (reaproveita `problemaGrade`), schema da entrada
-  - `src/lib/gateway/cardapio.server.ts` — criado — listar (`GET catalogo/itens`, 100 por página) e `PATCH catalogo/itens/{id}`; projeção sem descrição/observação
-  - `src/lib/gateway-cardapio.functions.ts` — criado — função de servidor
-  - `src/lib/gateway/modulo.server.ts` — modificado — regras: GET para admin e atendente; PATCH só admin e só com a chave `disponibilidade`
-  - `src/lib/gateway/erros.ts` — modificado — ajuda para erro no campo `disponibilidade`
-  - `src/components/luxtia/Cardapio.tsx`, `src/routes/_authenticated/ia/cardapio.tsx`, `src/routeTree.gen.ts`, `src/lib/nav.ts` — criados/modificados — tela, rota e menu "Cardápio"
-  - `src/components/luxtia/gestao-base.tsx` — modificado — `EditorFaixas` aceita `nome` (padrão "turno"; no cardápio "faixa")
-  - `src/lib/gateway/cardapio.test.ts` — criado — 8 testes
-- **Resumo das mudanças:** O painel não tinha tela de cardápio; foi criada uma mínima: busca, filtro por unidade, "Carregar mais", etiqueta com o resumo do gateway e "Inativo". Admin/plataforma veem o botão "Disponibilidade" (diálogo com "Sempre disponível", dias, "Exceto feriados" e faixas); atendente só lê.
-- **Decisões e justificativas:** "Sempre disponível" envia `null`. Os sete dias marcados vão como lista vazia (o gateway trata igual: sem restrição de dia); desligado sem nenhum dia é recusado no painel. O resumo exibido é sempre o do gateway, nunca montado no painel. A pré-visualização foi feita com dados de exemplo renderizando os componentes reais, porque a tela real exige login e chamaria o gateway de produção.
-- **Comandos executados:** `bun test` → 108 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; ESLint → 0 erros (avisos antigos de fast refresh); prints da pré-visualização com Chromium headless (`zenika/alpine-chrome`) → OK. **Sem build e sem publicação.**
-- **Erros e resoluções:** TS2353 em `Cardapio.tsx` (`item_id` não existe em `Omit<PedidoCardapio,"empresa">`: `Omit` sobre união só mantém chaves comuns) → `SemEmpresa<T>` distributivo.
-- **Pendências / TODO:** aprovação do Marco; depois: tag de volta, build, troca do `painel`, conferência só leitura. Não commitado.
-- **Próximos passos:** publicar após aprovação. Imagem em uso hoje: a do CAL1 (`85b1c122…`); volta do CAL1 continua `painel:cfg1a-20261011`.
-
-## [2026-10-12 20:40] — CAL1: Cidade e UF no cadastro de unidades
-- **Autor:** Claude Opus 5.5
-- **Objetivo:** Editar `cidade`/`uf` da unidade (contrato admin do gateway CAL1) e avisar quando a unidade está sem cidade.
-- **Arquivos alterados:**
-  - `src/lib/gateway/gestao.ts` — modificado — `UFS` (27), `cidadeUf`, tipo `Unidade` com `cidade`/`uf`, schema de escrita, `alertasUnidade.semCidade`
-  - `src/lib/gateway/gestao.server.ts` — modificado — `cidade` e `uf` na projeção da unidade
-  - `src/components/luxtia/GestaoUnidades.tsx` — modificado — campos Cidade e UF com ajuda no formulário; Cidade/UF no cartão e no detalhe; etiqueta "Sem cidade…"
-  - `src/lib/gateway/gestao.test.ts` — modificado — teste CAL1 e expectativa de `alertasUnidade`
-  - `instrucoes.md`, `README.md` — modificados
-- **Resumo das mudanças:** Formulário ganha Cidade (até 80) e UF (select das 27, "—" = sem UF); vazio grava `null`. Lista e detalhe mostram "Cidade/UF" em texto pequeno; unidade ativa sem cidade mostra o aviso, junto dos de horário e WhatsApp.
-- **Decisões e justificativas:** A escrita no gateway é `PATCH` (não `PUT`), como as demais edições de unidade. A lista é de cartões, então "coluna discreta" virou uma linha discreta no cartão. A lista fechada de UFs fica no painel porque o gateway só confere o formato (duas maiúsculas). O aviso vale só para unidade ativa, como os outros alertas. `cidade`/`uf` vão para todos os papéis (não são dados sensíveis); escrever continua só admin/plataforma.
-- **Comandos executados:** `bun test` → 100 OK, 6 ignorados, 0 falhas; `tsc --noEmit` → OK; ESLint nos 4 arquivos → OK (1 aviso antigo de fast refresh); tag `painel:cfg1a-20261011` da imagem em uso → OK; `docker compose build painel` + `up -d --no-deps painel` → OK; `verificar-chave-no-bundle.sh` → OK; `/` e `/ia/unidades` 200, `/gateway/admin/v1/tenants` 404, logs sem erro
-- **Erros e resoluções:** no teste novo, esperei exceção para dado inválido, mas `executarGestao` devolve `{ok:false}` (`expect…rejects` → "Received promise that resolved"); corrigida a expectativa, código sem mudança. ESLint acusou só formatação do Prettier nas linhas novas → `prettier --write`.
-- **Pendências / TODO:** prints da tela dependem de login do Marco no navegador do Cursor; nenhuma unidade real foi salva. Não commitado (regra do painel).
-- **Próximos passos:** prints (lista, formulário aberto sem salvar). Volta: `docker tag painel:cfg1a-20261011 painel_koji-painel` + `docker compose up -d --no-deps --no-build painel`.
-
-Entradas anteriores (até 11/10/2026) estão em `docs/worklog-arquivo/2026-10.md`.
+Entradas anteriores (revisão UX do cardápio, DISP1, CAL1 e até 11/10/2026) estão em `docs/worklog-arquivo/2026-10.md`.

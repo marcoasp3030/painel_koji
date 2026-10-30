@@ -34,7 +34,7 @@ import {
   CAMPOS_SO_WHATSAPP,
   MOTIVO_AVISO,
   MOTIVO_BLOQUEIO,
-  MOTIVO_CAMPO,
+  textoErroCampo,
   SEM_EDICOES,
   agenteTemWhatsapp,
   campoSoLeitura,
@@ -360,7 +360,7 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
                 >
                   {rotuloCaminho(c.campo)}
                 </a>
-                : {MOTIVO_CAMPO[c.motivo] ?? c.motivo}
+                : {textoErroCampo(c)}
               </li>
             ))}
           </ul>

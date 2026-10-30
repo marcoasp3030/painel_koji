@@ -199,6 +199,22 @@ const REGRAS: Regra[] = [
   },
   { metodo: "POST", caminho: ["unidades", "*", "reabrir"], papeis: SUP, corpo: semCorpo },
   { metodo: "PUT", caminho: ["unidades", "*", "horarios"], papeis: GEST },
+  { metodo: "GET", caminho: ["unidades", "*", "pagamentos"], papeis: FUNC },
+  {
+    metodo: "PUT",
+    caminho: ["unidades", "*", "pagamentos"],
+    papeis: GEST,
+    corpo: (c) => {
+      if (
+        !c ||
+        typeof c !== "object" ||
+        Array.isArray(c) ||
+        Object.keys(c).length !== 1 ||
+        !Array.isArray((c as { itens?: unknown }).itens)
+      )
+        throw new AcessoNegado("A lista de pagamentos é inválida.");
+    },
+  },
   { metodo: "GET", caminho: ["unidades", "*", "excecoes"], papeis: SUP },
   { metodo: "POST", caminho: ["unidades", "*", "excecoes"], papeis: SUP },
   { metodo: "DELETE", caminho: ["unidades", "*", "excecoes", "*"], papeis: SUP },
@@ -571,11 +587,7 @@ export function resolverTenant(
   const papel = vinculo.papel ?? (vinculo.admin ? "gestor" : "funcionario");
   // Sem a lista (só em teste antigo) usa uma unidade fictícia. O cadastro real sempre manda o array.
   const unidades: "*" | string[] =
-    papel === "gestor"
-      ? "*"
-      : Array.isArray(vinculo.unidades)
-        ? vinculo.unidades
-        : ["centro"];
+    papel === "gestor" ? "*" : Array.isArray(vinculo.unidades) ? vinculo.unidades : ["centro"];
   return { id: vinculo.gatewayTenantId, papel, unidades };
 }
 

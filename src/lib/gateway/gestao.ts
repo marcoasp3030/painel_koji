@@ -80,7 +80,7 @@ export function dataRecebida(v: string | null) {
     ? `${m[3]}/${m[2]}/${m[1]} ${m[4]} (${m[5] === "Z" ? "UTC" : m[5] ? "UTC" + m[5] : "horário do servidor"})`
     : v;
 }
-export type SecaoUnidade = "agenda" | "horarios" | "excecoes";
+export type SecaoUnidade = "agenda" | "horarios" | "excecoes" | "pagamentos";
 export function textoSituacao(s: Situacao) {
   if (s.aberta_agora === null) return "Horário não informado";
   if (s.aberta_agora) return "Aberta";
@@ -216,6 +216,25 @@ const dadosUnidade = z
     formas_pagamento: z.string().trim().max(500).nullable().optional(),
   })
   .strict();
+const formaPagamento = z
+  .object({
+    codigo: z
+      .string()
+      .regex(/^[a-z0-9_]{2,30}$/, "Código: 2 a 30 letras minúsculas, números ou _."),
+    rotulo: z.string().trim().min(2, "O rótulo precisa de 2 a 40 caracteres.").max(40),
+    ativo: z.boolean(),
+    aceita_troco: z.boolean(),
+    instrucoes: z.string().max(300).nullable().optional(),
+  })
+  .strict()
+  .superRefine((item, ctx) => {
+    if (item.aceita_troco && item.codigo !== "dinheiro")
+      ctx.addIssue({
+        code: "custom",
+        message: "Troco só vale para dinheiro.",
+        path: ["aceita_troco"],
+      });
+  });
 const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const gestaoSchema = z.discriminatedUnion("acao", [
   z.object({ ...alvo, acao: z.literal("listar") }).strict(),
@@ -241,6 +260,30 @@ export const gestaoSchema = z.discriminatedUnion("acao", [
     })
     .strict(),
   z.object({ ...alvo, acao: z.literal("reabrir"), id: uid }).strict(),
+  z.object({ ...alvo, acao: z.literal("pagamentos"), id: uid }).strict(),
+  z
+    .object({
+      ...alvo,
+      acao: z.literal("salvar_pagamentos"),
+      id: uid,
+      itens: z
+        .array(formaPagamento)
+        .max(12, "No máximo 12 formas.")
+        .superRefine((itens, ctx) => {
+          const vistos = new Map<string, number>();
+          itens.forEach((item, i) => {
+            const anterior = vistos.get(item.codigo);
+            if (anterior !== undefined)
+              ctx.addIssue({
+                code: "custom",
+                message: "Este código já está na lista.",
+                path: [i, "codigo"],
+              });
+            vistos.set(item.codigo, i);
+          });
+        }),
+    })
+    .strict(),
   z.object({ ...alvo, acao: z.literal("fuso_empresa") }).strict(),
   z
     .object({

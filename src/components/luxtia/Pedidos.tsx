@@ -29,6 +29,7 @@ import {
   acoesPedido,
   nomeClientePedido,
   reais,
+  textoPagamento,
   rotuloCanalPedido,
   rotuloOrigemPedido,
   tempoDesde,
@@ -715,11 +716,12 @@ function Lista(p: PropsLista) {
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   return (
     <div className="overflow-hidden rounded-xl border border-base-200 bg-card">
-      <div className="hidden grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_110px_90px] gap-3 border-b border-base-200 bg-base-100/60 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-500 md:grid">
+      <div className="hidden grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_minmax(0,9rem)_110px_90px] gap-3 border-b border-base-200 bg-base-100/60 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-500 md:grid">
         <span>Pedido</span>
         <span>Cliente</span>
         <span>Unidade</span>
         <span>Status</span>
+        <span>Pagamento</span>
         <span className="text-right">Total</span>
         <span className="text-right">Entrou</span>
       </div>
@@ -871,6 +873,7 @@ function CartaoPedido({
           {pedido.horario ? ` · ${pedido.horario}` : ""}
         </span>
       </p>
+      <p className="mt-1 truncate text-xs text-ink-700">{textoPagamento(pedido.pagamento)}</p>
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-base-200 pt-2">
         <span className="text-xs text-ink-500">
           {pedido.numero_itens} {pedido.numero_itens === 1 ? "item" : "itens"}
@@ -896,7 +899,7 @@ function LinhaPedido({
     <button
       type="button"
       onClick={onAbrir}
-      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_110px_90px]"
+      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_minmax(0,9rem)_110px_90px]"
     >
       <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-purple-800">
         #{pedido.numero}
@@ -924,6 +927,9 @@ function LinhaPedido({
       </span>
       <span className="flex items-center gap-2">
         <SeloStatus status={pedido.status} />
+      </span>
+      <span className="col-span-2 truncate text-xs text-ink-700 md:col-span-1 md:text-sm">
+        {textoPagamento(pedido.pagamento)}
       </span>
       <span className="hidden text-right font-semibold md:block">{reais(pedido.total)}</span>
       <span className="text-right text-xs text-ink-500">
@@ -1169,6 +1175,13 @@ function Detalhe({
                   ) : null}
                 </section>
               ) : null}
+
+              <section className="rounded-lg bg-base-100/70 p-3">
+                <h3 className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-500">
+                  Pagamento
+                </h3>
+                <p className="font-medium text-ink-700">{textoPagamento(pedido.pagamento)}</p>
+              </section>
 
               <section>
                 <h3 className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-500">

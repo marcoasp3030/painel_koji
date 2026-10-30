@@ -159,6 +159,21 @@ export function reais(valor: number | null | undefined) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/** Forma escolhida no pedido. Pedido antigo, sem pagamento, vira "—". */
+export type PagamentoPedido = {
+  forma: string;
+  rotulo: string;
+  troco_para: number | null;
+  troco: number | null;
+};
+
+export function textoPagamento(pagamento: PagamentoPedido | null | undefined) {
+  const nome = pagamento?.rotulo?.trim() || pagamento?.forma?.trim() || "";
+  if (!nome) return "—";
+  if (typeof pagamento?.troco !== "number" || !Number.isFinite(pagamento.troco)) return nome;
+  return `${nome} · troco ${reais(pagamento.troco)}`;
+}
+
 const numero = z.string().regex(/^\d{1,20}$/);
 const comFuso = z.string().regex(/^\d{4}-\d{2}-\d{2}T.+(Z|[+-]\d{2}:\d{2})$/);
 const alvo = { empresa };
@@ -243,6 +258,8 @@ export type PedidoLista = {
   atualizado_em: string | null;
   horario: string | null;
   aviso: AvisoPedido;
+  /** Ausente em pedido anterior ao pagamento estruturado. */
+  pagamento?: PagamentoPedido | null;
 };
 export type EventoPedido = {
   de: string | null;

@@ -248,7 +248,16 @@ export const salvarComportamento = createServerFn({ method: "POST" })
         const atual = (await t.chamar<AgenteDetalhe>("GET", ["agentes", data.agente])).dados;
         a.conferirPiloto(atual.configuracao_efetiva ?? {}, data.dados);
       }
-      await t.chamar("PATCH", ["agentes", data.agente], { corpo: data.dados });
+      try {
+        await t.chamar("PATCH", ["agentes", data.agente], { corpo: data.dados });
+      } catch (e) {
+        const { GatewayErro, erroDeTelefone } = await import("./gateway/erros");
+        if (e instanceof GatewayErro) {
+          const telefone = erroDeTelefone(e);
+          if (telefone) return { ok: false as const, ...telefone };
+        }
+        throw e;
+      }
       return { ok: true as const };
     });
   });

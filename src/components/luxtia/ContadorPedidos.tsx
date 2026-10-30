@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pedidos } from "@/lib/gateway-pedidos.functions";
-import type { ContagemPedidos } from "@/lib/gateway/pedidos";
+import { textoPagamento, type ContagemPedidos, type PedidoLista } from "@/lib/gateway/pedidos";
 import type { PapelGateway } from "@/lib/gateway/tipos";
 import { somPedidoLigado, tocarPedidoNovo } from "@/lib/pedidos-som";
 
@@ -48,10 +49,28 @@ export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefi
   const total = q.data?.aguardando_loja.total ?? 0;
   useEffect(() => {
     if (!q.isSuccess) return;
-    if (visto.current !== null && total > visto.current && somPedidoLigado(usuario))
-      tocarPedidoNovo();
+    const anterior = visto.current;
     visto.current = total;
-  }, [q.dataUpdatedAt, q.isSuccess, total, usuario]);
+    if (anterior === null || total <= anterior) return;
+    if (somPedidoLigado(usuario)) tocarPedidoNovo();
+    const empresaAviso = papel === "plataforma" ? empresa : null;
+    void fn({
+      data: {
+        acao: "listar",
+        empresa: empresaAviso,
+        status: ["aguardando_loja"],
+        limite: 1,
+      },
+    })
+      .then((r) => {
+        const item = r.ok ? (r.dados as { itens?: PedidoLista[] }).itens?.[0] : undefined;
+        const numero = item?.numero ? ` #${item.numero}` : "";
+        toast.message(`Novo pedido${numero} · ${textoPagamento(item?.pagamento)}`);
+      })
+      .catch(() => {
+        toast.message("Novo pedido");
+      });
+  }, [q.dataUpdatedAt, q.isSuccess, total, usuario, papel, empresa, fn]);
   if (!q.isSuccess || total <= 0) return null;
   return (
     <span

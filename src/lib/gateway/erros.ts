@@ -137,8 +137,8 @@ const AJUDA_POR_CAMPO: Record<string, string> = {
   max_wait_s:
     "A espera máxima precisa ser maior ou igual ao tempo de esperar o cliente terminar de digitar.",
   debounce_s: "O tempo de esperar o cliente terminar de digitar vai de 1 a 15 segundos.",
-  contatos_permitidos: "Telefone inválido: use só números, de 8 a 16 dígitos, um por linha.",
-  alerta_telefone: "Telefone inválido: use só números, de 8 a 16 dígitos.",
+  contatos_permitidos: "Use DDD + número, ex.: 11912345678",
+  alerta_telefone: "Use DDD + número, ex.: 11912345678",
   timeout_s: "O tempo limite vai de 1 a 600 segundos.",
   modelo_id: "Este modelo usa módulos que a empresa não tem habilitados, ou o modelo não existe.",
   nome: "Informe um nome.",
@@ -179,4 +179,23 @@ export function mensagemParaUsuario(erro: GatewayErro): string {
     if (campo !== "corpo") return `${erro.message} Campo: ${campo}.`;
   }
   return erro.message;
+}
+
+const CAMPOS_TELEFONE = new Set(["contatos_permitidos", "alerta_telefone"]);
+
+/**
+ * 400 de telefone na ficha (piloto ou alerta): a frase do gateway, presa ao campo.
+ * Se o envelope vier só com o texto genérico, usa a mesma frase fixa do TEL1.
+ */
+export function erroDeTelefone(erro: GatewayErro): { campo: string; mensagem: string } | null {
+  if (erro.status !== 400) return null;
+  const campo = typeof erro.detalhes["campo"] === "string" ? erro.detalhes["campo"] : "";
+  if (!CAMPOS_TELEFONE.has(campo)) return null;
+  const propria = erro.message.trim();
+  const mensagem =
+    propria && propria !== MENSAGEM_PADRAO[erro.codigo]
+      ? propria
+      : (AJUDA_POR_CAMPO[campo] ?? propria);
+  if (!mensagem || mensagem.length > 200) return null;
+  return { campo, mensagem };
 }

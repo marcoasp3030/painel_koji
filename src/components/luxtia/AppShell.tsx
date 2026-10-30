@@ -160,8 +160,16 @@ export function AppShell({
   if (seguranca.data?.bloqueado) {
     return (
       <div className="min-h-screen bg-base-100">
-        <FaixaSeguranca prazo={seguranca.data.prazo_ate} bloqueado />
-        <AtivarSegundaEtapa onPronta={() => void seguranca.refetch()} />
+        <FaixaSeguranca
+          prazo={seguranca.data.prazo_ate}
+          bloqueado
+          onAtivar={() =>
+            document
+              .getElementById("cadastro-segunda-etapa")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }
+        />
+        <AtivarSegundaEtapa automatico onPronta={() => void seguranca.refetch()} />
         <div className="px-6 pb-8">
           <button type="button" className="text-sm underline" onClick={() => void sair()}>
             Sair
@@ -340,6 +348,7 @@ export function AppShell({
             <FaixaSeguranca
               prazo={seguranca.data.prazo_ate}
               bloqueado={seguranca.data.bloqueado}
+              onAtivar={() => setSegurancaAberta(true)}
             />
           ) : null}
           <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:py-6">
@@ -350,19 +359,21 @@ export function AppShell({
             )}
           </main>
           {segurancaAberta ? (
-            <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 p-6">
-              <div className="w-full max-w-lg rounded-xl bg-card shadow-lg">
+            <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-6">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="titulo-segunda-etapa"
+                className="my-auto w-full max-w-lg rounded-xl bg-card shadow-lg"
+              >
                 <AtivarSegundaEtapa
+                  automatico
                   onPronta={() => {
                     setSegurancaAberta(false);
                     void seguranca.refetch();
                   }}
+                  onFechar={() => setSegurancaAberta(false)}
                 />
-                <div className="px-6 pb-6">
-                  <button type="button" className="text-sm underline" onClick={() => setSegurancaAberta(false)}>
-                    Fechar
-                  </button>
-                </div>
               </div>
             </div>
           ) : null}

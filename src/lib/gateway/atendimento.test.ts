@@ -13,6 +13,7 @@ import {
   gruposDoEsquema,
   marcarTrechos,
   porCampo,
+  textoErroCampo,
   rotuloCaminho,
   rotuloCampo,
   situacaoCampo,
@@ -33,7 +34,9 @@ async function montar(papel = "gestor", respostas: Response[] = []) {
           gatewayTenantId: "bykoji",
           ativo: true,
           admin: papel === "gestor",
-          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+          ...(papel === "plataforma"
+            ? {}
+            : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
         },
       ],
     }),
@@ -312,6 +315,31 @@ test("CFG1-a erros: todos os campos, confirmação com trecho, bloqueio e versã
     motivo: "versao_desatualizada",
     versao_publicada: 3,
   });
+});
+
+test("TEL1 telefone inválido no rascunho guarda a frase do gateway no campo", async () => {
+  const frase = "Use DDD + número, ex.: 11912345678";
+  const c = await montar("gestor", [
+    erro(400, {
+      campos: [
+        { campo: "comportamentos.transbordo_alerta", motivo: "valor", mensagem: frase },
+        { campo: "comportamentos.debounce_s", motivo: "valor" },
+      ],
+    }),
+  ]);
+  const r = await executarAtendimento(c.sessao, {
+    acao: "salvar",
+    baseado_em: 2,
+    comportamentos: { transbordo_alerta: "123" },
+  });
+  expect(r.ok).toBe(false);
+  if (r.ok) return;
+  expect(r.erro.campos).toEqual([
+    { campo: "comportamentos.transbordo_alerta", motivo: "valor", mensagem: frase },
+    { campo: "comportamentos.debounce_s", motivo: "valor" },
+  ]);
+  expect(textoErroCampo(r.erro.campos![0]!)).toBe(frase);
+  expect(textoErroCampo(r.erro.campos![1]!)).toBe("Valor fora do permitido.");
 });
 
 test("CFG1-a gateway 403 vira 'Sem permissão'; outra empresa não chama o gateway", async () => {

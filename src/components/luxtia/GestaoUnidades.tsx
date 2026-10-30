@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { peloMenos } from "@/lib/acesso/papeis";
 import { useGestao, EditorFaixas, botoesPausaRapida, textoPrazo } from "./gestao-base";
+import { PagamentosUnidade } from "./PagamentosUnidade";
 import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
 import { pedidosEmUso } from "@/lib/gateway/modulos";
 import { VisaoHoje, OperacaoVarias } from "./GestaoOperacao";
@@ -137,7 +138,11 @@ export function GestaoUnidades({
   const gestor = peloMenos(ctx.papel, "gestor");
   const admin = peloMenos(ctx.papel, "supervisor");
   const secaoEfetiva: SecaoUnidade =
-    !admin || (secao === "horarios" && !gestor) ? "agenda" : secao;
+    secao === "pagamentos"
+      ? "pagamentos"
+      : !admin || (secao === "horarios" && !gestor)
+        ? "agenda"
+        : secao;
   const itens = q.data?.itens ?? [];
   const termo = busca.trim().toLocaleLowerCase("pt-BR");
   const visiveis = itens.filter((u) =>
@@ -271,7 +276,7 @@ export function GestaoUnidades({
                       Incluir ao aplicar em várias
                     </label>
                   )}
-                  <div className={`grid gap-1 ${admin ? "grid-cols-3" : "grid-cols-1"}`}>
+                  <div className="grid grid-cols-2 gap-1">
                     <Button
                       className="min-h-11 px-2"
                       variant={
@@ -303,6 +308,15 @@ export function GestaoUnidades({
                         Exceções
                       </Button>
                     )}
+                    <Button
+                      className="min-h-11 px-2"
+                      variant={
+                        unidadeId === u.id && secaoEfetiva === "pagamentos" ? "default" : "outline"
+                      }
+                      onClick={() => seguir(u.id, "pagamentos")}
+                    >
+                      Pagamentos
+                    </Button>
                   </div>
                   {admin && (
                     <Button
@@ -393,7 +407,6 @@ function DadosUnidade({
     taxa_entrega: u?.taxa_entrega != null ? String(u.taxa_entrega) : "",
     pedido_minimo: u?.pedido_minimo != null ? String(u.pedido_minimo) : "",
     area_entrega: u?.area_entrega ?? "",
-    formas_pagamento: u?.formas_pagamento ?? "",
   };
   const [v, setV] = useState(inicial);
   const [ativo, setAtivo] = useState(u?.ativo ?? true);
@@ -445,9 +458,8 @@ function DadosUnidade({
                   }
                 }
               }
-              for (const k of ["area_entrega", "formas_pagamento"] as const) {
-                if (!u || v[k] !== inicial[k]) dados[k] = v[k].trim() || null;
-              }
+              if (!u || v.area_entrega !== inicial.area_entrega)
+                dados["area_entrega"] = v.area_entrega.trim() || null;
               if (!u || aceitaRetirada !== (u.aceita_retirada ?? null))
                 dados["aceita_retirada"] = aceitaRetirada;
             }
@@ -521,10 +533,10 @@ function DadosUnidade({
           <Erro g={g} campo="uf" />
           {comPedidos ? (
             <fieldset className="space-y-3 rounded-md border border-base-200 p-3">
-              <legend className="px-1 text-sm font-medium text-ink-700">Entrega e pagamento</legend>
+              <legend className="px-1 text-sm font-medium text-ink-700">Entrega</legend>
               <p className="text-xs text-ink-500">
                 Visível porque a empresa tem o módulo de pedidos em uso. Vazio = o agente não afirma
-                nada e diz que a unidade confirma.
+                nada e diz que a unidade confirma. As formas de pagamento ficam na seção Pagamentos.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -559,16 +571,6 @@ function DadosUnidade({
                   onChange={(e) => setV({ ...v, area_entrega: e.target.value })}
                 />
                 <Erro g={g} campo="area_entrega" />
-              </div>
-              <div>
-                <Label htmlFor="un-pagamentos">Formas de pagamento</Label>
-                <Input
-                  id="un-pagamentos"
-                  value={v.formas_pagamento}
-                  disabled={g.busy}
-                  onChange={(e) => setV({ ...v, formas_pagamento: e.target.value })}
-                />
-                <Erro g={g} campo="formas_pagamento" />
               </div>
               <label className="flex min-h-11 items-center gap-2">
                 <input
@@ -759,6 +761,7 @@ function Detalhe({
   const u = q.data;
   const secoes: { id: SecaoUnidade; rotulo: string }[] = [
     { id: "agenda", rotulo: "Agenda" },
+    { id: "pagamentos", rotulo: "Pagamentos" },
     ...(gestor ? [{ id: "horarios" as const, rotulo: "Horários" }] : []),
     ...(admin ? [{ id: "excecoes" as const, rotulo: "Exceções" }] : []),
   ];
@@ -833,6 +836,8 @@ function Detalhe({
           )}
           {secao === "agenda" ? (
             <Previa ctx={ctx} id={id} />
+          ) : secao === "pagamentos" ? (
+            <PagamentosUnidade ctx={ctx} id={id} podeEditar={gestor} />
           ) : secao === "horarios" && gestor ? (
             <Horarios ctx={ctx} u={u} />
           ) : admin ? (

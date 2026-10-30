@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { sessaoPrecisaDoCodigo } from "@/lib/acesso/codigos-recuperacao";
+import { usarCodigoRecuperacao } from "@/lib/seguranca.functions";
 import { aceitarConvite, verConvite } from "@/lib/usuarios.functions";
 import { bootstrapSuperAdmin } from "@/lib/platform.functions";
 import { LuxtiaWordmark, GoldRule } from "@/components/luxtia/Brand";
@@ -33,7 +35,10 @@ export const Route = createFileRoute("/")({
 
 function tokenConvite() {
   const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
-  return new URLSearchParams(hash).get("convite") ?? new URLSearchParams(window.location.search).get("convite");
+  return (
+    new URLSearchParams(hash).get("convite") ??
+    new URLSearchParams(window.location.search).get("convite")
+  );
 }
 
 function Login() {
@@ -42,7 +47,11 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [pedeCodigo, setPedeCodigo] = useState(false);
+  const [codigo, setCodigo] = useState("");
+  const usarRecuperacao = useServerFn(usarCodigoRecuperacao);
 
   useEffect(() => {
     const convite = tokenConvite();
@@ -57,6 +66,7 @@ function Login() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setAviso(null);
     setLoading(true);
     const email = identifier.includes("@")
       ? identifier.trim()
@@ -67,7 +77,58 @@ function Login() {
       setError("Usuário ou senha inválidos.");
       return;
     }
+    const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (sessaoPrecisaDoCodigo(nivel)) {
+      setPedeCodigo(true);
+      return;
+    }
     navigate({ to: "/painel", replace: true });
+  }
+
+  async function confirmarCodigo(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setLoading(true);
+    const limpo = codigo.replace(/\s/g, "");
+    try {
+      if (/^\d{6}$/.test(limpo)) {
+        const lista = await supabase.auth.mfa.listFactors();
+        const fator = lista.data?.totp[0];
+        if (!fator) {
+          setError("Não há aplicativo autenticador nesta conta.");
+          return;
+        }
+        const desafio = await supabase.auth.mfa.challenge({ factorId: fator.id });
+        if (desafio.error || !desafio.data) {
+          setError("Não foi possível validar o código.");
+          return;
+        }
+        const ver = await supabase.auth.mfa.verify({
+          factorId: fator.id,
+          challengeId: desafio.data.id,
+          code: limpo,
+        });
+        if (ver.error) {
+          setError("Código não conferiu. Tente o próximo do aplicativo.");
+          return;
+        }
+      } else {
+        await usarRecuperacao({ data: { codigo: limpo } });
+        await supabase.auth.signOut();
+        setPedeCodigo(false);
+        setCodigo("");
+        setPassword("");
+        setAviso(
+          "Código aceito. A segunda etapa foi desligada. Entre de novo com a senha. A conta de plataforma continua obrigada a ativar.",
+        );
+        return;
+      }
+      navigate({ to: "/painel", replace: true });
+    } catch {
+      setError("Código não conferiu.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -82,8 +143,7 @@ function Login() {
             Mais direção.
           </h1>
           <p className="mt-6 text-purple-300">
-            Integrações de delivery e mensagens curadas, organizadas e governadas em um único
-            lugar.
+            Integrações de delivery e mensagens curadas, organizadas e governadas em um único lugar.
           </p>
         </div>
         <p className="text-xs uppercase tracking-[0.18em] text-purple-400">
@@ -100,7 +160,11 @@ function Login() {
             {token ? "Criar senha" : "Acessar a plataforma"}
           </h2>
           <p className="mt-2 text-ink-500">
-            {token ? "Este convite vale uma vez." : "Use o acesso fornecido pela administração."}
+            {token
+              ? "Este convite vale uma vez."
+              : pedeCodigo
+                ? "Digite o código de 6 dígitos do aplicativo ou um código de recuperação."
+                : "Use o acesso fornecido pela administração."}
           </p>
           <GoldRule className="mt-6" />
 
@@ -115,40 +179,72 @@ function Login() {
                 if (email) setError("Senha definida. Entre com ela.");
               }}
             />
+          ) : pedeCodigo ? (
+            <form onSubmit={confirmarCodigo} className="mt-8 space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="codigo-segunda-etapa">Código do aplicativo ou de recuperação</Label>
+                <Input
+                  id="codigo-segunda-etapa"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  inputMode="text"
+                  autoComplete="one-time-code"
+                  className="bg-base-50"
+                  required
+                />
+              </div>
+              {error ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || codigo.trim().length < 6}
+              >
+                {loading ? "Conferindo…" : "Continuar"}
+              </Button>
+            </form>
           ) : (
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="identifier">Usuário ou e-mail</Label>
-              <Input
-                id="identifier"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                autoComplete="username"
-                className="bg-base-50"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                className="bg-base-50"
-                required
-              />
-            </div>
-            {error ? (
-              <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando…" : "Entrar"}
-            </Button>
-          </form>
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="identifier">Usuário ou e-mail</Label>
+                <Input
+                  id="identifier"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  autoComplete="username"
+                  className="bg-base-50"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="bg-base-50"
+                  required
+                />
+              </div>
+              {aviso ? (
+                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  {aviso}
+                </p>
+              ) : null}
+              {error ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Entrando…" : "Entrar"}
+              </Button>
+            </form>
           )}
         </div>
       </section>
@@ -156,13 +252,7 @@ function Login() {
   );
 }
 
-function AceitarConvite({
-  token,
-  onPronto,
-}: {
-  token: string;
-  onPronto: (email: string) => void;
-}) {
+function AceitarConvite({ token, onPronto }: { token: string; onPronto: (email: string) => void }) {
   const navigate = useNavigate();
   const ver = useServerFn(verConvite);
   const aceitar = useServerFn(aceitarConvite);

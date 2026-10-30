@@ -8,7 +8,7 @@ import {
   AJUDA_CAMPO,
   MOTIVO_AVISO,
   MOTIVO_BLOQUEIO,
-  MOTIVO_CAMPO,
+  textoErroCampo,
   ROTULO_ORIGEM,
   campoDisponivel,
   marcarTrechos,
@@ -55,7 +55,7 @@ export function CampoAtendimento({
   situacao: Situacao;
   podeEditar: boolean;
   escopo: "empresa" | "agente";
-  erros: { motivo: string }[];
+  erros: { motivo: string; mensagem?: string }[];
   bloqueios: Trecho[];
   avisos: Trecho[];
   mudar: (valor: Json) => void;
@@ -138,7 +138,7 @@ export function CampoAtendimento({
       ) : null}
       {erros.map((e, i) => (
         <p key={`e${i}`} role="alert" className="text-xs text-destructive">
-          {MOTIVO_CAMPO[e.motivo] ?? e.motivo}
+          {textoErroCampo(e)}
         </p>
       ))}
       {bloqueios.map((b, i) => (

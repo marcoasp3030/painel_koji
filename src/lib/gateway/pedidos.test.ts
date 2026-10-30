@@ -6,6 +6,8 @@ import {
   acoesPedido,
   nomeClientePedido,
   tempoDesde,
+  reais,
+  textoPagamento,
   whatsappPedido,
   type PedidoLista,
 } from "./pedidos";
@@ -288,4 +290,14 @@ test("PED1-c conversa fora das recentes: busca pelo telefone; falha mantém o no
   expect(nomeClientePedido({ nome: null, telefone: null, canal: null }).nome).toBe(
     "Cliente sem nome",
   );
+});
+test("pagamento na lista: rótulo, troco e traço quando o pedido antigo não tem", () => {
+  expect(textoPagamento(null)).toBe("—");
+  expect(textoPagamento(undefined)).toBe("—");
+  expect(textoPagamento({ forma: "pix", rotulo: "Pix", troco_para: null, troco: null })).toBe(
+    "Pix",
+  );
+  expect(
+    textoPagamento({ forma: "dinheiro", rotulo: "Dinheiro", troco_para: 50, troco: 12.5 }),
+  ).toBe(`Dinheiro · troco ${reais(12.5)}`);
 });

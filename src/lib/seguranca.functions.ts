@@ -5,8 +5,11 @@
  * Opcional para o gestor. O prazo das outras contas de plataforma só começa
  * quando esta função roda no próximo login.
  */
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizarCodigo } from "@/lib/acesso/codigos-recuperacao";
 import { contaEmergencia, decidirSegundaEtapa } from "@/lib/acesso/segunda-etapa";
 
 export type EstadoSeguranca = {
@@ -145,3 +148,91 @@ async function registrarAlertaLogin(
     console.error("[painel] não foi possível registrar o login da conta de emergência");
   }
 }
+
+function hashCodigo(codigo: string) {
+  return createHash("sha256").update(normalizarCodigo(codigo)).digest("hex");
+}
+
+function hashesIguais(a: string, b: string) {
+  const aa = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return aa.length === bb.length && timingSafeEqual(aa, bb);
+}
+
+const codigosSchema = z.object({
+  codigos: z.array(z.string().trim().min(8).max(32)).length(8),
+});
+
+/** Guarda só o hash. O texto fica na tela, uma vez, para a pessoa copiar. */
+export const guardarCodigosRecuperacao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => codigosSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const hashes = data.codigos.map(hashCodigo);
+    const { data: conta } = await supabaseAdmin
+      .from("conta_seguranca")
+      .select("user_id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const escrita = conta
+      ? await supabaseAdmin
+          .from("conta_seguranca")
+          .update({ codigos_recuperacao: hashes })
+          .eq("user_id", context.userId)
+      : await supabaseAdmin
+          .from("conta_seguranca")
+          .insert({ user_id: context.userId, codigos_recuperacao: hashes });
+    if (escrita.error) throw new Error("Não foi possível guardar os códigos de recuperação.");
+    return { ok: true as const };
+  });
+
+type AdminFatores = {
+  _listFactors(params: { userId: string }): Promise<{
+    data: { factors: { id: string }[] } | null;
+    error: { message: string } | null;
+  }>;
+  _deleteFactor(params: {
+    userId: string;
+    id: string;
+  }): Promise<{ error: { message: string } | null }>;
+};
+
+/** Um código de recuperação desliga o aplicativo. A obrigatoriedade da plataforma continua. */
+export const usarCodigoRecuperacao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ codigo: z.string().trim().min(8).max(32) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const hash = hashCodigo(data.codigo);
+    const { data: conta } = await supabaseAdmin
+      .from("conta_seguranca")
+      .select("codigos_recuperacao")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const guardados = conta?.codigos_recuperacao ?? [];
+    if (!guardados.some((item) => hashesIguais(item, hash))) {
+      throw new Error("Código de recuperação não conferiu.");
+    }
+    const admin = supabaseAdmin.auth.admin as unknown as AdminFatores;
+    const lista = await admin._listFactors({ userId: context.userId });
+    if (lista.error) throw new Error("Não foi possível conferir a segunda etapa.");
+    for (const fator of lista.data?.factors ?? []) {
+      const apagou = await admin._deleteFactor({ userId: context.userId, id: fator.id });
+      if (apagou.error) throw new Error("Não foi possível usar o código de recuperação.");
+    }
+    const restante = guardados.filter((item) => !hashesIguais(item, hash));
+    const { error } = await supabaseAdmin
+      .from("conta_seguranca")
+      .update({ codigos_recuperacao: restante })
+      .eq("user_id", context.userId);
+    if (error) throw new Error("Não foi possível usar o código de recuperação.");
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_user_id: context.userId,
+      action: "Código de recuperação usado",
+      target: context.userId,
+      status: "alerta",
+      detail: "A segunda etapa foi desligada com um código de recuperação.",
+    });
+    return { ok: true as const };
+  });

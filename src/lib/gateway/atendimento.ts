@@ -118,7 +118,7 @@ export type ErroAtendimento = {
   status: number;
   mensagem: string;
   motivo?: string;
-  campos?: { campo: string; motivo: string }[];
+  campos?: { campo: string; motivo: string; mensagem?: string }[];
   bloqueios?: Trecho[];
   avisos?: Trecho[];
   versao_publicada?: number;
@@ -291,6 +291,13 @@ export const MOTIVO_CAMPO: Record<string, string> = {
   campo_desconhecido: "Campo desconhecido pelo gateway.",
   so_plataforma: "Só a plataforma altera este campo.",
 };
+
+/** Frase embaixo do campo: a mensagem do gateway, quando ele manda uma. */
+export function textoErroCampo(e: { motivo: string; mensagem?: string }) {
+  const mensagem = typeof e.mensagem === "string" ? e.mensagem.trim() : "";
+  if (mensagem && mensagem.length <= 200) return mensagem;
+  return MOTIVO_CAMPO[e.motivo] ?? e.motivo;
+}
 export const MOTIVO_BLOQUEIO: Record<string, string> = {
   ignorar_instrucoes: "Manda ignorar instruções",
   esquecer_instrucoes: "Manda esquecer instruções",

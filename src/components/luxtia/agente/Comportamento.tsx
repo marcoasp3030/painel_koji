@@ -32,6 +32,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const original = agente as unknown as Record<string, unknown>;
 
   const [form, setForm] = useState<Formulario>(() => valoresIniciais(campos, original));
+  const [erroCampo, setErroCampo] = useState<{ campo: string; mensagem: string } | null>(null);
   useEffect(() => setForm(valoresIniciais(campos, original)), [agente, campos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const alterados = diferencas(campos, form, original);
@@ -40,7 +41,12 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const salvar = useMutation({
     mutationFn: () =>
       alterar({ data: { empresa: ctx.empresa, agente: agente.id, dados: alterados } }),
-    onSuccess: async () => {
+    onSuccess: async (r) => {
+      if (r && typeof r === "object" && "ok" in r && r.ok === false) {
+        setErroCampo({ campo: r.campo, mensagem: r.mensagem });
+        return;
+      }
+      setErroCampo(null);
       toast.success("Comportamento salvo.");
       await queryClient.invalidateQueries({
         queryKey: ["gateway", "agente", ctx.empresa, agente.id],
@@ -54,6 +60,7 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
   const origem = (efetiva["origem_config"] ?? {}) as Record<string, string>;
   const definir = (campo: string, valor: string) => {
     setForm((f) => ({ ...f, [campo]: valor }));
+    setErroCampo((atual) => (atual?.campo === campo ? null : atual));
   };
 
   // Funções que devolvem JSX (não componentes), para os campos não perderem o foco.
@@ -115,14 +122,19 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
     };
     const efetivo = efetiva[campo];
     const dica = efetivo === undefined || efetivo === null ? "" : paraTexto(efetivo);
+    const aviso = erroCampo?.campo === campo ? erroCampo.mensagem : "";
+    const invalido = aviso
+      ? { "aria-invalid": true as const, "aria-describedby": `${id}-erro` }
+      : {};
     return (
       <div className="space-y-1.5">
         <RotuloCampo htmlFor={id} campo={CAMPO_AGENTE[campo]} />
         {tipo === "longo" ? (
-          <Textarea {...comum} rows={2} placeholder={dica} />
+          <Textarea {...comum} {...invalido} rows={2} placeholder={dica} />
         ) : (
           <Input
             {...comum}
+            {...invalido}
             type={tipo === "numero" ? "number" : "text"}
             inputMode={tipo === "telefone" ? "numeric" : undefined}
             {...(min !== undefined ? { min } : {})}
@@ -131,6 +143,11 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             className="max-w-xs"
           />
         )}
+        {aviso ? (
+          <p id={`${id}-erro`} role="alert" className="text-xs text-destructive">
+            {aviso}
+          </p>
+        ) : null}
         {campo !== "nome" ? padrao(campo) : null}
       </div>
     );
@@ -207,7 +224,10 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
             <Button
               type="button"
               variant="outline"
-              onClick={() => setForm(valoresIniciais(campos, original))}
+              onClick={() => {
+                setForm(valoresIniciais(campos, original));
+                setErroCampo(null);
+              }}
               disabled={salvar.isPending}
             >
               Descartar

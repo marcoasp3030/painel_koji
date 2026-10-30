@@ -1,3 +1,23 @@
+## Cardápio — layout de gestão (30/10/2026)
+
+- A listagem de Cardápio foi reorganizada para facilitar localizar, editar e gerenciar itens.
+- Barra de comando fixa: busca, filtros sob demanda, indicadores compactos e ações principais.
+- Navegação por categorias com destaque da seção visível (coluna no desktop, faixa no celular); categorias recolhíveis.
+- Linha do item mais densa: selo único de status, preço, Ativo, Esgotar/Repor e editar à vista; arrastar/setas no hover.
+- Sem mudança de contrato com o gateway. Nada publicado.
+
+## Atalho da segunda etapa (29/10/2026, 22:22 Brasília)
+
+- O aviso "Ative a segunda etapa até …" ganhou o botão "Ativar agora". Ele abre o cadastro já no QR, no código de 6 dígitos e, depois da confirmação, nos 8 códigos de recuperação. O mesmo cadastro continua no botão "Segurança" da barra de cima, à direita do título da página. Não há item no menu lateral.
+- A obrigatoriedade da plataforma não mudou: 7 dias a partir do primeiro login desta versão. A conta de emergência (`admin@luxtia.local`) continua sem esses 7 dias. O gestor continua sem essa obrigação.
+- Os códigos de recuperação ficam só como hash. Usar um desliga o aplicativo e pede para entrar de novo com a senha. A migração `20261029220000_codigos_recuperacao.sql` ainda não foi aplicada. Nada foi publicado.
+
+## Telefone inválido embaixo do campo (29/10/2026)
+
+- Quando o gateway responde 400 no telefone do piloto (`contatos_permitidos`) ou do alerta (`alerta_telefone`), a ficha do agente mostra a frase dele embaixo do campo, em vez de só no aviso flutuante. A frase atual é “Use DDD + número, ex.: 11912345678”.
+- No rascunho de Comportamento do agente, o mesmo vale para o telefone de alerta da equipe (`transbordo_alerta`): se o item do erro traz `mensagem`, ela aparece embaixo do campo e no resumo. Os outros motivos continuam com o texto já usado na tela.
+- Nada foi publicado.
+
 ## USUARIOS1 — publicado (28/10/2026, 18:17 Brasília)
 
 - Commit `af380cb9d107fab8d166b552a9f1f5e8296ea7e0`. Imagem `painel:af380cb9d107fab8d166b552a9f1f5e8296ea7e0` = `sha256:c52a7c65d9e15d0e9aa6b7a338b51a754b068f9f61fed52f8e610a4ba63150a6`. Container `03f5c95acff1`, no ar desde 18:13 (Brasília). Só o painel foi recriado.
