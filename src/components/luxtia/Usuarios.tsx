@@ -9,6 +9,7 @@ import { ROTULO_PAPEL, type PapelAcesso } from "@/lib/acesso/papeis";
 
 export type UsuarioLinha = {
   id: string;
+  user_id: string;
   email: string;
   nome: string | null;
   papel: PapelAcesso;
@@ -38,6 +39,7 @@ export function UsuariosTela({
   onAlterar,
   onReenviar,
   onRevogar,
+  onRedefinirSenha,
 }: {
   empresa: string;
   concediveis: PapelAcesso[];
@@ -61,6 +63,7 @@ export function UsuariosTela({
   }) => void;
   onReenviar: (id: string) => void;
   onRevogar: (id: string) => void;
+  onRedefinirSenha?: (userId: string) => void;
 }) {
   const [email, setEmail] = useState("");
   const [copiado, setCopiado] = useState(false);
@@ -221,6 +224,16 @@ export function UsuariosTela({
                   {!u.ultimo_acesso ? (
                     <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onReenviar(u.id)}>
                       {convitePorEmail ? "Reenviar convite" : "Gerar novo link"}
+                    </Button>
+                  ) : null}
+                  {u.ultimo_acesso && onRedefinirSenha ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={ocupado}
+                      onClick={() => onRedefinirSenha(u.user_id)}
+                    >
+                      Link de nova senha
                     </Button>
                   ) : null}
                   {u.convitePendente ? (

@@ -385,6 +385,63 @@ export type Database = {
         }
         Relationships: []
       }
+      entrada_tentativas: {
+        Row: {
+          chave: string
+          falhas: number
+          falha_em: string | null
+          bloqueado_ate: string | null
+          atualizado_em: string
+        }
+        Insert: {
+          chave: string
+          falhas?: number
+          falha_em?: string | null
+          bloqueado_ate?: string | null
+          atualizado_em?: string
+        }
+        Update: {
+          chave?: string
+          falhas?: number
+          falha_em?: string | null
+          bloqueado_ate?: string | null
+          atualizado_em?: string
+        }
+        Relationships: []
+      }
+      redefinicoes_senha: {
+        Row: {
+          id: string
+          user_id: string
+          token_hash: string
+          expira_em: string
+          usado_em: string | null
+          revogado_em: string | null
+          criado_por: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token_hash: string
+          expira_em: string
+          usado_em?: string | null
+          revogado_em?: string | null
+          criado_por?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token_hash?: string
+          expira_em?: string
+          usado_em?: string | null
+          revogado_em?: string | null
+          criado_por?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       convites: {
         Row: {
           id: string
@@ -489,6 +546,14 @@ export type Database = {
       derrubar_sessoes: {
         Args: { uid: string }
         Returns: undefined
+      }
+      derrubar_outras_sessoes: {
+        Args: { uid: string; manter: string }
+        Returns: undefined
+      }
+      sessao_aal: {
+        Args: { sid: string }
+        Returns: string
       }
       usuario_id_por_email: {
         Args: { alvo: string }

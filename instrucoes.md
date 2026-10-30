@@ -1,3 +1,12 @@
+## ENTRADA1 — login, MFA e senha (30/10/2026)
+
+- Especificação: `docs/ESPEC_ENTRADA1.md`. Migração `20261030160000_entrada1.sql` aplicada.
+- Login: mostrar/ocultar senha, Caps Lock, “Esqueci a senha”, limite de 5 falhas / 15 min.
+- MFA na entrada: 6 dígitos com colar + “Usar código de recuperação”.
+- Senha nova (convite/redefinição): mín. 12, medidor, rejeita comuns.
+- Sem SMTP: mensagem pede ao gestor. Gestor/plataforma gera “Link de nova senha” em Usuários (`#redefinir=`).
+- Prints: `docs/prints-entrada/`. Query `voltar=/rota` volta após o login.
+
 ## MFA1 — publicado com flag off (30/10/2026)
 
 - Especificação: `docs/ESPEC_MFA1.md`. **`MFA1_OBRIGATORIO=0`** (cutover desligado).

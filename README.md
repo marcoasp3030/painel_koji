@@ -90,6 +90,8 @@ Prints com dados fictícios: `docs/prints-arq-fup/` (`tests/visual/arq-fup/captu
 
 ## Usuários e papéis
 
-USUARIOS1 está no ar (`docs/ESPEC_USUARIOS1.md`), imagem `painel:af380cb9d107fab8d166b552a9f1f5e8296ea7e0`. A volta é `painel:volta-20261028T211243Z`. Sem SMTP, quem convida vê o link uma vez, por 24 horas, de uso único e revogável. Com `GATEWAY_PLATFORM_KEY` vazia, a plataforma usa a chave da empresa e o log avisa uma vez por dia. `admin@luxtia.local` é conta de emergência: segunda etapa obrigatória no primeiro login desta versão, sem os 7 dias, e cada entrada dela gera alerta na auditoria. A senha não foi alterada. O servidor manda `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades`. Prints em `docs/prints-usuarios/`.
+USUARIOS1 está no ar (`docs/ESPEC_USUARIOS1.md`). Sem SMTP, quem convida vê o link uma vez, por 24 horas, de uso único e revogável. Com `GATEWAY_PLATFORM_KEY` vazia, a plataforma usa a chave da empresa e o log avisa uma vez por dia. `admin@luxtia.local` é conta de emergência: segunda etapa obrigatória no primeiro login desta versão, sem os 7 dias, e cada entrada dela gera alerta na auditoria. O servidor manda `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades`. Prints em `docs/prints-usuarios/`.
 
-O aviso do prazo, ainda só no código, tem o botão "Ativar agora". O caminho é o botão "Segurança" na barra de cima, à direita do título; o aviso fica logo abaixo. O cadastro abre direto no QR, pede o código de 6 dígitos e então mostra os códigos de recuperação. A conta de plataforma continua obrigada a ter a segunda etapa. A migração `20261029220000` ainda não foi aplicada e esta tela não foi publicada.
+## Entrada (login)
+
+ENTRADA1 (`docs/ESPEC_ENTRADA1.md`): login com mostrar/ocultar senha, Caps Lock, “Esqueci a senha”, bloqueio após 5 falhas em 15 minutos, MFA com 6 caixas e código de recuperação, senha mínima 12 no convite/redefinição, e “Link de nova senha” em Usuários. Sem SMTP o pedido de redefinição orienta a falar com o gestor. Prints em `docs/prints-entrada/`. MFA1 continua com `MFA1_OBRIGATORIO=0`.

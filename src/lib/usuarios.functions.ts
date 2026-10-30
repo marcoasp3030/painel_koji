@@ -16,6 +16,7 @@ import {
 } from "@/lib/acesso/convite";
 import { EMAIL_CONTA_EMERGENCIA } from "@/lib/acesso/segunda-etapa";
 import { podeConceder, peloMenos, papelAcesso, type PapelAcesso } from "@/lib/acesso/papeis";
+import { SENHA_MAX, SENHA_MIN, validarSenhaNova } from "@/lib/acesso/senha";
 import { empresa } from "@/lib/gateway/esquemas";
 
 const TOKEN_CONVITE = z.string().regex(/^[A-Za-z0-9_-]{43,128}$/);
@@ -25,6 +26,7 @@ const CODIGO = z.string().regex(/^[a-z0-9_]{1,40}$/);
 
 type LinhaUsuario = {
   id: string;
+  user_id: string;
   email: string;
   nome: string | null;
   papel: PapelAcesso;
@@ -143,6 +145,7 @@ export const listarUsuarios = createServerFn({ method: "POST" })
         .sort((a, b) => b.expira_em.localeCompare(a.expira_em))[0];
       usuarios.push({
         id: m.id,
+        user_id: m.user_id,
         email: m.email,
         nome: m.full_name,
         papel,
@@ -393,9 +396,11 @@ export const verConvite = createServerFn({ method: "POST" })
 
 export const aceitarConvite = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ token: TOKEN_CONVITE, senha: z.string().min(8).max(72) }).parse(d),
+    z.object({ token: TOKEN_CONVITE, senha: z.string().min(SENHA_MIN).max(SENHA_MAX) }).parse(d),
   )
   .handler(async ({ data }) => {
+    const erroSenha = validarSenhaNova(data.senha);
+    if (erroSenha) throw new Error(erroSenha);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const agora = new Date().toISOString();
     const hash = hashToken(data.token);

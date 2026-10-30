@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { UsuariosTela } from "@/components/luxtia/Usuarios";
+import { gerarLinkRedefinicao } from "@/lib/entrada.functions";
 import {
   alterarUsuario,
   convidarUsuario,
@@ -42,6 +43,7 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
   const alterar = useServerFn(alterarUsuario);
   const reenviar = useServerFn(reenviarConvite);
   const revogar = useServerFn(revogarConvite);
+  const redefinir = useServerFn(gerarLinkRedefinicao);
   const [aviso, setAviso] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const q = useQuery({
@@ -91,6 +93,15 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const novaSenha = useMutation({
+    mutationFn: (userId: string) => redefinir({ data: { user_id: userId, empresa: ctx.empresa } }),
+    onSuccess: (r) => {
+      setLink(r.link);
+      setAviso(r.aviso);
+      toast.success("Link de nova senha gerado.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   if (q.isPending) return <p className="text-sm text-ink-500">Carregando usuários…</p>;
   if (q.isError) return <p role="alert">{q.error.message}</p>;
   return (
@@ -99,7 +110,13 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
       concediveis={q.data.concediveis}
       unidades={q.data.unidades}
       usuarios={q.data.usuarios}
-      ocupado={criar.isPending || mudar.isPending || deNovo.isPending || revogarUm.isPending}
+      ocupado={
+        criar.isPending ||
+        mudar.isPending ||
+        deNovo.isPending ||
+        revogarUm.isPending ||
+        novaSenha.isPending
+      }
       aviso={aviso}
       linkConvite={link}
       convitePorEmail={q.data.convitePorEmail}
@@ -107,6 +124,7 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
       onAlterar={(d) => mudar.mutate(d)}
       onReenviar={(id) => deNovo.mutate(id)}
       onRevogar={(id) => revogarUm.mutate(id)}
+      onRedefinirSenha={(userId) => novaSenha.mutate(userId)}
     />
   );
 }

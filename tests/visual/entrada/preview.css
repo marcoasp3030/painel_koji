@@ -1,0 +1,21 @@
+@import "../../../src/styles.css";
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f6f4f8;
+}
+
+.selo-demo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #f5c542;
+  color: #1a1520;
+  text-align: center;
+  font: 600 12px/1.4 Inter, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+}
