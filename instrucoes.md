@@ -1,3 +1,8 @@
+## Correção super admin / aal1 (31/10/2026)
+
+- Após o MFA1, `getMe` lia `user_roles` com o JWT do usuário (RLS exige aal2). Admin de emergência sem fator ficava em aal1, o papel sumia e `/painel` dizia “não vinculado a nenhum cliente”.
+- `resolveMe` passou a ler papel e vínculo com service role (igual ao gateway). A mensagem de “sem cliente” só aparece para quem não é super admin e não tem empresa.
+
 ## ENTRADA1 — publicado (30/10/2026, ~16:28 Brasília)
 
 - Commit `9f2a6766f10982c00305b8c6808b62b99c99ebf8`. Imagem `painel:9f2a676…` = `sha256:0c2964ac…`. Só o painel recriado. Volta: `painel:volta-20261030T192732Z` (MFA1 `8146e5c…` / `sha256:cdcd8f01…`).

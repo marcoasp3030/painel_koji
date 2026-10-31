@@ -1,4 +1,19 @@
+## [2026-10-31 20:40] — Super admin sumia após MFA1 (aal1)
+- **Autor:** Auto
+- **Objetivo:** Admin (`admin@luxtia.local`, super_admin) via `/painel` via mensagem de “sem cliente”; deveria abrir a plataforma.
+- **Arquivos alterados:**
+ - `src/lib/platform.functions.ts` — modificado — `resolveMe` lê papel/vínculo com service role
+ - `src/routes/_authenticated/painel.tsx` — modificado — mensagem de “sem cliente” só se não for super admin
+ - `docs/worklog.md`, `instrucoes.md` — modificados — registro
+- **Resumo das mudanças:** A RLS de `user_roles` (MFA1) exige aal2. O `getMe` lia pelo JWT do usuário; em aal1 (emergência ainda sem fator) o papel sumia e o painel tratava como sem vínculo. Agora o servidor resolve o papel como o gateway já fazia.
+- **Decisões e justificativas:** Identidade/roteamento não pode depender de aal2; a proteção aal2 continua nas políticas e no gateway.
+- **Comandos executados:** `tsc --noEmit` → OK. publicar → (em seguida).
+- **Erros e resoluções:** conta de emergência sem fator MFA (0 em `auth.mfa_factors`) — esperado com cutover off; não era a mensagem certa.
+- **Pendências / TODO:** ativar fator + 10 códigos na emergência antes de `MFA1_OBRIGATORIO=1`
+- **Próximos passos:** hard refresh e entrar de novo como admin
+
 ## [2026-10-30 16:28] — ENTRADA1 publicado
+
 - **Autor:** Auto
 - **Objetivo:** Aplicar ENTRADA1 e publicar para ficar funcionando.
 - **Arquivos alterados:**

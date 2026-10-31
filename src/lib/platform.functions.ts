@@ -13,29 +13,38 @@ type Ctx = {
 };
 
 async function resolveMe(context: Ctx) {
-  const { data: roles } = await context.supabase
+  // Papel e vínculo saem com service role: a RLS de user_roles/tenant_users
+  // exige aal2, e o redirecionamento do login precisa saber o papel já em aal1
+  // (ex.: super admin de emergência ainda sem fator cadastrado).
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: roles } = await supabaseAdmin
     .from("user_roles")
     .select("role")
     .eq("user_id", context.userId);
   const isSuperAdmin = (roles ?? []).some((r: { role: string }) => r.role === "super_admin");
 
-  const { data: membership } = await context.supabase
+  const { data: membership } = await supabaseAdmin
     .from("tenant_users")
     .select("tenant_id, is_tenant_admin, full_name, email, tenants(id, name, slug, status)")
     .eq("user_id", context.userId)
     .maybeSingle();
+
+  const tenantRow = membership?.tenants as
+    | { id: string; name: string; slug: string; status: string }
+    | null
+    | undefined;
 
   return {
     userId: context.userId,
     email: (context.claims["email"] as string) ?? membership?.email ?? null,
     isSuperAdmin,
     isTenantAdmin: Boolean(membership?.is_tenant_admin),
-    tenant: membership?.tenants
+    tenant: tenantRow
       ? {
-          id: membership.tenants.id as string,
-          name: membership.tenants.name as string,
-          slug: membership.tenants.slug as string,
-          status: membership.tenants.status as string,
+          id: tenantRow.id,
+          name: tenantRow.name,
+          slug: tenantRow.slug,
+          status: tenantRow.status,
         }
       : null,
   };

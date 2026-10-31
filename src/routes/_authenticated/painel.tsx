@@ -33,7 +33,9 @@ function Painel() {
     <div className="flex min-h-screen items-center justify-center bg-base-50 px-6 text-center">
       {isError ? (
         <p className="text-ink-500">Não foi possível carregar o seu acesso. Entre novamente.</p>
-      ) : data && !data.isSuperAdmin && !data.tenant ? (
+      ) : data && data.isSuperAdmin ? (
+        <p className="text-ink-500">Abrindo o painel da plataforma…</p>
+      ) : data && !data.tenant ? (
         <p className="text-ink-500">
           Seu acesso ainda não está vinculado a nenhum cliente. Fale com a administração.
         </p>
