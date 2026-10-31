@@ -7,7 +7,7 @@
  - `docs/worklog.md`, `instrucoes.md` — modificados — registro
 - **Resumo das mudanças:** A RLS de `user_roles` (MFA1) exige aal2. O `getMe` lia pelo JWT do usuário; em aal1 (emergência ainda sem fator) o papel sumia e o painel tratava como sem vínculo. Agora o servidor resolve o papel como o gateway já fazia.
 - **Decisões e justificativas:** Identidade/roteamento não pode depender de aal2; a proteção aal2 continua nas políticas e no gateway.
-- **Comandos executados:** `tsc --noEmit` → OK. publicar → (em seguida).
+- **Comandos executados:** `tsc --noEmit` → OK. `publicar-painel.sh` → OK (`painel:f81d411…` = `sha256:c4e2eadd…`). `up -d --no-deps --no-build painel` → OK. Volta: `painel:volta-20261031T234057Z` (ENTRADA1 `9f2a676…` / `sha256:0c2964ac…`).
 - **Erros e resoluções:** conta de emergência sem fator MFA (0 em `auth.mfa_factors`) — esperado com cutover off; não era a mensagem certa.
 - **Pendências / TODO:** ativar fator + 10 códigos na emergência antes de `MFA1_OBRIGATORIO=1`
 - **Próximos passos:** hard refresh e entrar de novo como admin
