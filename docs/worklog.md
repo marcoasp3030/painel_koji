@@ -8,9 +8,9 @@
  - `docs/worklog.md`, `instrucoes.md` — modificados — registro
 - **Resumo das mudanças:** O papel do menu vinha via `sessaoGatewayMfa`. Conta de emergência (ou sessão aal1) falhava, `papel` ficava vazio e o filtro deixava só “Clientes”. Identidade do menu não exige mais aal2; ações de negócio continuam exigindo.
 - **Decisões e justificativas:** Menu ≠ operação sensível. Conta de emergência ainda deve ativar MFA (faixa de segurança).
-- **Comandos executados:** `bun test` modulos/atendimento → OK. publicar → (em seguida).
+- **Comandos executados:** `bun test` modulos → 5 OK. `publicar-painel.sh` → OK (`painel:b4d6a41…` = `sha256:cf9b18e7…`). Volta: `painel:volta-20261031T234737Z`.
 - **Erros e resoluções:** `filtrarMenuPorTelas(undefined)` tratava como `[]` e escondia Cardápio/Pedidos — corrigido com `null` = ainda carregando.
-- **Pendências / TODO:** ativar fator na emergência
+- **Pendências / TODO:** ativar fator na emergência (`admin@luxtia.local`)
 - **Próximos passos:** hard refresh; conferir menu completo
 
 ## [2026-10-31 20:40] — Super admin sumia após MFA1 (aal1)
