@@ -1,4 +1,20 @@
+## [2026-10-31 20:50] — Menu do super admin só com Clientes
+- **Autor:** Auto
+- **Objetivo:** Menu do admin mostrava só “Clientes”; deveria listar Usuários, Empresas, Agentes etc.
+- **Arquivos alterados:**
+ - `src/lib/gateway.functions.ts` — modificado — `obterAcessoGateway` sem exigir aal2
+ - `src/lib/nav.ts`, `AppShell.tsx` — modificados — telas null não escondem o menu; loading mostra a árvore
+ - `src/lib/gateway/modulos.test.ts` — modificado — regressão
+ - `docs/worklog.md`, `instrucoes.md` — modificados — registro
+- **Resumo das mudanças:** O papel do menu vinha via `sessaoGatewayMfa`. Conta de emergência (ou sessão aal1) falhava, `papel` ficava vazio e o filtro deixava só “Clientes”. Identidade do menu não exige mais aal2; ações de negócio continuam exigindo.
+- **Decisões e justificativas:** Menu ≠ operação sensível. Conta de emergência ainda deve ativar MFA (faixa de segurança).
+- **Comandos executados:** `bun test` modulos/atendimento → OK. publicar → (em seguida).
+- **Erros e resoluções:** `filtrarMenuPorTelas(undefined)` tratava como `[]` e escondia Cardápio/Pedidos — corrigido com `null` = ainda carregando.
+- **Pendências / TODO:** ativar fator na emergência
+- **Próximos passos:** hard refresh; conferir menu completo
+
 ## [2026-10-31 20:40] — Super admin sumia após MFA1 (aal1)
+
 - **Autor:** Auto
 - **Objetivo:** Admin (`admin@luxtia.local`, super_admin) via `/painel` via mensagem de “sem cliente”; deveria abrir a plataforma.
 - **Arquivos alterados:**

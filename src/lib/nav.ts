@@ -264,12 +264,17 @@ export function filtrarMenu(itens: ItemMenu[], papel: PapelGateway | null | unde
   return itens.filter((item) => !item.papeis || (papel != null && item.papeis.includes(papel)));
 }
 
-/** Esconde Cardápio/Pedidos/Avisos quando o módulo correspondente não está em uso. */
+/**
+ * Esconde Cardápio/Pedidos/Avisos quando o módulo correspondente não está em uso.
+ * `null`/`undefined` = ainda sem resposta: mantém itens com `tela` (não esconde).
+ * Array (mesmo vazio) = resposta chegou: só libera o que estiver na lista.
+ */
 export function filtrarMenuPorTelas(
   itens: ItemMenu[],
   telas: readonly string[] | null | undefined,
 ) {
-  const liberadas = new Set(telas ?? []);
+  if (telas == null) return itens;
+  const liberadas = new Set(telas);
   return itens.filter((item) => !item.tela || liberadas.has(item.tela));
 }
 

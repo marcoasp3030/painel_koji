@@ -1,3 +1,8 @@
+## Correção menu super admin (31/10/2026)
+
+- Menu do admin só mostrava “Clientes”: `obterAcessoGateway` exigia aal2; sem fator/MFA o papel não vinha e o filtro escondia o resto.
+- Papel do menu não exige mais aal2. Itens esperados: Clientes, Usuários, Empresas, Agentes, Canais, Conversas, Pedidos, etc. Conta de emergência ainda deve cadastrar a segunda etapa.
+
 ## Correção super admin / aal1 (31/10/2026)
 
 - Após o MFA1, `getMe` lia `user_roles` com o JWT do usuário (RLS exige aal2). Admin de emergência sem fator ficava em aal1, o papel sumia e `/painel` dizia “não vinculado a nenhum cliente”.

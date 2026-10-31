@@ -138,10 +138,11 @@ export function AppShell({
     staleTime: 30_000,
     retry: false,
   });
+  // `nav` já é ADMIN_NAV ou TENANT_NAV. Enquanto o papel carrega, mostra essa
+  // árvore; depois filtra pelo papel do gateway.
   const itens = filtrarMenuPorTelas(
-    filtrarMenu(nav, acesso.data?.papel),
-    // Sem resposta ainda: esconde telas de módulo para não mostrar Cardápio/Pedidos à toa.
-    modulos.data?.telas ?? (modulos.isFetched ? [] : undefined),
+    acesso.isPending ? nav : filtrarMenu(nav, acesso.data?.papel),
+    modulos.data?.telas ?? (modulos.isFetched ? [] : null),
   );
   const grupos = agruparMenu(itens);
   const atual = itens.find((item) => itemAtivo(pathname, item.to));

@@ -36,3 +36,8 @@ test("menu By Koji com as três telas mostra Cardápio, Pedidos e Avisos", () =>
   expect(itens.some((i) => i.to === "/ia/configuracoes/avisos")).toBe(true);
   expect(itens.some((i) => i.to === "/ia/modelos")).toBe(true);
 });
+
+test("sem lista de telas ainda, o menu não esconde Cardápio/Pedidos", () => {
+  expect(filtrarMenuPorTelas(ADMIN_NAV, null).some((i) => i.to === "/ia/cardapio")).toBe(true);
+  expect(filtrarMenuPorTelas(ADMIN_NAV, undefined).some((i) => i.to === "/ia/pedidos")).toBe(true);
+});
