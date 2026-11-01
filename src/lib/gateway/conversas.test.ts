@@ -11,13 +11,20 @@ import {
   desdeDoCursor,
   estadoConversa,
   juntarMensagens,
+  linhaDoTempo,
+  rotuloPessoa,
   nomeContato,
+  esperaCurta,
   ordenarConversas,
+  proximaDaFila,
+  urgenciaEspera,
+  vizinhaNaLista,
   telefoneExibicao,
   telefoneVisivel,
   textoCanal,
   temNovidade,
   type Conversa,
+  type NotaInterna,
 } from "./conversas";
 import { agentesOcultos, exigirConversaVisivel } from "./ocultos";
 
@@ -144,7 +151,7 @@ test("agentes de teste em páginas posteriores continuam ocultos; falha de canal
   let chamadas = 0;
   const t = {
     papel: "funcionario" as const,
-    chamar: async <T>() => ({
+    leituraDeApoio: async <T>() => ({
       dados: (++chamadas === 1
         ? { itens: [{ id: "a", nome: "normal" }], proximo_cursor: "a" }
         : { itens: [{ id: "b", nome: "[teste] oculto" }], proximo_cursor: null }) as T,
@@ -155,7 +162,7 @@ test("agentes de teste em páginas posteriores continuam ocultos; falha de canal
     exigirConversaVisivel(
       {
         papel: "funcionario",
-        chamar: async () => {
+        leituraDeApoio: async () => {
           throw new Error("canal indisponível");
         },
       },
@@ -266,4 +273,96 @@ test("PED1-c ordem de cadastro mantém a ordem do gateway, fila de espera no top
     "b",
   ]);
   expect(ordenarConversas(itens).map((x) => x.conversation_id)).toEqual(["e", "b", "a"]);
+});
+
+const AGORA = Date.parse("2026-11-01T12:00:00-03:00");
+const minutosAtras = (m: number) => new Date(AGORA - m * 60000).toISOString();
+const fila = (id: string, aguardando?: string) =>
+  ({ conversation_id: id, aguardando_atendente_desde: aguardando ?? null }) as Conversa;
+
+test("esperaCurta mostra só o que importa em cada faixa", () => {
+  expect(esperaCurta(minutosAtras(0.5), AGORA)).toBe("agora");
+  expect(esperaCurta(minutosAtras(12), AGORA)).toBe("12 min");
+  expect(esperaCurta(minutosAtras(60), AGORA)).toBe("1 h");
+  expect(esperaCurta(minutosAtras(125), AGORA)).toBe("2 h 5 min");
+  expect(esperaCurta(minutosAtras(1620), AGORA)).toBe("1 d 3 h");
+  expect(esperaCurta(minutosAtras(2880), AGORA)).toBe("2 d");
+  expect(esperaCurta("data ruim", AGORA)).toBe("");
+});
+
+test("urgenciaEspera muda nos limites de 5 e 15 minutos", () => {
+  expect(urgenciaEspera(minutosAtras(4.9), AGORA)).toBe("normal");
+  expect(urgenciaEspera(minutosAtras(5), AGORA)).toBe("atencao");
+  expect(urgenciaEspera(minutosAtras(14.9), AGORA)).toBe("atencao");
+  expect(urgenciaEspera(minutosAtras(15), AGORA)).toBe("critica");
+  expect(urgenciaEspera("data ruim", AGORA)).toBe("normal");
+});
+
+test("vizinhaNaLista anda uma posição e para nas pontas", () => {
+  const itens = [fila("a"), fila("b"), fila("c")];
+  expect(vizinhaNaLista(itens, "b", 1)?.conversation_id).toBe("c");
+  expect(vizinhaNaLista(itens, "b", -1)?.conversation_id).toBe("a");
+  expect(vizinhaNaLista(itens, "c", 1)).toBeNull();
+  expect(vizinhaNaLista(itens, "a", -1)).toBeNull();
+  expect(vizinhaNaLista(itens, null, 1)?.conversation_id).toBe("a");
+  expect(vizinhaNaLista(itens, "sumiu", -1)?.conversation_id).toBe("a");
+  expect(vizinhaNaLista([], "a", 1)).toBeNull();
+});
+
+test("proximaDaFila abre a espera mais antiga e pula a conversa aberta", () => {
+  const itens = ordenarConversas([
+    fila("nova", minutosAtras(2)),
+    fila("sem-espera"),
+    fila("antiga", minutosAtras(40)),
+  ]);
+  expect(proximaDaFila(itens, null)?.conversation_id).toBe("antiga");
+  expect(proximaDaFila(itens, "antiga")?.conversation_id).toBe("nova");
+  expect(proximaDaFila([fila("sem-espera")], null)).toBeNull();
+  expect(proximaDaFila([fila("so", minutosAtras(1))], "so")).toBeNull();
+});
+
+test("rotuloPessoa usa o primeiro nome do cadastro e cai para o e-mail", () => {
+  const equipe = [
+    { email: "ana.lima@exemplo.test", nome: "Ana Lima" },
+    { email: "bia@exemplo.test", nome: null },
+  ];
+  expect(rotuloPessoa("ANA.LIMA@exemplo.test", equipe)).toBe("Ana");
+  expect(rotuloPessoa("bia@exemplo.test", equipe)).toBe("bia");
+  expect(rotuloPessoa("fora@exemplo.test", equipe)).toBe("fora");
+  expect(rotuloPessoa("sem-arroba")).toBe("sem-arroba");
+});
+
+const nota = (id: number, criado_em: string) => ({ id, criado_em }) as NotaInterna;
+const msg = (id: number, enviada_em: string | null) => ({ id, enviada_em });
+
+test("linhaDoTempo intercala notas pelo horário", () => {
+  const linha = linhaDoTempo(
+    [msg(1, "2026-11-01T10:00:00Z"), msg(2, "2026-11-01T10:10:00Z")],
+    [nota(9, "2026-11-01T10:05:00Z"), nota(8, "2026-11-01T10:20:00Z")],
+  );
+  expect(linha.map((i) => (i.tipo === "nota" ? `n${i.nota.id}` : `m${i.mensagem.id}`))).toEqual([
+    "m1",
+    "n9",
+    "m2",
+    "n8",
+  ]);
+});
+
+test("linhaDoTempo só mostra nota antiga quando o histórico anterior está carregado", () => {
+  const mensagens = [msg(5, "2026-11-01T10:00:00Z")];
+  const antiga = [nota(1, "2026-11-01T09:00:00Z")];
+  expect(linhaDoTempo(mensagens, antiga, { temMais: true }).map((i) => i.tipo)).toEqual([
+    "mensagem",
+  ]);
+  expect(linhaDoTempo(mensagens, antiga).map((i) => i.tipo)).toEqual(["nota", "mensagem"]);
+  // Conversa sem mensagem nenhuma ainda mostra a nota.
+  expect(linhaDoTempo([], antiga).map((i) => i.tipo)).toEqual(["nota"]);
+});
+
+test("linhaDoTempo mantém no lugar a mensagem sem data", () => {
+  const linha = linhaDoTempo(
+    [msg(1, "2026-11-01T10:00:00Z"), msg(2, null), msg(3, "2026-11-01T10:10:00Z")],
+    [],
+  );
+  expect(linha.map((i) => (i.tipo === "mensagem" ? i.mensagem.id : 0))).toEqual([1, 2, 3]);
 });

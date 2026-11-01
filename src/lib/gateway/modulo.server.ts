@@ -225,6 +225,37 @@ const REGRAS: Regra[] = [
   { metodo: "POST", caminho: ["conversas", "*", "mensagens"], papeis: FUNC },
   { metodo: "POST", caminho: ["conversas", "*", "assumir"], papeis: FUNC },
   { metodo: "POST", caminho: ["conversas", "*", "devolver"], papeis: SUP },
+  {
+    metodo: "POST",
+    caminho: ["conversas", "*", "atribuir"],
+    papeis: SUP,
+    corpo: soChaves(["para"], "Campos de transferência inválidos."),
+  },
+  // Notas internas. O gateway confere quem apaga: quem escreveu ou, a partir de gestor, a equipe.
+  { metodo: "GET", caminho: ["conversas", "*", "notas"], papeis: FUNC },
+  {
+    metodo: "POST",
+    caminho: ["conversas", "*", "notas"],
+    papeis: FUNC,
+    corpo: soChaves(["texto"], "Campos da nota inválidos."),
+  },
+  { metodo: "DELETE", caminho: ["conversas", "*", "notas", "*"], papeis: FUNC },
+  // Respostas rápidas. O gateway confere o resto: as da equipe a partir de supervisor; as pessoais, só quem é dono.
+  { metodo: "GET", caminho: ["respostas-rapidas"], papeis: FUNC },
+  {
+    metodo: "POST",
+    caminho: ["respostas-rapidas"],
+    papeis: FUNC,
+    corpo: soChaves(["atalho", "texto", "escopo"], "Campos da resposta inválidos."),
+  },
+  {
+    metodo: "PATCH",
+    caminho: ["respostas-rapidas", "*"],
+    papeis: FUNC,
+    corpo: soChaves(["atalho", "texto"], "Campos da resposta inválidos."),
+  },
+  { metodo: "DELETE", caminho: ["respostas-rapidas", "*"], papeis: FUNC },
+  { metodo: "POST", caminho: ["respostas-rapidas", "*", "uso"], papeis: FUNC },
   // Nome de cadastro do contato (PED1-c): qualquer papel, só a chave `nome`.
   {
     metodo: "PATCH",
@@ -636,6 +667,25 @@ export function criarModuloGateway(deps: {
             id,
             papel,
             unidades,
+            /**
+             * Leitura de apoio do próprio servidor, para saber o que esconder. Funcionário não lê
+             * agentes e canais, mas toda a tela de conversas depende dessa conferência. Só estas
+             * duas rotas passam aqui, e o resultado não vai ao navegador.
+             */
+            async leituraDeApoio<T = unknown>(
+              partes: ["agentes"] | ["agentes", string] | ["canais", string],
+              opcoes: Pick<Opcoes, "query"> = {},
+            ) {
+              try {
+                return await chamar<T>("supervisor", "GET", ["tenants", id, ...partes], {
+                  ...opcoes,
+                  unidades: "*",
+                  ...(papel === "plataforma" ? {} : { escopoEmpresa: id }),
+                });
+              } catch (erro) {
+                return negar(id, erro);
+              }
+            },
             async chamar<T = unknown>(
               metodo: MetodoGateway,
               partes: string[] = [],

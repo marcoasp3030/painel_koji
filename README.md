@@ -18,6 +18,30 @@ bun run dev
 
 Confira que está no commit recente (`git log -1` deve mostrar a correção do MFA / Configurações). Sem `git pull`, o menu pode parecer a versão antiga (só Clientes).
 
+### Com Docker
+
+Sobe banco, autenticação, API e painel em `http://localhost:8080`, com o código montado no container: salvar um arquivo atualiza a tela. O acesso fica restrito à própria máquina.
+
+```sh
+python3 docker/gerar-segredos.py
+echo "BOOTSTRAP_SUPER_ADMIN_SENHA=$(openssl rand -base64 18)" >> .env
+echo "COMPOSE_FILE=docker-compose.local.yml" >> .env
+docker network create --internal luxbrain_gateway_proxy
+docker compose up -d
+```
+
+Entre com `admin@luxtia.local` e a senha de `BOOTSTRAP_SUPER_ADMIN_SENHA`. A conta é criada ao abrir a tela de entrada pela primeira vez.
+
+| Ação | Comando |
+| --- | --- |
+| Parar, mantendo os dados | `docker compose down` |
+| Ver os logs do painel | `docker compose logs -f painel` |
+| Aplicar uma migration nova | `docker compose up -d` |
+| Instalar dependência nova | `docker compose restart painel` |
+| Apagar os dados e recomeçar | `docker compose down -v` |
+
+As telas de Agentes dependem do gateway (repositório `marcoasp3030/gateway`), que roda em projeto próprio com `docker-compose.local.yml`, em modo `dry` e `mock`, sem enviar nada ao WhatsApp. No `.env` do painel, `GATEWAY_ADMIN_URL=http://luxbrain-gateway:8000/admin/v1`; `GATEWAY_PANEL_KEY` e `GATEWAY_PLATFORM_KEY` têm os valores de `PANEL_SERVICE_KEY` e `PANEL_PLATFORM_KEY` do gateway. Sem essas variáveis, as telas mostram "Gateway de agentes temporariamente indisponível".
+
 ## Built with
 
 - TanStack Start
@@ -67,7 +91,15 @@ O menu Pedidos, para administrador, plataforma e atendente, abre com indicadores
 
 ## Conversas
 
-A lista e a conversa aberta dividem a altura da tela. Cada contato aparece com iniciais, horário curto e o estado. Ao abrir, o histórico já fica nas mensagens mais recentes; se a pessoa subir para ler o passado, a posição é mantida e um atalho “Mensagens recentes” volta ao fim. No celular, a conversa ocupa a tela e há um voltar para a lista. Enter envia a mensagem e Shift+Enter quebra a linha. A lista e o detalhe mostram o atendimento atual (número, aberto, com humano ou encerrado, aberto em, encerrado em e motivo), o bloco de follow-up (agendado, cancelado ou ensaio, com horário de Brasília, tipo da pendência, motivo e “Cancelar este” na linha do agendado) e o selo “não quer follow-up” no contato, com Reativar só para admin e plataforma — a confirmação pede um motivo de pelo menos 3 caracteres, enviado no corpo do DELETE; depois, o contato mostra quem reativou e o motivo —, além do estado da conversa (encerrada, aguardando atendente, atendente ou bot), do canal com o nome cadastrado e do telefone legível. O histórico lista os atendimentos anteriores, com resumo, e as mensagens podem ser filtradas por atendimento. Admin e membro encerram o atendimento aberto ou reabrem só o último; se o gateway recusar (409), a tela explica e pede para atualizar. Nenhuma dessas ações envia mensagem ao cliente. Desde o PED1-c, o nome é o de exibição do gateway (cadastro > informado > perfil > telefone) com um selo discreto da origem; conversas de teste levam o selo "teste"; a última mensagem mostra autor e tipo; aparecem a unidade preferida e o pedido aberto, com atalho para o pedido. Filtros por estado (inclusive Encerrada) e ordem por atividade recente; a busca cobre os três nomes e o telefone. Qualquer papel usa "Editar nome" no cabeçalho para gravar o nome de cadastro (vazio apaga e volta ao próximo da prioridade); o gateway audita quem alterou. Os Pedidos mostram o mesmo nome da conversa. A tela pede o último evento confirmado (`GET /admin/v1/tenants/{tenant}/eventos/cursor`) antes de carregar a lista e usa esse `ultimo_id` como `desde` do polling.
+Tela de operação: ocupa toda a altura da janela, com fila, conversa e, a partir de 1280 px, um painel fixo com contato, pedido, atendimento e follow-up (em telas menores ele abre pelo botão ao lado de Assumir). A fila tem busca, abas por estado com a contagem de quem aguarda e o botão "Abrir próxima", que abre a espera mais antiga. Agente, canal, ordem e data ficam em Filtros. Cada linha usa duas alturas de texto, com o restante no título. A espera muda de cor: até 5 minutos normal, até 15 atenção, depois crítica. A lista carrega sozinha ao rolar. Atalhos: `/` busca, `Alt+↑/↓` troca de conversa, `N` abre a próxima, `R` vai para a resposta. O texto em digitação de cada conversa fica guardado ao trocar entre elas, enquanto a tela estiver aberta. A pausa ao assumir vai de 15 minutos a 24 horas.
+
+Responsável: quem assume ou responde fica com a conversa, e ela aparece na aba Minhas e com o nome da pessoa na fila. Enquanto isso, ninguém mais assume nem responde; o gateway recusa, mesmo com dois cliques no mesmo instante. Transferir, para si ou para um colega, fica a partir de supervisor (`docs/ESPEC_USUARIOS1.md`). A responsabilidade acaba ao devolver ao agente, ao encerrar ou quando a pausa vence, para ninguém ficar preso a uma conversa de quem saiu do turno.
+
+Notas internas: a aba "Nota interna" da caixa de mensagem (atalho `I`) grava um comentário que só a equipe vê, na linha do tempo da conversa. Funciona mesmo com a conversa com outra pessoa e não pausa o agente. As notas ficam em tabela própria, fora de `mensagens`, então não vão ao cliente nem ao histórico do agente. Apaga quem escreveu ou, a partir de gestor, a equipe. Entram na exportação do contato e são apagadas na anonimização.
+
+Respostas rápidas: `/` na caixa de mensagem (ou o botão de raio) abre a lista, com as mais usadas primeiro e busca por atalho ou texto. A resposta entra no campo para revisão e nunca é enviada sozinha. `{saudacao}`, `{nome}` e `{unidade}` são preenchidas pela conversa; o que ela não souber fica no texto e o envio espera a pessoa completar. "Gerenciar" cria, edita e apaga, partindo do texto já digitado, se houver. Resposta de "Toda a equipe" fica a partir de supervisor; "Só para mim" qualquer papel cria, e ninguém mais vê. Os dados ficam no gateway (migrações 056 e 057), que precisa ser publicado antes do painel; sem a rota, a conversa continua funcionando e o menu avisa que o recurso não está disponível.
+
+Ao abrir, o histórico já fica nas mensagens mais recentes; se a pessoa subir para ler o passado, a posição é mantida e um atalho “Mensagens recentes” volta ao fim. No celular, a conversa ocupa a tela e há um voltar para a lista. Enter envia a mensagem e Shift+Enter quebra a linha. A lista e o detalhe mostram o atendimento atual (número, aberto, com humano ou encerrado, aberto em, encerrado em e motivo), o bloco de follow-up (agendado, cancelado ou ensaio, com horário de Brasília, tipo da pendência, motivo e “Cancelar este” na linha do agendado) e o selo “não quer follow-up” no contato, com Reativar só para admin e plataforma — a confirmação pede um motivo de pelo menos 3 caracteres, enviado no corpo do DELETE; depois, o contato mostra quem reativou e o motivo —, além do estado da conversa (encerrada, aguardando atendente, atendente ou bot), do canal com o nome cadastrado e do telefone legível. O histórico lista os atendimentos anteriores, com resumo, e as mensagens podem ser filtradas por atendimento. Admin e membro encerram o atendimento aberto ou reabrem só o último; se o gateway recusar (409), a tela explica e pede para atualizar. Nenhuma dessas ações envia mensagem ao cliente. Desde o PED1-c, o nome é o de exibição do gateway (cadastro > informado > perfil > telefone) com um selo discreto da origem; conversas de teste levam o selo "teste"; a última mensagem mostra autor e tipo; aparecem a unidade preferida e o pedido aberto, com atalho para o pedido. Filtros por estado (inclusive Encerrada) e ordem por atividade recente; a busca cobre os três nomes e o telefone. Qualquer papel usa "Editar nome" no cabeçalho para gravar o nome de cadastro (vazio apaga e volta ao próximo da prioridade); o gateway audita quem alterou. Os Pedidos mostram o mesmo nome da conversa. A tela pede o último evento confirmado (`GET /admin/v1/tenants/{tenant}/eventos/cursor`) antes de carregar a lista e usa esse `ultimo_id` como `desde` do polling.
 
 ## Comportamento do agente
 

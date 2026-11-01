@@ -1,3 +1,9 @@
+## [2026-11-01] — Conversas para operação, respostas rápidas, responsável e notas internas
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/Conversas.tsx`, `RespostasRapidas.tsx`, `AppShell.tsx`, `Gateway.tsx`, `src/lib/gateway/*`, `README.md`, `docker-compose.local.yml`
+- **Resumo das mudanças:** Tela de Conversas em tela cheia, com fila em abas, aba Minhas, responsável, transferência (a partir de supervisor), notas internas e respostas rápidas. Corrige funcionário sem acesso à tela: a conferência de agentes ocultos usava rotas que o papel não alcança e agora usa `leituraDeApoio`, cujo resultado não vai ao navegador. Ambiente local em Docker.
+- **Pendências / TODO:** publicar o gateway (migrações 056 e 057) antes do painel.
+
 ## [2026-11-01 00:58] — Menu completo no clone local (Super Admin)
 - **Autor:** Auto
 - **Objetivo:** Na máquina do Marco o menu vinha sem as opções (versão antiga / papel null).

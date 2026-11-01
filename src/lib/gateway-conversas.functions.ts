@@ -11,12 +11,15 @@ import {
   ordenarConversas,
   contarEsperasVisiveis,
   ESTADOS_CONVERSA,
+  LIMITE_NOTA,
   MOTIVO_NOME,
   validarNomeCadastro,
   type ContatoPainel,
   type Conversa,
   type EstadoConversa,
   type Eventos,
+  type NotaInterna,
+  type PessoaEquipe,
 } from "./gateway/conversas";
 
 const conversa = z.string().min(3).max(300);
@@ -30,6 +33,8 @@ export const listarConversas = createServerFn({ method: "POST" })
         agente: idRecurso.optional(),
         canal: idRecurso.optional(),
         aguardando: z.boolean().optional(),
+        minhas: z.boolean().optional(),
+        conversa: conversa.optional(),
         status: z.enum(["ativa", "pausada"]).optional(),
         estado: z.array(z.enum(ESTADOS)).min(1).max(4).optional(),
         ordem: z.enum(["id", "recentes"]).optional(),
@@ -145,6 +150,7 @@ export const atenderConversa = createServerFn({ method: "POST" })
         acao: z.enum(["assumir", "devolver", "mensagens"]),
         minutos: z.number().int().min(1).max(1440).optional(),
         texto: z.string().trim().min(1).max(20000).optional(),
+        transferir: z.boolean().optional(),
       })
       .superRefine((d, c) => {
         if (d.acao === "mensagens" && !d.texto)
@@ -166,13 +172,144 @@ export const atenderConversa = createServerFn({ method: "POST" })
               data.acao === "mensagens"
                 ? { texto: data.texto }
                 : data.acao === "assumir"
-                  ? { minutos: data.minutos ?? 60 }
+                  ? {
+                      minutos: data.minutos ?? 60,
+                      ...(data.transferir ? { transferir: true } : {}),
+                    }
                   : {},
           },
         )
       ).dados;
     });
   });
+/** Pessoas da empresa no painel. Empresa sem cliente ligado devolve lista vazia. */
+async function pessoasDaEmpresa(gatewayTenantId: string): Promise<PessoaEquipe[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: tenant } = await supabaseAdmin
+    .from("tenants")
+    .select("id")
+    .eq("gateway_tenant_id", gatewayTenantId)
+    .maybeSingle();
+  if (!tenant) return [];
+  const { data, error } = await supabaseAdmin
+    .from("tenant_users")
+    .select("email, full_name, ativo")
+    .eq("tenant_id", tenant.id);
+  if (error) throw new Error("Não foi possível carregar a equipe.");
+  return (data ?? [])
+    .filter((p) => p.ativo !== false && p.email)
+    .map((p) => ({ email: p.email as string, nome: p.full_name }));
+}
+
+export const listarEquipeConversas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      return { itens: await pessoasDaEmpresa(t.id) };
+    });
+  });
+
+/** Passa a conversa para um colega. O servidor confere que a pessoa é da empresa; o gateway, quem pode pedir. */
+export const atribuirConversa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, conversa, para: z.string().email().max(200) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      const alvo = data.para.toLowerCase();
+      const pessoa = (await pessoasDaEmpresa(t.id)).find((p) => p.email.toLowerCase() === alvo);
+      if (!pessoa) {
+        const { GatewayErro } = await import("./gateway/erros");
+        throw new GatewayErro({
+          codigo: "VALIDATION_ERROR",
+          status: 400,
+          mensagem: "Escolha uma pessoa ativa desta empresa.",
+        });
+      }
+      return (
+        await t.chamar<{ ok: boolean }>("POST", ["conversas", data.conversa, "atribuir"], {
+          corpo: { para: pessoa.email },
+        })
+      ).dados;
+    });
+  });
+
+const atendimentoDaNota = z
+  .string()
+  .regex(/^at_[a-z0-9]+$/)
+  .optional();
+
+export const listarNotas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, conversa, atendimento: atendimentoDaNota }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      try {
+        return (
+          await t.chamar<{ itens: NotaInterna[] }>("GET", ["conversas", data.conversa, "notas"], {
+            query: { atendimento: data.atendimento },
+          })
+        ).dados;
+      } catch (erro) {
+        // Gateway anterior às notas: a conversa segue funcionando.
+        const { GatewayErro } = await import("./gateway/erros");
+        if (erro instanceof GatewayErro && erro.status === 404) return { itens: [] };
+        throw erro;
+      }
+    });
+  });
+
+export const criarNota = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, conversa, texto: z.string().trim().min(1).max(LIMITE_NOTA) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      return (
+        await t.chamar<NotaInterna>("POST", ["conversas", data.conversa, "notas"], {
+          corpo: { texto: data.texto },
+        })
+      ).dados;
+    });
+  });
+
+export const apagarNota = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, conversa, nota: z.number().int().positive() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      return (
+        await t.chamar<{ ok: boolean }>("DELETE", [
+          "conversas",
+          data.conversa,
+          "notas",
+          String(data.nota),
+        ])
+      ).dados;
+    });
+  });
+
 /**
  * Nome de cadastro do contato da conversa (PED1-c). Qualquer papel; o gateway audita pelo X-Actor.
  * Vazio vira null: apaga o cadastro e volta a valer o próximo nome da prioridade.

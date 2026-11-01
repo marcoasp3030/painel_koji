@@ -108,6 +108,7 @@ export function PaginaGateway({
   semEmpresa = false,
   empresaFixa = null,
   semCabecalho = false,
+  telaCheia = false,
   children,
 }: {
   sobretitulo?: string;
@@ -120,6 +121,8 @@ export function PaginaGateway({
   empresaFixa?: string | null;
   /** A própria tela desenha o cabeçalho (ex.: nome do agente). */
   semCabecalho?: boolean;
+  /** Ocupa toda a altura da janela, sem margens, para telas de operação. O seletor vira uma linha. */
+  telaCheia?: boolean;
   children: (ctx: ContextoGateway) => React.ReactNode;
 }) {
   const acesso = useAcessoGateway();
@@ -147,6 +150,8 @@ export function PaginaGateway({
   }, [plataforma, empresaFixa]);
 
   let conteudo: React.ReactNode;
+  // Avisos e estados vazios mantêm a margem; a área de trabalho ocupa a tela inteira.
+  let areaCheia = false;
   if (acesso.isLoading || (me.isLoading && !acesso.data?.papel)) {
     conteudo = <p className="mt-8 text-ink-500">Carregando…</p>;
   } else if (!papel) {
@@ -171,13 +176,28 @@ export function PaginaGateway({
       </Cartao>
     );
   } else if (plataforma && empresaFixa) {
+    areaCheia = true;
     conteudo = children({ papel, empresa: empresaFixa });
   } else if (plataforma && !semEmpresa) {
+    areaCheia = true;
+    const avisoComMargem = telaCheia ? "m-4" : "mt-6";
     conteudo = (
       <>
-        <div className="mt-6 flex flex-wrap items-end gap-3">
-          <div className="w-full max-w-xs space-y-2">
-            <Label htmlFor="empresa-gateway">Empresa</Label>
+        <div
+          className={
+            telaCheia
+              ? "flex shrink-0 items-center gap-2 border-b border-base-200 bg-base-50 px-3 py-1.5"
+              : "mt-6 flex flex-wrap items-end gap-3"
+          }
+        >
+          <div
+            className={
+              telaCheia ? "flex w-full max-w-sm items-center gap-2" : "w-full max-w-xs space-y-2"
+            }
+          >
+            <Label htmlFor="empresa-gateway" className={telaCheia ? "text-xs text-ink-500" : ""}>
+              Empresa
+            </Label>
             <Select
               value={escolha.empresa ?? ""}
               onValueChange={(v) => {
@@ -186,7 +206,10 @@ export function PaginaGateway({
               }}
               disabled={escolha.carregando || escolha.empresas.length === 0}
             >
-              <SelectTrigger id="empresa-gateway" className="bg-card">
+              <SelectTrigger
+                id="empresa-gateway"
+                className={telaCheia ? "h-8 bg-card text-xs" : "bg-card"}
+              >
                 <SelectValue
                   placeholder={escolha.carregando ? "Carregando…" : "Escolha a empresa"}
                 />
@@ -203,19 +226,20 @@ export function PaginaGateway({
           </div>
         </div>
         {escolha.erro ? (
-          <Cartao className="mt-6">
+          <Cartao className={avisoComMargem}>
             <EstadoVazio titulo="Não foi possível carregar as empresas" texto={escolha.erro} />
           </Cartao>
         ) : escolha.empresa ? (
           children({ papel, empresa: escolha.empresa })
         ) : escolha.carregando ? null : (
-          <Cartao className="mt-6">
+          <Cartao className={avisoComMargem}>
             <EstadoVazio titulo="Nenhuma empresa" texto="Cadastre uma empresa na tela Empresas." />
           </Cartao>
         )}
       </>
     );
   } else {
+    areaCheia = true;
     conteudo = children({ papel, empresa: null });
   }
 
@@ -223,15 +247,18 @@ export function PaginaGateway({
     <AppShell
       nav={plataforma ? ADMIN_NAV : TENANT_NAV}
       context={plataforma ? "Super Admin" : "Empresa"}
+      telaCheia={telaCheia}
     >
-      {semCabecalho && papel && papeis.includes(papel) ? null : (
+      {telaCheia ? (
+        <h1 className="sr-only">{titulo}</h1>
+      ) : semCabecalho && papel && papeis.includes(papel) ? null : (
         <CabecalhoPagina
           sobretitulo={sobretitulo}
           titulo={titulo}
           {...(descricao ? { descricao } : {})}
         />
       )}
-      {conteudo}
+      {telaCheia && !areaCheia ? <div className="px-4 pb-4">{conteudo}</div> : conteudo}
     </AppShell>
   );
 }

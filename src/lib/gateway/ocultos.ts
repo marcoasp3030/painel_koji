@@ -3,7 +3,6 @@
  * da empresa: some das listas e o acesso direto responde "não encontrado".
  * O admin da plataforma vê tudo. Nada é apagado nem pausado.
  */
-import type { MetodoGateway } from "./cliente.server";
 import { GatewayErro } from "./erros";
 import type { PapelGateway } from "./tipos";
 
@@ -15,10 +14,9 @@ export function ehAgenteDeTeste(nome: string | null | undefined) {
 
 type Escopo = {
   papel: PapelGateway;
-  chamar<T = unknown>(
-    metodo: MetodoGateway,
-    partes?: string[],
-    opcoes?: object,
+  leituraDeApoio<T = unknown>(
+    partes: ["agentes"] | ["agentes", string] | ["canais", string],
+    opcoes?: { query?: object },
   ): Promise<{ dados: T }>;
 };
 
@@ -47,7 +45,7 @@ export async function agentesOcultos(t: Escopo): Promise<Set<string>> {
     const {
       dados,
     }: { dados: { itens: { id: string; nome: string }[]; proximo_cursor?: string | null } } =
-      await t.chamar("GET", ["agentes"], {
+      await t.leituraDeApoio(["agentes"], {
         query: { limite: 99, cursor },
       });
     for (const a of dados.itens) if (ehAgenteDeTeste(a.nome)) ocultos.add(a.id);
@@ -61,7 +59,7 @@ export async function agentesOcultos(t: Escopo): Promise<Set<string>> {
 /** Para quem é da empresa, agente de teste "não existe". */
 export async function exigirAgenteVisivel(t: Escopo, agenteId: string) {
   if (t.papel === "plataforma") return;
-  const { dados } = await t.chamar<{ nome: string }>("GET", ["agentes", agenteId]);
+  const { dados } = await t.leituraDeApoio<{ nome: string }>(["agentes", agenteId]);
   if (ehAgenteDeTeste(dados.nome)) throw naoEncontrado();
 }
 
@@ -70,6 +68,6 @@ export async function exigirConversaVisivel(t: Escopo, conversa: string) {
   if (t.papel === "plataforma") return;
   const canal = conversa.split(":")[1];
   if (!canal) return;
-  const { dados } = await t.chamar<{ agente_id: string | null }>("GET", ["canais", canal]);
+  const { dados } = await t.leituraDeApoio<{ agente_id: string | null }>(["canais", canal]);
   if (dados.agente_id && (await agentesOcultos(t)).has(dados.agente_id)) throw naoEncontrado();
 }

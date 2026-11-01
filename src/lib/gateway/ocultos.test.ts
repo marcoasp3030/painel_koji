@@ -25,7 +25,7 @@ function escopo(papel: PapelGateway) {
   return {
     chamadas,
     papel,
-    async chamar<T>(_metodo: string, partes: string[] = []) {
+    async leituraDeApoio<T>(partes: string[] = []) {
       chamadas.push(partes.join("/"));
       if (partes.length === 1 && partes[0] === "agentes") return { dados: { itens: AGENTES } as T };
       if (partes[0] === "agentes") return { dados: AGENTES.find((a) => a.id === partes[1]) as T };
@@ -61,7 +61,9 @@ describe("agentes de teste escondidos da empresa", () => {
   test("acesso direto ao agente de teste responde não encontrado para a empresa", async () => {
     for (const papel of ["gestor", "funcionario"] as const) {
       expect(await naoEncontrado(exigirAgenteVisivel(escopo(papel), "ag_bench"))).toBe(true);
-      expect(await naoEncontrado(exigirAgenteVisivel(escopo(papel), "bykoji_atendimento"))).toBe(false);
+      expect(await naoEncontrado(exigirAgenteVisivel(escopo(papel), "bykoji_atendimento"))).toBe(
+        false,
+      );
     }
     const p = escopo("plataforma");
     expect(await naoEncontrado(exigirAgenteVisivel(p, "ag_bench"))).toBe(false);
@@ -69,8 +71,14 @@ describe("agentes de teste escondidos da empresa", () => {
   });
 
   test("histórico de conversa de canal de agente de teste também some", async () => {
-    expect(await naoEncontrado(exigirConversaVisivel(escopo("gestor"), "bykoji:can_bench:marco"))).toBe(true);
-    expect(await naoEncontrado(exigirConversaVisivel(escopo("gestor"), "bykoji:can_real:marco"))).toBe(false);
-    expect(await naoEncontrado(exigirConversaVisivel(escopo("plataforma"), "bykoji:can_bench:marco"))).toBe(false);
+    expect(
+      await naoEncontrado(exigirConversaVisivel(escopo("gestor"), "bykoji:can_bench:marco")),
+    ).toBe(true);
+    expect(
+      await naoEncontrado(exigirConversaVisivel(escopo("gestor"), "bykoji:can_real:marco")),
+    ).toBe(false);
+    expect(
+      await naoEncontrado(exigirConversaVisivel(escopo("plataforma"), "bykoji:can_bench:marco")),
+    ).toBe(false);
   });
 });

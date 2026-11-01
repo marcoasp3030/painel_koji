@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { criarClienteGateway, lerTentarApos, type MetodoGateway } from "./cliente.server";
 import { GatewayErro } from "./erros";
-import { AcessoNegado, criarModuloGateway, type PerfilGateway } from "./modulo.server";
+import { AcessoNegado, autorizar, criarModuloGateway, type PerfilGateway } from "./modulo.server";
+import { agentesOcultos, exigirConversaVisivel } from "./ocultos";
 
 const CHAVE = "chave-de-teste-nao-usar-0123456789";
 const CHAVE_PLATAFORMA = "chave-plataforma-teste-nao-usar-9876543210";
@@ -585,8 +586,12 @@ describe("cliente HTTP", () => {
         { status: 429, headers: { "Retry-After": "30" } },
       ),
     ]);
-    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE,
-      chavePlataforma: CHAVE, fetch: rede.fn });
+    const cliente = criarClienteGateway({
+      url: URL_BASE,
+      chave: CHAVE,
+      chavePlataforma: CHAVE,
+      fetch: rede.fn,
+    });
     const erro = (await cliente
       .requisitar({ metodo: "GET", caminho: ["tenants"], ator: "a", papel: "plataforma" })
       .catch((e) => e)) as GatewayErro;
@@ -606,12 +611,11 @@ describe("cliente HTTP", () => {
       throw new Error(`falha com ${CHAVE}`);
     }) as unknown as typeof fetch;
     const clientes = [
-      criarClienteGateway({ url: URL_BASE, chave: CHAVE,
-      chavePlataforma: CHAVE, fetch: quebrado }),
+      criarClienteGateway({ url: URL_BASE, chave: CHAVE, chavePlataforma: CHAVE, fetch: quebrado }),
       criarClienteGateway({
         url: URL_BASE,
         chave: CHAVE,
-      chavePlataforma: CHAVE,
+        chavePlataforma: CHAVE,
         fetch: fetchFalso([
           new Response("erro", { status: 500 }),
           new Response("", { status: 401 }),
@@ -635,8 +639,12 @@ describe("cliente HTTP", () => {
 
   test("documento do simulador sai como multipart, sem JSON", async () => {
     const rede = fetchFalso([Response.json({ anexo_id: "anx_1", estado: "processando" })]);
-    const cliente = criarClienteGateway({ url: URL_BASE, chave: CHAVE,
-      chavePlataforma: CHAVE, fetch: rede.fn });
+    const cliente = criarClienteGateway({
+      url: URL_BASE,
+      chave: CHAVE,
+      chavePlataforma: CHAVE,
+      fetch: rede.fn,
+    });
     await cliente.requisitar({
       metodo: "POST",
       caminho: ["tenants", "bykoji", "agentes", "ag_1", "simular-documento"],
@@ -676,10 +684,17 @@ describe("cliente HTTP", () => {
       avisar: (mensagem) => avisos.push(mensagem),
       avisoChave: memoria,
     });
-    const req = { metodo: "GET" as const, caminho: ["tenants"], ator: "a", papel: "plataforma" as const };
+    const req = {
+      metodo: "GET" as const,
+      caminho: ["tenants"],
+      ator: "a",
+      papel: "plataforma" as const,
+    };
     await cliente.requisitar(req);
     await cliente.requisitar(req);
-    const bearer = rede.chamadas.map((c) => (c.init.headers as Record<string, string>)["Authorization"]);
+    const bearer = rede.chamadas.map(
+      (c) => (c.init.headers as Record<string, string>)["Authorization"],
+    );
     expect(bearer).toEqual([`Bearer ${CHAVE}`, `Bearer ${CHAVE}`]);
     expect(avisos).toHaveLength(1);
     expect(avisos[0]).toContain("GATEWAY_PLATFORM_KEY");
@@ -721,5 +736,58 @@ describe("cliente HTTP", () => {
       `Bearer ${CHAVE_PLATAFORMA}`,
     );
     expect(avisos).toHaveLength(0);
+  });
+});
+
+describe("conferência de agentes ocultos", () => {
+  test("funcionário passa pela conferência, sem ganhar acesso direto a agentes e canais", async () => {
+    const { modulo, rede } = montar([
+      Response.json({ itens: [{ id: "a", nome: "[teste] oculto" }], proximo_cursor: null }),
+      Response.json({ agente_id: "a" }),
+      Response.json({ itens: [{ id: "a", nome: "[teste] oculto" }], proximo_cursor: null }),
+    ]);
+    const sessao = await modulo.sessao({ userId: "membroA", email: null });
+    const t = await sessao.tenant();
+    expect(await agentesOcultos(t)).toEqual(new Set(["a"]));
+    await expect(exigirConversaVisivel(t, `${t.id}:canal:contato`)).rejects.toBeInstanceOf(
+      GatewayErro,
+    );
+    expect(rede.chamadas).toHaveLength(3);
+    await expect(t.chamar("GET", ["agentes"])).rejects.toBeInstanceOf(AcessoNegado);
+    expect(rede.chamadas).toHaveLength(3);
+  });
+});
+
+describe("rotas do atendimento alcançam quem atende", () => {
+  // A lista do painel nega por padrão: rota esquecida aqui só apareceria para quem não é plataforma.
+  const ROTAS: [MetodoGateway, string[], unknown][] = [
+    ["GET", ["respostas-rapidas"], undefined],
+    ["POST", ["respostas-rapidas"], { atalho: "a", texto: "b", escopo: "pessoal" }],
+    ["PATCH", ["respostas-rapidas", "1"], { atalho: "a", texto: "b" }],
+    ["DELETE", ["respostas-rapidas", "1"], undefined],
+    ["POST", ["respostas-rapidas", "1", "uso"], undefined],
+    ["GET", ["conversas", "c", "notas"], undefined],
+    ["POST", ["conversas", "c", "notas"], { texto: "x" }],
+    ["DELETE", ["conversas", "c", "notas", "1"], undefined],
+  ];
+  for (const papel of ["funcionario", "supervisor", "gestor"] as const) {
+    test(papel, () => {
+      for (const [metodo, partes, corpo] of ROTAS) autorizar(papel, metodo, partes, corpo);
+    });
+  }
+  test("transferir para um colega fica a partir de supervisor", () => {
+    const corpo = { para: "a@b.test" };
+    autorizar("supervisor", "POST", ["conversas", "c", "atribuir"], corpo);
+    expect(() => autorizar("funcionario", "POST", ["conversas", "c", "atribuir"], corpo)).toThrow(
+      AcessoNegado,
+    );
+  });
+  test("campo a mais no corpo é recusado", () => {
+    expect(() =>
+      autorizar("funcionario", "POST", ["respostas-rapidas"], { atalho: "a", dono: "outra" }),
+    ).toThrow(AcessoNegado);
+    expect(() =>
+      autorizar("funcionario", "POST", ["conversas", "c", "notas"], { autor: "x" }),
+    ).toThrow(AcessoNegado);
   });
 });

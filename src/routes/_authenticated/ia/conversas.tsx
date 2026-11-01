@@ -26,6 +26,7 @@ function PaginaConversas() {
       titulo="Conversas"
       descricao="Acompanhe as mensagens e assuma o atendimento quando precisar."
       papeis={["plataforma", "gestor", "supervisor", "funcionario"]}
+      telaCheia
     >
       {(ctx) => (
         <Conversas

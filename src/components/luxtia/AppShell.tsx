@@ -63,10 +63,13 @@ function itemAtivo(caminho: string, destino: string) {
 export function AppShell({
   nav,
   context,
+  telaCheia = false,
   children,
 }: {
   nav: ItemMenu[];
   context: string;
+  /** A tela ocupa a altura da janela e cuida da própria rolagem. */
+  telaCheia?: boolean;
   children: React.ReactNode;
 }) {
   const navigate = useNavigate();
@@ -187,7 +190,9 @@ export function AppShell({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="min-h-screen bg-base-100 lg:flex">
+      <div
+        className={`bg-base-100 ${telaCheia ? "flex h-dvh flex-col overflow-hidden lg:flex-row" : "min-h-screen lg:flex"}`}
+      >
         {menuAberto ? (
           <button
             type="button"
@@ -305,8 +310,8 @@ export function AppShell({
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-base-200 bg-base-50/90 h-14 px-4 backdrop-blur sm:px-6">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-base-200 bg-base-50/90 h-14 shrink-0 px-4 backdrop-blur sm:px-6">
             <button
               type="button"
               className="rounded-lg border border-base-200 bg-card p-2 text-purple-800 lg:hidden"
@@ -377,7 +382,13 @@ export function AppShell({
               </button>
             </div>
           ) : null}
-          <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:py-6">
+          <main
+            className={
+              telaCheia
+                ? "flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+                : "w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:py-6"
+            }
+          >
             {seguranca.data?.bloqueado ? (
               <AtivarSegundaEtapa onPronta={() => void seguranca.refetch()} />
             ) : (

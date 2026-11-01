@@ -57,6 +57,10 @@ export type Conversa = {
   pedido_aberto?: { numero: string; status: string } | null;
   /** FUP1-a: presente quando há follow-up agendado. */
   follow_up?: { estado: string; previsto_em: string | null } | null;
+  /** Responsável humano, só enquanto vale. Opcionais para tolerar um gateway anterior. */
+  atribuida_a?: string | null;
+  atribuida_em?: string | null;
+  atribuida_minha?: boolean;
   status: "ativa" | "pausada";
   bot_pausado_ate: string | null;
   ultima_mensagem: string | null;
@@ -262,6 +266,37 @@ export function seloEspera(desde: string, agora = Date.now()) {
   const minutos = Math.max(0, Math.floor((agora - Date.parse(desde)) / 60000));
   return `Aguardando atendente há ${Number.isFinite(minutos) ? minutos : 0} min`;
 }
+/** Tempo de espera curto para a linha da lista: "agora", "12 min", "2 h 5 min", "1 d 3 h". */
+export function esperaCurta(desde: string, agora = Date.now()) {
+  const instante = Date.parse(desde);
+  if (!Number.isFinite(instante)) return "";
+  const minutos = Math.max(0, Math.floor((agora - instante) / 60000));
+  if (minutos < 1) return "agora";
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return minutos % 60 ? `${horas} h ${minutos % 60} min` : `${horas} h`;
+  return horas % 24 ? `${Math.floor(horas / 24)} d ${horas % 24} h` : `${Math.floor(horas / 24)} d`;
+}
+export type UrgenciaEspera = "normal" | "atencao" | "critica";
+/** Cor da espera na fila: até 5 min normal, até 15 min atenção, depois crítica. */
+export function urgenciaEspera(desde: string, agora = Date.now()): UrgenciaEspera {
+  const instante = Date.parse(desde);
+  if (!Number.isFinite(instante)) return "normal";
+  const minutos = (agora - instante) / 60000;
+  if (minutos >= 15) return "critica";
+  return minutos >= 5 ? "atencao" : "normal";
+}
+/** Conversa acima (-1) ou abaixo (+1) da aberta. Sem nenhuma aberta, a primeira da lista. */
+export function vizinhaNaLista(itens: Conversa[], atual: string | null | undefined, passo: 1 | -1) {
+  if (!itens.length) return null;
+  const indice = itens.findIndex((c) => c.conversation_id === atual);
+  if (indice < 0) return itens[0] ?? null;
+  return itens[indice + passo] ?? null;
+}
+/** Quem aguarda há mais tempo, fora a conversa aberta. Depende da ordem de `ordenarConversas`. */
+export function proximaDaFila(itens: Conversa[], atual: string | null | undefined) {
+  return itens.find((c) => c.aguardando_atendente_desde && c.conversation_id !== atual) ?? null;
+}
 /**
  * Fila de espera primeiro (mais antiga no topo). O resto por atividade recente ou,
  * com `porRecencia: false`, na ordem em que o gateway devolveu.
@@ -303,4 +338,53 @@ export async function contarEsperasVisiveis(
     }
   }
   return total;
+}
+
+export type PessoaEquipe = { email: string; nome: string | null };
+export type NotaInterna = {
+  id: number;
+  texto: string;
+  autor: string;
+  atendimento_id: string | null;
+  criado_em: string;
+  minha: boolean;
+  apagavel: boolean;
+};
+export const LIMITE_NOTA = 2000;
+
+/** Nome curto da pessoa: primeiro nome do cadastro, senão o começo do e-mail. */
+export function rotuloPessoa(email: string, equipe: PessoaEquipe[] = []) {
+  const alvo = email.toLowerCase();
+  const nome = equipe.find((p) => p.email.toLowerCase() === alvo)?.nome?.trim();
+  return (nome ? nome.split(/\s+/)[0] : email.split("@")[0]) || email;
+}
+
+export type ItemLinhaDoTempo<M> =
+  | { tipo: "mensagem"; mensagem: M; em: string | null }
+  | { tipo: "nota"; nota: NotaInterna; em: string };
+
+/**
+ * Mensagens e notas em ordem de tempo. Com mensagens mais antigas por carregar, a nota anterior à
+ * primeira carregada fica de fora: ela apareceria fora do lugar, no topo do histórico.
+ */
+export function linhaDoTempo<M extends { id: number; enviada_em: string | null }>(
+  mensagens: M[],
+  notas: NotaInterna[],
+  { temMais = false } = {},
+): ItemLinhaDoTempo<M>[] {
+  const inicio = Date.parse(mensagens[0]?.enviada_em ?? "");
+  const itens: { item: ItemLinhaDoTempo<M>; quando: number }[] = mensagens.map((m, i) => ({
+    item: { tipo: "mensagem", mensagem: m, em: m.enviada_em },
+    // Mensagem sem data mantém o lugar da anterior.
+    quando: Date.parse(m.enviada_em ?? "") || Date.parse(mensagens[i - 1]?.enviada_em ?? "") || 0,
+  }));
+  for (const n of notas) {
+    const quando = Date.parse(n.criado_em);
+    if (temMais && quando < inicio) continue;
+    itens.push({ item: { tipo: "nota", nota: n, em: n.criado_em }, quando });
+  }
+  return itens
+    .map((x, ordem) => ({ ...x, ordem }))
+    .sort((a, b) => a.quando - b.quando || a.ordem - b.ordem)
+    .map((x) => x.item);
 }

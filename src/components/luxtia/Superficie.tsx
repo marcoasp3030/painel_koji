@@ -62,7 +62,7 @@ export function EstadoVazio({ titulo, texto }: { titulo: string; texto: string }
   );
 }
 
-export function Iniciais({ nome }: { nome: string }) {
+export function Iniciais({ nome, className = "size-9" }: { nome: string; className?: string }) {
   const letras = nome
     .trim()
     .split(/\s+/)
@@ -71,7 +71,9 @@ export function Iniciais({ nome }: { nome: string }) {
     .join("");
 
   return (
-    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700 ${className}`}
+    >
       {letras || "·"}
     </span>
   );
