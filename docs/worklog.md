@@ -1,4 +1,19 @@
+## [2026-10-31 21:20] — Correção salvar MFA desativado
+- **Autor:** Auto
+- **Objetivo:** “Não foi possível salvar a configuração” ao desativar MFA.
+- **Arquivos alterados:**
+ - `src/lib/plataforma-config.functions.ts` — modificado — update+insert; mensagem com causa
+ - `supabase/migrations/20261031220000_config_plataforma.sql` — modificado — NOTIFY pgrst
+ - `docs/worklog.md` — modificado — registro
+- **Resumo das mudanças:** A tabela nova não estava no schema cache do PostgREST; o upsert falhava. Schema recarregado (`NOTIFY` + restart api-rest). Gravação usa UPDATE da linha 1.
+- **Decisões e justificativas:** Erro genérico escondia PGRST205; agora loga e descreve.
+- **Comandos executados:** `NOTIFY pgrst`; restart api-rest → OK. PATCH via service_role → 200.
+- **Erros e resoluções:** schema cache → reload.
+- **Pendências / TODO:** publicar correção da mensagem/update
+- **Próximos passos:** tentar desativar de novo após publicar
+
 ## [2026-10-31 21:15] — Configurações Super Admin + desligar MFA
+
 - **Autor:** Auto
 - **Objetivo:** Menu Configurações só para Super Admin, com opção de desativar MFA em tudo.
 - **Arquivos alterados:**

@@ -41,13 +41,35 @@ export const definirMfaDesativado = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const supabaseAdmin = await exigirSuperAdmin(context);
     const agora = new Date().toISOString();
-    const { error } = await supabaseAdmin.from("config_plataforma").upsert({
-      id: 1,
+    const patch = {
       mfa_desativado: data.desativado,
       atualizado_em: agora,
       atualizado_por: context.userId,
-    });
-    if (error) throw new Error("Não foi possível salvar a configuração.");
+    };
+    // Update da linha única; se ainda não existir, cria.
+    let { data: row, error } = await supabaseAdmin
+      .from("config_plataforma")
+      .update(patch)
+      .eq("id", 1)
+      .select("mfa_desativado")
+      .maybeSingle();
+    if (!error && !row) {
+      const ins = await supabaseAdmin
+        .from("config_plataforma")
+        .insert({ id: 1, ...patch })
+        .select("mfa_desativado")
+        .maybeSingle();
+      row = ins.data;
+      error = ins.error;
+    }
+    if (error) {
+      console.error("[config] falha ao gravar mfa_desativado:", error.message, error.code);
+      throw new Error(
+        error.code === "PGRST205" || /schema cache|does not exist/i.test(error.message)
+          ? "A configuração ainda não está disponível no banco. Peça para recarregar a API (PostgREST) e tente de novo."
+          : `Não foi possível salvar a configuração. (${error.message})`,
+      );
+    }
 
     // Com MFA desligado em tudo, zera a flag por empresa para não reaparecer depois.
     if (data.desativado) {

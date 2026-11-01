@@ -17,3 +17,6 @@ ON CONFLICT (id) DO NOTHING;
 GRANT ALL ON public.config_plataforma TO service_role;
 ALTER TABLE public.config_plataforma ENABLE ROW LEVEL SECURITY;
 -- Sem políticas para authenticated: só service_role.
+
+-- PostgREST precisa recarregar o schema após criar a tabela.
+NOTIFY pgrst, 'reload schema';
