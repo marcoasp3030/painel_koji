@@ -14,7 +14,8 @@ export type IconeMenu =
   | "simular"
   | "conversas"
   | "pedidos"
-  | "modelos";
+  | "modelos"
+  | "configuracoes";
 
 export type ItemMenu = {
   to: string;
@@ -250,6 +251,12 @@ export const ADMIN_NAV: ItemMenu[] = [
     grupo: "Operação",
     icone: "equipe",
     papeis: ["plataforma"],
+  },
+  {
+    to: "/admin/configuracoes",
+    label: "Configurações",
+    grupo: "Operação",
+    icone: "configuracoes",
   },
   ...AGENTES_PLATAFORMA,
 ];

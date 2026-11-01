@@ -103,6 +103,34 @@ describe("MFA1 regras", () => {
     expect(d.exigeAal2).toBe(false);
   });
 
+  test("mfa desativado na plataforma zera obrigação e aal2", () => {
+    const d = decidirMfa1({
+      papel: "plataforma",
+      email: "admin@luxtia.local",
+      emergenciaMarcada: true,
+      fatores: 1,
+      mfaEmpresa: true,
+      prazoAte: null,
+      agora,
+      obrigatorioGlobal: true,
+      mfaDesativado: true,
+    });
+    expect(d.obrigatorio).toBe(false);
+    expect(d.bloqueado).toBe(false);
+    expect(d.exigeAal2).toBe(false);
+    expect(
+      exigeAal2({
+        papel: "plataforma",
+        emergencia: true,
+        mfaEmpresa: true,
+        obrigatorioGlobal: true,
+        fatores: 2,
+        bloqueado: true,
+        mfaDesativado: true,
+      }),
+    ).toBe(false);
+  });
+
   test("step-up e bloqueio por falhas", () => {
     expect(stepUpValido(new Date(agora.getTime() + 60_000).toISOString(), agora)).toBe(true);
     expect(stepUpValido(new Date(agora.getTime() - 1000).toISOString(), agora)).toBe(false);

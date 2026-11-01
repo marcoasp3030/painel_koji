@@ -1,4 +1,21 @@
+## [2026-10-31 21:15] — Configurações Super Admin + desligar MFA
+- **Autor:** Auto
+- **Objetivo:** Menu Configurações só para Super Admin, com opção de desativar MFA em tudo.
+- **Arquivos alterados:**
+ - `supabase/migrations/20261031220000_config_plataforma.sql` — criado — `config_plataforma.mfa_desativado`
+ - `src/lib/plataforma-config.functions.ts` — criado — ler/gravar (só super admin na gravação)
+ - `src/routes/_authenticated/admin/configuracoes.tsx` — criado — tela
+ - `src/lib/nav.ts`, `AppShell.tsx`, `mfa.ts`, `mfa.server.ts`, `index.tsx` — modificados — menu, regras e login
+ - `types.ts`, `instrucoes.md`, `docs/worklog.md` — modificados — tipos e registro
+- **Resumo das mudanças:** Interruptor global desliga obrigação, aal2, step-up e o desafio MFA no login. Fatores cadastrados permanecem. Ao desligar, zera `tenants.mfa_obrigatorio`.
+- **Decisões e justificativas:** Persistido no banco (não só env) para o Super Admin alterar sem redeploy. Confirmação antes de desligar.
+- **Comandos executados:** migracoes / testes / publicar → (em seguida).
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh; Configurações → Desativar MFA em tudo
+
 ## [2026-10-31 21:05] — Super admin: seletor de empresas vazio
+
 - **Autor:** Auto
 - **Objetivo:** Em Simular conversa (e telas com empresa) o seletor não habilitava empresas para o super admin.
 - **Arquivos alterados:**

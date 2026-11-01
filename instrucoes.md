@@ -1,4 +1,11 @@
+## Configurações Super Admin + MFA global (31/10/2026)
+
+- Menu **Configurações** (`/admin/configuracoes`), só Super Admin.
+- Interruptor **Desativar MFA em tudo**: desliga obrigação, aal2, step-up e o código no login em toda a plataforma. Não apaga fatores já cadastrados. Ao desligar, limpa `mfa_obrigatorio` das empresas.
+- Tabela `config_plataforma` (migração `20261031220000`).
+
 ## Correção seletor de empresas (31/10/2026)
+
 
 - Super admin via Simular (e outras telas) com seletor de empresas vazio: sem fator MFA o servidor pedia aal2 impossível e `listarEmpresasGateway` falhava.
 - Sem fator verified, aal2 não é mais exigido nas funções de negócio. Com fator, continua obrigatório. Cadastre a segunda etapa na conta de emergência quando puder.

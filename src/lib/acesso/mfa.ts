@@ -36,7 +36,10 @@ export function papelExigeMfa(entrada: {
   emergencia: boolean;
   mfaEmpresa: boolean;
   obrigatorioGlobal: boolean;
+  /** Interruptor global do Super Admin: desliga obrigação em tudo. */
+  mfaDesativado?: boolean;
 }) {
+  if (entrada.mfaDesativado) return false;
   if (entrada.emergencia) return true;
   if (!entrada.obrigatorioGlobal) {
     // Antes do cutover: só plataforma (e emergência) como hoje.
@@ -66,7 +69,9 @@ export function exigeAal2(entrada: {
   obrigatorioGlobal: boolean;
   fatores: number;
   bloqueado: boolean;
+  mfaDesativado?: boolean;
 }) {
+  if (entrada.mfaDesativado) return false;
   void entrada.papel;
   void entrada.emergencia;
   void entrada.mfaEmpresa;
@@ -85,13 +90,24 @@ export function decidirMfa1(entrada: {
   prazoAte: string | null;
   agora: Date;
   obrigatorioGlobal: boolean;
+  mfaDesativado?: boolean;
 }): DecisaoSegundaEtapa & { exigeAal2: boolean } {
+  if (entrada.mfaDesativado) {
+    return {
+      obrigatorio: false,
+      bloqueado: false,
+      prazo_ate: null,
+      gravarPrazo: null,
+      exigeAal2: false,
+    };
+  }
   const emergencia = contaEmergencia(entrada.email, entrada.emergenciaMarcada);
   const obrigado = papelExigeMfa({
     papel: entrada.papel,
     emergencia,
     mfaEmpresa: entrada.mfaEmpresa,
     obrigatorioGlobal: entrada.obrigatorioGlobal,
+    mfaDesativado: false,
   });
 
   if (!obrigado) {
@@ -102,6 +118,7 @@ export function decidirMfa1(entrada: {
       obrigatorioGlobal: entrada.obrigatorioGlobal,
       fatores: entrada.fatores,
       bloqueado: false,
+      mfaDesativado: false,
     });
     return {
       obrigatorio: false,
@@ -126,6 +143,7 @@ export function decidirMfa1(entrada: {
         obrigatorioGlobal: entrada.obrigatorioGlobal,
         fatores: entrada.fatores,
         bloqueado,
+        mfaDesativado: false,
       }),
     };
   }
@@ -147,6 +165,7 @@ export function decidirMfa1(entrada: {
       obrigatorioGlobal: entrada.obrigatorioGlobal,
       fatores: entrada.fatores,
       bloqueado: legado.bloqueado,
+      mfaDesativado: false,
     }),
   };
 }

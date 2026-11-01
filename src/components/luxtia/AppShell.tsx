@@ -17,6 +17,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   Users,
   X,
   type LucideIcon,
@@ -50,6 +51,7 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   conversas: MessagesSquare,
   pedidos: ClipboardList,
   modelos: Layers,
+  configuracoes: Settings,
 };
 
 const CHAVE_EMPRESA = "luxtia:gateway-empresa";

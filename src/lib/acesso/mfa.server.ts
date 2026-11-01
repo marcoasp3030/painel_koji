@@ -35,6 +35,16 @@ export function hashCodigoMfa(codigo: string) {
   return createHash("sha256").update(normalizarCodigo(codigo)).digest("hex");
 }
 
+/** Interruptor global (Super Admin): MFA desligado em toda a plataforma. */
+export async function mfaDesativadoNaPlataforma() {
+  const { data } = await supabaseAdmin
+    .from("config_plataforma")
+    .select("mfa_desativado")
+    .eq("id", 1)
+    .maybeSingle();
+  return Boolean(data?.mfa_desativado);
+}
+
 export function hashesIguaisMfa(a: string, b: string) {
   const aa = Buffer.from(a);
   const bb = Buffer.from(b);
@@ -204,6 +214,9 @@ export async function exigirAalDaSessao(entrada: {
     entrada.superAdmin,
     entrada.gatewayTenantId ?? null,
   );
+  if (await mfaDesativadoNaPlataforma()) {
+    return { fatores, papel, conta };
+  }
   const mfaEmpresa = await mfaEmpresaDoTenant(entrada.gatewayTenantId ?? null);
   const emergencia = contaEmergencia(entrada.email, Boolean(conta?.emergencia));
   const decisao = decidirMfa1({
@@ -215,6 +228,7 @@ export async function exigirAalDaSessao(entrada: {
     prazoAte: conta?.prazo_ate ?? null,
     agora,
     obrigatorioGlobal: mfa1ObrigatorioLigado(),
+    mfaDesativado: false,
   });
   const precisa = exigeAal2({
     papel,
@@ -223,6 +237,7 @@ export async function exigirAalDaSessao(entrada: {
     obrigatorioGlobal: mfa1ObrigatorioLigado(),
     fatores,
     bloqueado: decisao.bloqueado,
+    mfaDesativado: false,
   });
   if (!precisa) return { fatores, papel, conta };
   let elevada =
@@ -258,6 +273,7 @@ export async function exigirStepUp(entrada: {
   email: string | null;
   acao: AcaoStepUp;
 }) {
+  if (await mfaDesativadoNaPlataforma()) return;
   const conta = await lerContaSeguranca(entrada.userId);
   if (!stepUpValido(conta?.step_up_ate, new Date())) {
     throw new MfaErro(
@@ -303,6 +319,7 @@ export async function estadoMfaCompleto(entrada: {
     entrada.gatewayTenantId,
   );
   const mfaEmpresa = await mfaEmpresaDoTenant(entrada.gatewayTenantId);
+  const mfaDesativado = await mfaDesativadoNaPlataforma();
   const decisao = decidirMfa1({
     papel,
     email: entrada.email,
@@ -312,6 +329,7 @@ export async function estadoMfaCompleto(entrada: {
     prazoAte: conta?.prazo_ate ?? null,
     agora: new Date(),
     obrigatorioGlobal: mfa1ObrigatorioLigado(),
+    mfaDesativado,
   });
   if (decisao.gravarPrazo) {
     if (conta) {
@@ -338,5 +356,6 @@ export async function estadoMfaCompleto(entrada: {
     mfa_bloqueado_ate: conta?.mfa_bloqueado_ate ?? null,
     mfa_empresa: mfaEmpresa,
     max_fatores: 2,
+    mfa_desativado: mfaDesativado,
   };
 }

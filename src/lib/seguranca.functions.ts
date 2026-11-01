@@ -21,6 +21,7 @@ export type EstadoSeguranca = {
   mfa_bloqueado_ate?: string | null;
   mfa_empresa?: boolean;
   max_fatores?: number;
+  mfa_desativado?: boolean;
 };
 
 const vazio: EstadoSeguranca = {

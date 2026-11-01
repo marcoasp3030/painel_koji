@@ -13,6 +13,7 @@ import {
   registrarLoginOk,
   verRedefinicao,
 } from "@/lib/entrada.functions";
+import { lerConfigPlataforma } from "@/lib/plataforma-config.functions";
 import { usarCodigoRecuperacao } from "@/lib/seguranca.functions";
 import { aceitarConvite, verConvite } from "@/lib/usuarios.functions";
 import { bootstrapSuperAdmin } from "@/lib/platform.functions";
@@ -86,6 +87,7 @@ function Login() {
   const loginOk = useServerFn(registrarLoginOk);
   const pedirRedef = useServerFn(pedirRedefinicaoSenha);
   const usarRecuperacao = useServerFn(usarCodigoRecuperacao);
+  const lerConfig = useServerFn(lerConfigPlataforma);
 
   useEffect(() => {
     const convite = tokenDaHash("convite");
@@ -127,13 +129,16 @@ function Login() {
         setError(r.mensagem ?? MSG_LOGIN_ERRO);
         return;
       }
-      const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (sessaoPrecisaDoCodigo(nivel)) {
-        setCodigo("");
-        setCodigoRecuperacao("");
-        setModoRecuperacao(false);
-        setEtapa("mfa");
-        return;
+      const cfg = await lerConfig();
+      if (!cfg.mfa_desativado) {
+        const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (sessaoPrecisaDoCodigo(nivel)) {
+          setCodigo("");
+          setCodigoRecuperacao("");
+          setModoRecuperacao(false);
+          setEtapa("mfa");
+          return;
+        }
       }
       await irAoPainel(email);
     } catch {

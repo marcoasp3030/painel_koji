@@ -385,6 +385,27 @@ export type Database = {
         }
         Relationships: []
       }
+      config_plataforma: {
+        Row: {
+          id: number
+          mfa_desativado: boolean
+          atualizado_em: string
+          atualizado_por: string | null
+        }
+        Insert: {
+          id?: number
+          mfa_desativado?: boolean
+          atualizado_em?: string
+          atualizado_por?: string | null
+        }
+        Update: {
+          id?: number
+          mfa_desativado?: boolean
+          atualizado_em?: string
+          atualizado_por?: string | null
+        }
+        Relationships: []
+      }
       entrada_tentativas: {
         Row: {
           chave: string
