@@ -80,7 +80,17 @@ function useEmpresaEscolhida(ativo: boolean) {
     }
   }
 
-  return { empresa, escolher, empresas: lista.data?.itens ?? [], carregando: lista.isLoading };
+  return {
+    empresa,
+    escolher,
+    empresas: lista.data?.itens ?? [],
+    carregando: lista.isLoading,
+    erro: lista.isError
+      ? lista.error instanceof Error
+        ? lista.error.message
+        : "Não foi possível listar as empresas."
+      : null,
+  };
 }
 
 export type ContextoGateway = {
@@ -182,7 +192,11 @@ export function PaginaGateway({
             </Select>
           </div>
         </div>
-        {escolha.empresa ? (
+        {escolha.erro ? (
+          <Cartao className="mt-6">
+            <EstadoVazio titulo="Não foi possível carregar as empresas" texto={escolha.erro} />
+          </Cartao>
+        ) : escolha.empresa ? (
           children({ papel, empresa: escolha.empresa })
         ) : escolha.carregando ? null : (
           <Cartao className="mt-6">

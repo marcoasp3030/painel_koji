@@ -54,9 +54,10 @@ export function papelExigeMfa(entrada: {
 
 /**
  * Sessão precisa de aal2 para funções de negócio.
- * - Com fator verified: sempre.
- * - Sem fator: só quando já está bloqueado (emergência, cutover, ou prazo vencido).
- *   Na janela de 7 dias (flag off) a plataforma ainda usa o painel em aal1.
+ * - Com fator verified: sempre (login deve ter confirmado o TOTP).
+ * - Sem fator: nunca exige aal2 (é impossível elevar). A UI usa `bloqueado`
+ *   para forçar o cadastro (emergência / cutover / prazo); o servidor não
+ *   pode pedir aal2 sem fator — isso deixava o seletor de empresas vazio.
  */
 export function exigeAal2(entrada: {
   papel: PapelAcesso | null;
@@ -66,16 +67,12 @@ export function exigeAal2(entrada: {
   fatores: number;
   bloqueado: boolean;
 }) {
-  if (entrada.fatores > 0) return true;
-  if (!papelExigeMfa({
-    papel: entrada.papel,
-    emergencia: entrada.emergencia,
-    mfaEmpresa: entrada.mfaEmpresa,
-    obrigatorioGlobal: entrada.obrigatorioGlobal,
-  })) {
-    return false;
-  }
-  return entrada.bloqueado || entrada.obrigatorioGlobal || entrada.emergencia;
+  void entrada.papel;
+  void entrada.emergencia;
+  void entrada.mfaEmpresa;
+  void entrada.obrigatorioGlobal;
+  void entrada.bloqueado;
+  return entrada.fatores > 0;
 }
 
 /** Decisão de UI/bloqueio de cadastro. Com cutover ligado, sem prazo de 7 dias. */

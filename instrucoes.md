@@ -1,3 +1,8 @@
+## Correção seletor de empresas (31/10/2026)
+
+- Super admin via Simular (e outras telas) com seletor de empresas vazio: sem fator MFA o servidor pedia aal2 impossível e `listarEmpresasGateway` falhava.
+- Sem fator verified, aal2 não é mais exigido nas funções de negócio. Com fator, continua obrigatório. Cadastre a segunda etapa na conta de emergência quando puder.
+
 ## Correção menu super admin (31/10/2026)
 
 - Menu do admin só mostrava “Clientes”: `obterAcessoGateway` exigia aal2; sem fator/MFA o papel não vinha e o filtro escondia o resto.

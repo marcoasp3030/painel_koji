@@ -64,7 +64,7 @@ describe("MFA1 regras", () => {
     ).toBe(false);
   });
 
-  test("com fator sempre exige aal2; na graça da plataforma sem fator não exige", () => {
+  test("com fator exige aal2; sem fator nunca (aal2 seria impossível)", () => {
     expect(
       exigeAal2({
         papel: "plataforma",
@@ -78,26 +78,16 @@ describe("MFA1 regras", () => {
     expect(
       exigeAal2({
         papel: "plataforma",
-        emergencia: false,
-        mfaEmpresa: false,
-        obrigatorioGlobal: false,
-        fatores: 0,
-        bloqueado: false,
-      }),
-    ).toBe(false);
-    expect(
-      exigeAal2({
-        papel: "plataforma",
-        emergencia: false,
+        emergencia: true,
         mfaEmpresa: false,
         obrigatorioGlobal: false,
         fatores: 0,
         bloqueado: true,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  test("decidirMfa1 cutover: gestor sem fator bloqueado na hora", () => {
+  test("decidirMfa1 cutover: gestor sem fator bloqueado na UI; aal2 só com fator", () => {
     const d = decidirMfa1({
       papel: "gestor",
       email: "g@x.com",
@@ -110,7 +100,7 @@ describe("MFA1 regras", () => {
     });
     expect(d.obrigatorio).toBe(true);
     expect(d.bloqueado).toBe(true);
-    expect(d.exigeAal2).toBe(true);
+    expect(d.exigeAal2).toBe(false);
   });
 
   test("step-up e bloqueio por falhas", () => {

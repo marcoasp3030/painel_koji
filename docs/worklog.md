@@ -1,4 +1,20 @@
+## [2026-10-31 21:05] — Super admin: seletor de empresas vazio
+- **Autor:** Auto
+- **Objetivo:** Em Simular conversa (e telas com empresa) o seletor não habilitava empresas para o super admin.
+- **Arquivos alterados:**
+ - `src/lib/acesso/mfa.ts` (+ teste) — modificado — sem fator, não exige aal2 (deadlock)
+ - `src/lib/gateway/painel.server.ts` — modificado — mensagem MFA não vira erro genérico
+ - `src/components/luxtia/Gateway.tsx` — modificado — mostra erro ao falhar a lista de empresas
+ - `docs/worklog.md`, `instrucoes.md` — modificados — registro
+- **Resumo das mudanças:** Conta de emergência sem TOTP nunca alcança aal2; `listarEmpresasGateway` falhava e o select ficava vazio. Sem fator o servidor não pede mais aal2; a UI continua bloqueando cadastro quando `bloqueado`.
+- **Decisões e justificativas:** aal2 só faz sentido com fator verified. Cutover ainda off.
+- **Comandos executados:** `bun test` mfa/segunda-etapa → 14 OK. publicar → (em seguida).
+- **Erros e resoluções:** logs `[gateway] erro inesperado` engoliam a mensagem MFA — `comGateway` preserva `MfaErro`.
+- **Pendências / TODO:** cadastrar fator na emergência
+- **Próximos passos:** hard refresh; abrir Simular e conferir o seletor
+
 ## [2026-10-31 20:50] — Menu do super admin só com Clientes
+
 - **Autor:** Auto
 - **Objetivo:** Menu do admin mostrava só “Clientes”; deveria listar Usuários, Empresas, Agentes etc.
 - **Arquivos alterados:**

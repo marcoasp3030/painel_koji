@@ -158,6 +158,7 @@ export function AppShell({
     navigate({ to: "/", replace: true });
   }
 
+  // Conta obrigada e bloqueada (emergência / prazo vencido): só o cadastro MFA.
   if (seguranca.data?.bloqueado) {
     return (
       <div className="min-h-screen bg-base-100">

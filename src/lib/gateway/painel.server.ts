@@ -124,7 +124,11 @@ export async function sessaoGatewayMfa(
       gatewayTenantId: gatewayTenantId ?? null,
     });
   } catch (e) {
-    if (e instanceof MfaErro) throw new Error(e.message);
+    if (e instanceof MfaErro) {
+      const err = new Error(e.message);
+      err.name = "MfaErro";
+      throw err;
+    }
     throw e;
   }
   return sessao;
@@ -136,6 +140,8 @@ export async function comGateway<T>(acao: () => Promise<T>): Promise<T> {
     return await acao();
   } catch (erro) {
     if (erro instanceof GatewayErro) throw new Error(mensagemParaUsuario(erro));
+    // MFA e outras mensagens já preparadas para o usuário.
+    if (erro instanceof Error && erro.name === "MfaErro") throw new Error(erro.message);
     console.error("[gateway] erro inesperado:", erro instanceof Error ? erro.name : typeof erro);
     throw new Error("Não foi possível falar com o gateway de agentes.");
   }
