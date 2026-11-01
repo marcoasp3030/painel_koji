@@ -140,10 +140,12 @@ export function AppShell({
     staleTime: 30_000,
     retry: false,
   });
-  // `nav` já é ADMIN_NAV ou TENANT_NAV. Enquanto o papel carrega, mostra essa
-  // árvore; depois filtra pelo papel do gateway.
+  // Super Admin: se o gateway não devolveu o papel (clone local, aal1, etc.),
+  // assume "plataforma" para o menu não ficar só com Clientes.
+  const papelMenu =
+    acesso.data?.papel ?? (context === "Super Admin" ? ("plataforma" as const) : undefined);
   const itens = filtrarMenuPorTelas(
-    acesso.isPending ? nav : filtrarMenu(nav, acesso.data?.papel),
+    acesso.isPending && papelMenu == null ? nav : filtrarMenu(nav, papelMenu),
     modulos.data?.telas ?? (modulos.isFetched ? [] : null),
   );
   const grupos = agruparMenu(itens);

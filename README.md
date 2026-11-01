@@ -9,11 +9,14 @@ Plataforma de integrações de delivery e mensagens (iFood, 99Food, WhatsApp Ofi
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/marcoasp3030/painel_koji.git
+cd painel_koji
+git pull origin main
+bun install
+bun run dev
 ```
+
+Confira que está no commit recente (`git log -1` deve mostrar a correção do MFA / Configurações). Sem `git pull`, o menu pode parecer a versão antiga (só Clientes).
 
 ## Built with
 

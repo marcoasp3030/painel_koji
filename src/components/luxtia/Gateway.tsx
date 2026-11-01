@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { obterAcessoGateway } from "@/lib/gateway.functions";
 import { listarEmpresasGateway } from "@/lib/gateway-empresas.functions";
+import { getMe } from "@/lib/platform.functions";
 import type { PapelGateway } from "@/lib/gateway/tipos";
 import { ADMIN_NAV, TENANT_NAV } from "@/lib/nav";
 
@@ -122,7 +123,16 @@ export function PaginaGateway({
   children: (ctx: ContextoGateway) => React.ReactNode;
 }) {
   const acesso = useAcessoGateway();
-  const papel = acesso.data?.papel ?? null;
+  const eu = useServerFn(getMe);
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: () => eu(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  // Super admin local: se obterAcessoGateway falhar, ainda trata como plataforma.
+  const papel: PapelGateway | null =
+    acesso.data?.papel ?? (me.data?.isSuperAdmin ? "plataforma" : null);
   const plataforma = papel === "plataforma";
   const escolha = useEmpresaEscolhida(plataforma && !semEmpresa && !empresaFixa);
 
@@ -137,9 +147,9 @@ export function PaginaGateway({
   }, [plataforma, empresaFixa]);
 
   let conteudo: React.ReactNode;
-  if (acesso.isLoading) {
+  if (acesso.isLoading || (me.isLoading && !acesso.data?.papel)) {
     conteudo = <p className="mt-8 text-ink-500">Carregando…</p>;
-  } else if (acesso.isError || !papel) {
+  } else if (!papel) {
     conteudo = (
       <Cartao className="mt-8">
         <EstadoVazio

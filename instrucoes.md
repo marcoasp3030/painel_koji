@@ -1,3 +1,9 @@
+## Menu completo no clone local (31/10/2026 → 01/11)
+
+- Na máquina local o menu vinha “sem opções” (só Clientes): clone desatualizado e/ou `obterAcessoGateway` sem papel.
+- Fallback: Super Admin assume papel `plataforma` no menu (`AppShell`) e via `getMe().isSuperAdmin` (`Gateway`).
+- Na máquina: `git pull origin main`, `bun install`, `bun run dev`, hard refresh.
+
 ## Configurações Super Admin + MFA global (31/10/2026)
 
 - Menu **Configurações** (`/admin/configuracoes`), só Super Admin.

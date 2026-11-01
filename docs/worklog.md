@@ -1,4 +1,19 @@
+## [2026-11-01 00:58] — Menu completo no clone local (Super Admin)
+- **Autor:** Auto
+- **Objetivo:** Na máquina do Marco o menu vinha sem as opções (versão antiga / papel null).
+- **Arquivos alterados:**
+ - `src/components/luxtia/AppShell.tsx` — modificado — Super Admin assume papel plataforma no menu
+ - `src/components/luxtia/Gateway.tsx` — modificado — fallback via `getMe().isSuperAdmin`
+ - `README.md`, `instrucoes.md`, `docs/worklog.md` — modificados — pull + bun
+- **Resumo das mudanças:** Código no GitHub já tinha o menu; clone sem pull ou `obterAcessoGateway` falhando escondia itens com `papeis: plataforma`. Fallback deixa Super Admin ver o menu completo.
+- **Decisões e justificativas:** Proteção real continua no servidor; menu é só navegação.
+- **Comandos executados:** commit + push → (em seguida).
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** Na máquina local: `git pull origin main` e hard refresh
+
 ## [2026-10-31 21:20] — Correção salvar MFA desativado
+
 - **Autor:** Auto
 - **Objetivo:** “Não foi possível salvar a configuração” ao desativar MFA.
 - **Arquivos alterados:**
