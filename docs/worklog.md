@@ -9,10 +9,10 @@
  - `types.ts`, `instrucoes.md`, `docs/worklog.md` — modificados — tipos e registro
 - **Resumo das mudanças:** Interruptor global desliga obrigação, aal2, step-up e o desafio MFA no login. Fatores cadastrados permanecem. Ao desligar, zera `tenants.mfa_obrigatorio`.
 - **Decisões e justificativas:** Persistido no banco (não só env) para o Super Admin alterar sem redeploy. Confirmação antes de desligar.
-- **Comandos executados:** migracoes / testes / publicar → (em seguida).
+- **Comandos executados:** migracoes → OK. `bun test` mfa → 7 OK. `publicar-painel.sh` → OK (`painel:66046a1…` = `sha256:c8718ed5…`). Container recriado.
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
-- **Próximos passos:** hard refresh; Configurações → Desativar MFA em tudo
+- **Próximos passos:** hard refresh; menu Configurações → Desativar MFA em tudo
 
 ## [2026-10-31 21:05] — Super admin: seletor de empresas vazio
 
