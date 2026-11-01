@@ -1,0 +1,24 @@
+# Proxy do ambiente local: mesma origem de produção, só em HTTP e sem o gateway.
+{
+	auto_https off
+}
+
+:80 {
+	handle /auth/v1/* {
+		uri strip_prefix /auth/v1
+		reverse_proxy autenticacao:9999
+	}
+	handle /rest/v1/* {
+		uri strip_prefix /rest/v1
+		reverse_proxy api-rest:3000
+	}
+	handle /_serverFn/* {
+		request_body {
+			max_size 15MB
+		}
+		reverse_proxy painel:3000
+	}
+	handle {
+		reverse_proxy painel:3000
+	}
+}
