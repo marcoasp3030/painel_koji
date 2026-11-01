@@ -8,9 +8,9 @@
  - `docs/worklog.md`, `instrucoes.md` — modificados — registro
 - **Resumo das mudanças:** Conta de emergência sem TOTP nunca alcança aal2; `listarEmpresasGateway` falhava e o select ficava vazio. Sem fator o servidor não pede mais aal2; a UI continua bloqueando cadastro quando `bloqueado`.
 - **Decisões e justificativas:** aal2 só faz sentido com fator verified. Cutover ainda off.
-- **Comandos executados:** `bun test` mfa/segunda-etapa → 14 OK. publicar → (em seguida).
+- **Comandos executados:** `bun test` mfa/segunda-etapa → 14 OK. `publicar-painel.sh` → OK (`painel:6109800…` = `sha256:a8d2ef55…`). Volta: tag mais recente `painel:volta-20261031T23*`.
 - **Erros e resoluções:** logs `[gateway] erro inesperado` engoliam a mensagem MFA — `comGateway` preserva `MfaErro`.
-- **Pendências / TODO:** cadastrar fator na emergência
+- **Pendências / TODO:** cadastrar fator na emergência (`admin@luxtia.local`)
 - **Próximos passos:** hard refresh; abrir Simular e conferir o seletor
 
 ## [2026-10-31 20:50] — Menu do super admin só com Clientes
