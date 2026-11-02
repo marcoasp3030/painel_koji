@@ -19,7 +19,8 @@ function PaginaHistorico() {
     <PaginaGateway
       titulo="Histórico de gestão"
       descricao="Quem mudou unidades, horários e exceções. Escolha a unidade pelo nome."
-      papeis={["plataforma", "gestor", "supervisor", "funcionario"]}
+      papeis={["plataforma", "gestor", "supervisor"]}
+      telaCheia
     >
       {(ctx) => (
         <HistoricoGestao

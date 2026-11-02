@@ -4,15 +4,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { TriangleAlert } from "lucide-react";
 import { AppShell } from "@/components/luxtia/AppShell";
-import { CabecalhoPagina, Cartao } from "@/components/luxtia/Superficie";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { ADMIN_NAV } from "@/lib/nav";
 import {
-  definirMfaDesativado,
-  lerConfigPlataforma,
-} from "@/lib/plataforma-config.functions";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import { ADMIN_NAV } from "@/lib/nav";
+import { definirMfaDesativado, lerConfigPlataforma } from "@/lib/plataforma-config.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/configuracoes")({
   head: () => ({
@@ -31,7 +37,7 @@ function Pagina() {
   const cache = useQueryClient();
   const ler = useServerFn(lerConfigPlataforma);
   const gravar = useServerFn(definirMfaDesativado);
-  const [confirmando, setConfirmando] = useState(false);
+  const [confirmando, setConfirmando] = useState<"ligar" | "desligar" | null>(null);
 
   const q = useQuery({
     queryKey: ["config-plataforma"],
@@ -43,11 +49,11 @@ function Pagina() {
     onSuccess: (r) => {
       void cache.invalidateQueries({ queryKey: ["config-plataforma"] });
       void cache.invalidateQueries({ queryKey: ["seguranca"] });
-      setConfirmando(false);
+      setConfirmando(null);
       toast.success(
         r.mfa_desativado
-          ? "MFA desativado em toda a plataforma."
-          : "MFA reativado. As regras de obrigação voltam a valer.",
+          ? "Segunda etapa desligada em toda a plataforma."
+          : "Segunda etapa ligada. As regras de obrigação voltam a valer.",
       );
     },
     onError: (e: Error) => toast.error(e.message),
@@ -57,101 +63,101 @@ function Pagina() {
   const quando = q.data?.atualizado_em
     ? new Date(q.data.atualizado_em).toLocaleString("pt-BR", {
         timeZone: "America/Sao_Paulo",
+        dateStyle: "short",
+        timeStyle: "short",
       })
     : null;
 
+  const ligado = !desativado;
+
   return (
-    <AppShell nav={ADMIN_NAV} context="Super Admin">
-      <CabecalhoPagina
-        sobretitulo="Plataforma"
-        titulo="Configurações"
-        descricao="Ajustes que valem para todos os clientes. Só o Super Admin altera."
-      />
-      <Cartao className="mt-6 max-w-xl space-y-5 p-5">
-        <div>
-          <h2 className="font-display text-xl text-purple-900">Segunda etapa (MFA)</h2>
-          <p className="mt-2 text-sm text-ink-600">
-            Com o MFA desativado, ninguém é obrigado a usar aplicativo autenticador: login, menu e
-            funções de negócio seguem em sessão simples. Os fatores já cadastrados não são apagados.
-          </p>
-        </div>
+    <AppShell nav={ADMIN_NAV} context="Super Admin" telaCheia>
+      <h1 className="sr-only">Configurações</h1>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-card">
+        <p className="shrink-0 border-b border-base-200 px-4 py-2 text-xs text-ink-500">
+          Ajustes que valem para todos os clientes. Só o Super Admin altera.
+        </p>
 
-        {q.isPending ? (
-          <p className="text-sm text-ink-500">Carregando…</p>
-        ) : q.isError ? (
-          <p role="alert" className="text-sm text-destructive">
-            {q.error.message}
+        {q.isSuccess && desativado ? (
+          <p
+            role="status"
+            className="flex shrink-0 items-center gap-2 border-b border-gold-500/40 bg-gold-300/20 px-4 py-1.5 text-sm text-gold-700"
+          >
+            <TriangleAlert className="size-4 shrink-0" aria-hidden />
+            Segunda etapa desligada: nenhuma conta precisa do aplicativo autenticador para entrar.
           </p>
-        ) : (
-          <>
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-base-200 bg-base-50 px-4 py-3">
-              <div className="space-y-1">
-                <Label htmlFor="mfa-global" className="text-base text-ink-900">
-                  Desativar MFA em tudo
-                </Label>
-                <p className="text-xs text-ink-500">
-                  Estado atual:{" "}
-                  <strong>{desativado ? "desativado" : "ativo (regras MFA1)"}</strong>
-                  {quando ? ` · atualizado em ${quando}` : ""}
-                </p>
-              </div>
-              <button
-                id="mfa-global"
-                type="button"
-                role="switch"
-                aria-checked={desativado}
-                disabled={mut.isPending}
-                onClick={() => {
-                  if (!desativado) setConfirmando(true);
-                  else mut.mutate(false);
-                }}
-                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700 ${
-                  desativado ? "bg-amber-600" : "bg-base-200"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 size-6 rounded-full bg-white shadow transition-transform ${
-                    desativado ? "translate-x-5" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
-            </div>
+        ) : null}
 
-            {confirmando ? (
-              <div
-                role="alertdialog"
-                aria-labelledby="confirma-mfa-titulo"
-                className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
-              >
-                <p id="confirma-mfa-titulo" className="font-medium">
-                  Desativar a segunda etapa em toda a plataforma?
-                </p>
-                <p>
-                  Contas de plataforma, emergência, gestores e empresas deixam de ser obrigadas a
-                  confirmar o aplicativo. Use só em manutenção ou emergência operacional.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
+        <section
+          aria-label="Segurança"
+          className="grid gap-x-6 gap-y-2 border-b border-base-200/70 px-4 py-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+        >
+          <div className="min-w-0">
+            <label htmlFor="mfa-global" className="text-sm font-medium text-ink-900">
+              Segunda etapa (MFA) na plataforma
+            </label>
+            <p className="mt-0.5 text-xs text-ink-500">
+              Ligada, valem as regras de quem precisa confirmar pelo aplicativo autenticador.
+              Desligada, ninguém é obrigado: login, menu e funções seguem em sessão simples. Os
+              aplicativos já cadastrados não são apagados.
+            </p>
+          </div>
+          <div className="min-w-0 text-sm">
+            {q.isPending ? (
+              <p className="text-ink-500">Carregando…</p>
+            ) : q.isError ? (
+              <p role="alert" className="text-destructive">
+                {q.error.message}
+              </p>
+            ) : (
+              <>
+                <span className="flex items-center gap-2 text-ink-900">
+                  <Switch
+                    id="mfa-global"
+                    checked={ligado}
                     disabled={mut.isPending}
-                    onClick={() => mut.mutate(true)}
-                  >
-                    {mut.isPending ? "Salvando…" : "Sim, desativar MFA"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={mut.isPending}
-                    onClick={() => setConfirmando(false)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-          </>
-        )}
-      </Cartao>
+                    onCheckedChange={(ligar) => setConfirmando(ligar ? "ligar" : "desligar")}
+                  />
+                  {ligado ? "Ligada" : "Desligada"}
+                </span>
+                {quando ? <p className="mt-1 text-xs text-ink-500">Alterada em {quando}</p> : null}
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <AlertDialog
+        open={confirmando !== null}
+        onOpenChange={(a) => !a && !mut.isPending && setConfirmando(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmando === "ligar"
+                ? "Ligar a segunda etapa em toda a plataforma?"
+                : "Desligar a segunda etapa em toda a plataforma?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmando === "ligar"
+                ? "As regras de obrigação voltam a valer. Contas obrigadas que ainda não têm o aplicativo precisam cadastrá-lo, e podem ficar bloqueadas ao vencer o prazo."
+                : "Contas de plataforma, emergência, gestores e empresas deixam de ser obrigadas a confirmar o aplicativo. Use só em manutenção ou emergência operacional."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={mut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                mut.mutate(confirmando === "desligar");
+              }}
+            >
+              {mut.isPending ? "Salvando…" : confirmando === "ligar" ? "Ligar" : "Desligar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }

@@ -71,42 +71,50 @@ export function CampoAtendimento({
   return (
     <div
       id={id}
-      className={`space-y-2 rounded-lg border p-3 ${temProblema ? "border-destructive/60 bg-destructive/5" : "border-base-200"} ${disponivel ? "" : "opacity-70"}`}
+      className={`grid scroll-mt-12 gap-x-6 gap-y-1.5 border-b border-base-200/70 px-4 py-2.5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] ${temProblema ? "bg-destructive/5" : ""} ${disponivel ? "" : "opacity-70"}`}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor={`${id}-entrada`} className="text-sm font-medium text-ink-700">
-          {rotuloCampo(campo)}
-        </label>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <label htmlFor={`${id}-entrada`} className="text-sm font-medium text-ink-900">
+            {rotuloCampo(campo)}
+          </label>
+          {!disponivel ? (
+            <span
+              className="rounded-full bg-base-100 px-2 py-0.5 text-[11px] font-medium text-ink-500"
+              title="Este recurso ainda não está ativo. A configuração fica guardada e passa a valer quando ele for liberado."
+            >
+              em breve
+            </span>
+          ) : null}
+          {situacao.personalizado ? (
+            <span className="rounded-full bg-gold-300/30 px-2 py-0.5 text-[11px] font-medium text-gold-700">
+              Personalizado
+            </span>
+          ) : situacao.origem !== "plataforma" ? (
+            <span className="text-[11px] text-ink-500" title="De onde vem o valor em uso">
+              {ROTULO_ORIGEM[situacao.origem] ?? situacao.origem}
+            </span>
+          ) : null}
+          {situacao.editado ? (
+            <span className="text-[11px] font-medium text-purple-700">não salvo</span>
+          ) : situacao.noRascunho ? (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-700">
+              <span className="size-1.5 rounded-full bg-purple-700" aria-hidden /> no rascunho
+            </span>
+          ) : null}
+        </div>
+        {ajuda ? <p className="mt-0.5 text-xs text-ink-500">{ajuda}</p> : null}
         {!disponivel ? (
-          <span
-            className="rounded-full bg-base-100 px-2 py-0.5 text-[11px] font-medium text-ink-500"
-            title="Este recurso ainda não está ativo. A configuração fica guardada e passa a valer quando ele for liberado."
-          >
-            em breve
-          </span>
-        ) : null}
-        {situacao.personalizado ? (
-          <span className="rounded-full bg-gold-300/30 px-2 py-0.5 text-[11px] font-medium text-gold-700">
-            Personalizado
-          </span>
-        ) : (
-          <span className="text-[11px] text-ink-500" title="De onde vem o valor em uso">
-            {ROTULO_ORIGEM[situacao.origem] ?? situacao.origem}
-          </span>
-        )}
-        {situacao.editado ? (
-          <span className="text-[11px] font-medium text-purple-700">· não salvo</span>
-        ) : situacao.noRascunho ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-700">
-            <span className="size-1.5 rounded-full bg-purple-700" aria-hidden /> no rascunho
-          </span>
+          <p className="mt-0.5 text-xs text-ink-500">
+            Ainda não está ativo. A configuração fica guardada e passa a valer quando for liberado.
+          </p>
         ) : null}
         {situacao.personalizado && podeEditar && def.editavel && disponivel && !restricao ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="ml-auto h-7 px-2 text-xs text-ink-500"
+            className="-ml-2 mt-0.5 h-6 px-2 text-xs text-ink-500"
             onClick={voltarAoPadrao}
             title={
               escopo === "agente"
@@ -119,39 +127,34 @@ export function CampoAtendimento({
           </Button>
         ) : null}
       </div>
-      <Entrada
-        id={`${id}-entrada`}
-        campo={campo}
-        def={def}
-        valor={situacao.valor}
-        desabilitado={desabilitado}
-        mudar={mudar}
-        trechos={[...bloqueios, ...avisos].map((t) => t.trecho)}
-      />
-      {restricao ? <p className="text-xs text-ink-500">{restricao}</p> : null}
-      {ajuda ? <p className="text-xs text-ink-500">{ajuda}</p> : null}
-      {!disponivel ? (
-        <p className="text-xs text-ink-500">
-          Este recurso ainda não está ativo. A configuração fica guardada e passa a valer quando ele
-          for liberado.
-        </p>
-      ) : null}
-      {erros.map((e, i) => (
-        <p key={`e${i}`} role="alert" className="text-xs text-destructive">
-          {textoErroCampo(e)}
-        </p>
-      ))}
-      {bloqueios.map((b, i) => (
-        <p key={`b${i}`} role="alert" className="text-xs text-destructive">
-          Trecho não permitido ({MOTIVO_BLOQUEIO[b.motivo] ?? b.motivo}): “{b.trecho}”
-        </p>
-      ))}
-      {avisos.map((a, i) => (
-        <p key={`a${i}`} className="text-xs text-gold-700">
-          Confira ({MOTIVO_AVISO[a.motivo] ?? a.motivo}): “{a.trecho}”. Publicar vai pedir
-          confirmação.
-        </p>
-      ))}
+      <div className="min-w-0 space-y-1">
+        <Entrada
+          id={`${id}-entrada`}
+          campo={campo}
+          def={def}
+          valor={situacao.valor}
+          desabilitado={desabilitado}
+          mudar={mudar}
+          trechos={[...bloqueios, ...avisos].map((t) => t.trecho)}
+        />
+        {restricao ? <p className="text-xs text-ink-500">{restricao}</p> : null}
+        {erros.map((e, i) => (
+          <p key={`e${i}`} role="alert" className="text-xs text-destructive">
+            {textoErroCampo(e)}
+          </p>
+        ))}
+        {bloqueios.map((b, i) => (
+          <p key={`b${i}`} role="alert" className="text-xs text-destructive">
+            Trecho não permitido ({MOTIVO_BLOQUEIO[b.motivo] ?? b.motivo}): “{b.trecho}”
+          </p>
+        ))}
+        {avisos.map((a, i) => (
+          <p key={`a${i}`} className="text-xs text-gold-700">
+            Confira ({MOTIVO_AVISO[a.motivo] ?? a.motivo}): “{a.trecho}”. Publicar vai pedir
+            confirmação.
+          </p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -320,7 +323,7 @@ function CampoTexto({
   mudar: (v: Json) => void;
   trechos: string[];
 }) {
-  const longo = (def.max ?? 0) > 120 || def.linhas !== undefined;
+  const longo = (def.max ?? 0) > 120 || (def.linhas ?? 0) > 0;
   const marcado = trechos.length ? marcarTrechos(valor, trechos) : [];
   return (
     <div className="space-y-1">
@@ -344,10 +347,10 @@ function CampoTexto({
       {def.max !== undefined ? (
         <p className="flex gap-3 text-[11px]">
           <Contador atual={valor.length} max={def.max} rotulo="caracteres" />
-          {def.linhas !== undefined ? (
+          {(def.linhas ?? 0) > 0 ? (
             <Contador
               atual={(valor.match(/\n/g) ?? []).length}
-              max={def.linhas}
+              max={def.linhas!}
               rotulo="quebras de linha"
             />
           ) : null}

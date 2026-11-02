@@ -10,8 +10,12 @@ import {
   chaveNovidades,
   desdeDoCursor,
   estadoConversa,
+  duracaoCurta,
   juntarMensagens,
+  legendaDoArquivo,
   linhaDoTempo,
+  problemaNoArquivo,
+  tamanhoLegivel,
   rotuloPessoa,
   nomeContato,
   esperaCurta,
@@ -365,4 +369,29 @@ test("linhaDoTempo mantém no lugar a mensagem sem data", () => {
     [],
   );
   expect(linha.map((i) => (i.tipo === "mensagem" ? i.mensagem.id : 0))).toEqual([1, 2, 3]);
+});
+
+test("duracaoCurta escolhe a unidade e mostra traço sem dado", () => {
+  expect(duracaoCurta(null)).toBe("—");
+  expect(duracaoCurta(0)).toBe("0 s");
+  expect(duracaoCurta(59)).toBe("59 s");
+  expect(duracaoCurta(120)).toBe("2 min");
+  expect(duracaoCurta(3600)).toBe("1 h");
+  expect(duracaoCurta(7500)).toBe("2 h 5 min");
+});
+
+test("problemaNoArquivo aceita PDF, JPG e PNG até 10 MB", () => {
+  expect(problemaNoArquivo({ name: "a.PDF", size: 10 })).toBeNull();
+  expect(problemaNoArquivo({ name: "a.jpeg", size: 10 })).toBeNull();
+  expect(problemaNoArquivo({ name: "a.exe", size: 10 })).toContain("PDF");
+  expect(problemaNoArquivo({ name: "a.png", size: 10 * 1024 * 1024 + 1 })).toContain("10 MB");
+  expect(problemaNoArquivo({ name: "a.png", size: 0 })).toContain("vazio");
+});
+
+test("tamanhoLegivel e legendaDoArquivo", () => {
+  expect(tamanhoLegivel(2048)).toBe("2 KB");
+  expect(tamanhoLegivel(2.5 * 1024 * 1024)).toBe("2,5 MB");
+  expect(legendaDoArquivo("[arquivo enviado: a.pdf]\nSegue")).toBe("Segue");
+  expect(legendaDoArquivo("[arquivo enviado: a.pdf]")).toBeNull();
+  expect(legendaDoArquivo("Texto comum")).toBe("Texto comum");
 });

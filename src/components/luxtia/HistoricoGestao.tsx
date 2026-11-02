@@ -2,8 +2,9 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useGestao } from "./gestao-base";
 import type { ContextoGateway } from "./Gateway";
-import { Cartao, EstadoVazio } from "./Superficie";
+import { EstadoVazio } from "./Superficie";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -11,12 +12,15 @@ import {
   NOMES_DIA,
   FUSO_PAINEL,
   dataRecebida,
+  momentoNoFuso,
   periodoNoFuso,
+  rotuloDia,
   type Alteracao,
   type PedidoGestao,
   type Unidade,
 } from "@/lib/gateway/gestao";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronRight, SlidersHorizontal } from "lucide-react";
 
 const CAMPOS: Record<string, string> = {
   nome: "Nome",
@@ -92,6 +96,16 @@ export function HistoricoGestao({
   const [ate, setAte] = useState("");
   const [entidade, setEntidade] = useState("");
   const [alvo, setAlvo] = useState("");
+  const [abertos, setAbertos] = useState<Set<number>>(new Set());
+  const fimLista = useRef<HTMLDivElement>(null);
+  function alternar(id: number) {
+    setAbertos((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
   const unidades = useQuery({
     queryKey: ["gestao", ctx.empresa, "unidades"],
     queryFn: () => g.ler<{ itens: Unidade[] }>({ acao: "listar" }),
@@ -101,6 +115,8 @@ export function HistoricoGestao({
     queryFn: () =>
       g.ler<{ timezone: string; origem: "empresa" | "padrao" }>({ acao: "fuso_empresa" }),
     staleTime: 60_000,
+    // Quem não lê o fuso cai no de Brasília na hora, sem esperar repetições.
+    retry: false,
   });
   const zona = fusoEmpresa.data?.timezone ?? FUSO_PAINEL;
   const origemFuso = fusoEmpresa.data?.origem ?? "padrao";
@@ -138,69 +154,129 @@ export function HistoricoGestao({
     getNextPageParam: (ultima) => ultima.proximo_cursor ?? undefined,
   });
   const itens = q.data?.pages.flatMap((p) => p.itens) ?? [];
+  const momento = (v: string) => momentoNoFuso(v, zona);
   const grupos: { dia: string; itens: Alteracao[] }[] = [];
   for (const item of itens) {
-    const dia = diaRegistro(item.criado_em);
+    const dia = momento(item.criado_em)?.dia ?? diaRegistro(item.criado_em);
     const atual = grupos.at(-1);
     if (atual?.dia === dia) atual.itens.push(item);
     else grupos.push({ dia, itens: [item] });
   }
   const recorte = especifico
     ? alvo
-      ? `Identificador exato ${alvo}. As outras alterações da unidade não entram.`
+      ? `Identificador exato ${alvo}.`
       : entidade === "excecao"
         ? "Somente exceções, de qualquer unidade."
         : "Somente alterações de unidade, sem as exceções."
     : unidadeId
       ? `${nomeEscolhida}: a unidade e todas as exceções dela.`
       : "Todas as alterações da empresa.";
+  const filtrando = Boolean(desde || ate || entidade || alvo || unidadeId);
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = q;
+  useEffect(() => {
+    const fim = fimLista.current;
+    if (!fim || !hasNextPage || isFetchingNextPage) return;
+    const observador = new IntersectionObserver(
+      ([e]) => {
+        if (e?.isIntersecting) void fetchNextPage();
+      },
+      { root: fim.parentElement, rootMargin: "200px" },
+    );
+    observador.observe(fim);
+    return () => observador.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
   return (
-    <div className="mt-6 space-y-4">
-      <Cartao className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-        <label className="text-sm">
-          Unidade
-          <select
-            className="mt-1 block min-h-11 w-full rounded-md border bg-card px-3"
-            value={especifico ? "" : unidadeId}
-            onChange={(e) => {
-              setEntidade("");
-              setAlvo("");
-              aoEscolherUnidade(e.target.value);
-            }}
-          >
-            <option value="">Todas</option>
-            {unidadeId && !nomes.has(unidadeId) ? (
-              <option value={unidadeId}>{unidadeId}</option>
-            ) : null}
-            {unidades.data?.itens.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          Desde
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-200 bg-card px-3 py-2">
+        <select
+          aria-label="Unidade"
+          className="h-8 max-w-52 rounded-md border bg-base-50 px-2 text-sm"
+          value={especifico ? "" : unidadeId}
+          onChange={(e) => {
+            setEntidade("");
+            setAlvo("");
+            aoEscolherUnidade(e.target.value);
+          }}
+        >
+          <option value="">Todas as unidades</option>
+          {unidadeId && !nomes.has(unidadeId) ? (
+            <option value={unidadeId}>{unidadeId}</option>
+          ) : null}
+          {unidades.data?.itens.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.nome}
+            </option>
+          ))}
+        </select>
+        <label className="flex items-center gap-1.5 text-xs text-ink-500">
+          De
           <Input
-            className="mt-1 min-h-11"
+            className="h-8 w-36 bg-base-50 text-sm"
             type="date"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
           />
         </label>
-        <label className="text-sm">
+        <label className="flex items-center gap-1.5 text-xs text-ink-500">
           Até
           <Input
-            className="mt-1 min-h-11"
+            className="h-8 w-36 bg-base-50 text-sm"
             type="date"
             value={ate}
             onChange={(e) => setAte(e.target.value)}
           />
         </label>
-        <div className="flex items-end">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5">
+              <SlidersHorizontal className="size-3.5" aria-hidden />
+              Identificador
+              {especifico ? (
+                <span className="rounded-full bg-purple-800 px-1.5 text-[10px] font-semibold text-white">
+                  1
+                </span>
+              ) : null}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 space-y-2 p-3">
+            <p className="text-xs text-ink-500">
+              Para uma unidade ou exceção específica (ID ou ID:AAAA-MM-DD). Não combina com o filtro
+              de unidade.
+            </p>
+            <label className="block text-xs font-medium text-ink-500">
+              Tipo
+              <select
+                className="mt-1 block h-8 w-full rounded-md border bg-card px-2 text-sm text-ink-900"
+                value={entidade}
+                onChange={(e) => {
+                  setEntidade(e.target.value);
+                  if (e.target.value) aoEscolherUnidade("");
+                }}
+              >
+                <option value="">Qualquer</option>
+                <option value="unidade">Unidade</option>
+                <option value="excecao">Exceção</option>
+              </select>
+            </label>
+            <label className="block text-xs font-medium text-ink-500">
+              Identificador
+              <Input
+                className="mt-1 h-8 text-sm"
+                value={alvo}
+                placeholder="ID da unidade ou ID:AAAA-MM-DD"
+                onChange={(e) => {
+                  setAlvo(e.target.value);
+                  if (e.target.value) aoEscolherUnidade("");
+                }}
+              />
+            </label>
+          </PopoverContent>
+        </Popover>
+        {filtrando ? (
           <Button
-            className="min-h-11"
-            variant="outline"
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2"
             onClick={() => {
               setDesde("");
               setAte("");
@@ -211,157 +287,148 @@ export function HistoricoGestao({
           >
             Limpar
           </Button>
-        </div>
-      </Cartao>
-      <p className="text-sm text-ink-500">
-        {recorte}{" "}
-        {origemFuso === "empresa"
-          ? `Período no fuso da empresa (${zona}).`
-          : "Fuso da empresa indisponível; o período usa Brasília."}{" "}
-        O dia final entra na consulta. O horário de cada linha continua o que o gateway enviou.
-      </p>
-      <details className="rounded-xl border border-base-200 bg-card p-4">
-        <summary className="cursor-pointer text-sm font-medium">
-          Buscar por identificador exato
-        </summary>
-        <p className="mt-2 text-sm text-ink-500">
-          Serve para uma unidade ou uma exceção específica (ID ou ID:AAAA-MM-DD). Não combina com o
-          filtro de unidade acima.
+        ) : null}
+        <p className="ml-auto min-w-0 truncate text-xs text-ink-500" title={`Fuso ${zona}`}>
+          {recorte} {origemFuso === "empresa" ? `Horários em ${zona}.` : "Horários de Brasília."}
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <label className="text-sm">
-            Tipo
-            <select
-              className="mt-1 block min-h-11 rounded-md border bg-card px-3"
-              value={entidade}
-              onChange={(e) => {
-                setEntidade(e.target.value);
-                if (e.target.value) aoEscolherUnidade("");
-              }}
-            >
-              <option value="">Qualquer</option>
-              <option value="unidade">Unidade</option>
-              <option value="excecao">Exceção</option>
-            </select>
-          </label>
-          <label className="min-w-64 flex-1 text-sm">
-            Identificador
-            <Input
-              className="mt-1 min-h-11"
-              value={alvo}
-              placeholder="ID da unidade ou ID:AAAA-MM-DD"
-              onChange={(e) => {
-                setAlvo(e.target.value);
-                if (e.target.value) aoEscolherUnidade("");
-              }}
-            />
-          </label>
-        </div>
-      </details>
-      {periodo.erro ? <p role="alert">{periodo.erro}</p> : null}
-      {q.isPending && !periodo.erro ? (
-        <div className="space-y-3">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
+      </div>
+      {periodo.erro ? (
+        <p role="alert" className="shrink-0 px-3 py-1.5 text-sm text-destructive">
+          {periodo.erro}
+        </p>
       ) : null}
       {q.error ? (
-        <p role="alert">
+        <p role="alert" className="shrink-0 px-3 py-1.5 text-sm text-destructive">
           {q.error.message}{" "}
-          <Button variant="outline" onClick={() => q.refetch()}>
+          <button type="button" className="underline" onClick={() => void q.refetch()}>
             Tentar novamente
-          </Button>
+          </button>
         </p>
       ) : null}
-      {q.data && itens.length === 0 ? (
-        <Cartao>
-          <EstadoVazio
-            titulo="Nenhuma alteração neste recorte"
-            texto="Troque a unidade ou amplie o período. Uma alteração sem efeito não gera linha."
-          />
-        </Cartao>
-      ) : null}
-      {grupos.map((grupo) => (
-        <section key={grupo.dia} className="space-y-2">
-          <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-ink-500">
-            {grupo.dia}
-          </h2>
-          {grupo.itens.map((a) => {
-            const campos = [
-              ...new Set([...Object.keys(a.antes ?? {}), ...Object.keys(a.depois ?? {})]),
-            ];
-            const unidade = idUnidade(a);
-            const nome = unidade ? (nomes.get(unidade) ?? unidade) : a.entidade_id;
-            return (
-              <Cartao key={a.id} className="space-y-2 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{rotuloAcao(a.entidade, a.acao)}</p>
-                    <p className="text-sm text-ink-500">
-                      {nome} · {dataRecebida(a.criado_em)} · {a.actor}
-                    </p>
-                  </div>
-                  {unidade && (
-                    <Link
-                      to="/ia/unidades"
-                      search={{
-                        unidade,
-                        ...(a.entidade === "excecao" ? { secao: "excecoes" as const } : {}),
-                      }}
-                      className="text-sm font-medium text-purple-800 underline-offset-4 hover:underline"
+      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-card">
+        {q.isPending && !periodo.erro ? (
+          <div className="space-y-2 p-3">
+            <Skeleton className="h-10" />
+            <Skeleton className="h-10" />
+            <Skeleton className="h-10" />
+          </div>
+        ) : null}
+        {q.data && itens.length === 0 ? (
+          <div className="flex h-full items-center justify-center bg-base-100 p-6">
+            <EstadoVazio
+              titulo="Nenhuma alteração neste recorte"
+              texto="Troque a unidade ou amplie o período. Uma alteração sem efeito não gera linha."
+            />
+          </div>
+        ) : null}
+        {grupos.map((grupo) => (
+          <section key={grupo.dia} aria-label={grupo.dia}>
+            <h2 className="sticky top-0 z-10 flex h-7 items-center gap-2 border-b border-base-200 bg-base-50 px-3 font-sans text-xs font-semibold text-ink-900">
+              {rotuloDia(grupo.dia, zona)}
+              <span className="font-normal tabular-nums text-ink-500">{grupo.itens.length}</span>
+            </h2>
+            {grupo.itens.map((a) => {
+              const campos = [
+                ...new Set([...Object.keys(a.antes ?? {}), ...Object.keys(a.depois ?? {})]),
+              ];
+              const unidade = idUnidade(a);
+              const nome = unidade ? (nomes.get(unidade) ?? unidade) : a.entidade_id;
+              const aberto = abertos.has(a.id);
+              return (
+                <article key={a.id} className="border-b border-base-200/70">
+                  <div className="flex items-center gap-2 pr-3 transition-colors hover:bg-purple-50/50">
+                    <button
+                      type="button"
+                      aria-expanded={campos.length ? aberto : undefined}
+                      disabled={!campos.length}
+                      title={`${dataRecebida(a.criado_em)} · ${a.actor}`}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 disabled:cursor-default"
+                      onClick={() => alternar(a.id)}
                     >
-                      Abrir unidade
-                    </Link>
-                  )}
-                </div>
-                <p className="text-sm">
-                  {campos.length
-                    ? campos.map(rotuloCampo).join(" · ")
-                    : "Sem campos detalhados nesta linha."}
-                </p>
-                {campos.length > 0 && (
-                  <details>
-                    <summary className="cursor-pointer text-sm font-medium">
-                      Ver antes e depois
-                    </summary>
-                    <div className="mt-3 space-y-3">
-                      {campos.map((k) => (
-                        <div key={k} className="rounded-lg border border-base-200 p-3">
-                          <strong>{rotuloCampo(k)}</strong>
-                          <div className="mt-2 grid gap-3 md:grid-cols-2">
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-ink-500">Antes</p>
-                              <pre className="whitespace-pre-wrap break-words text-sm">
-                                {textoValor(k, a.antes?.[k])}
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-ink-500">Depois</p>
-                              <pre className="whitespace-pre-wrap break-words text-sm">
-                                {textoValor(k, a.depois?.[k])}
-                              </pre>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                      <ChevronRight
+                        className={`size-3.5 shrink-0 text-ink-400 transition-transform ${aberto ? "rotate-90" : ""} ${campos.length ? "" : "invisible"}`}
+                        aria-hidden
+                      />
+                      <time className="w-11 shrink-0 text-xs tabular-nums text-ink-500">
+                        {momento(a.criado_em)?.hora ?? "—"}
+                      </time>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                          <strong className="text-sm font-medium text-ink-900">
+                            {rotuloAcao(a.entidade, a.acao)}
+                          </strong>
+                          <span className="truncate text-sm text-ink-700">{nome}</span>
+                        </span>
+                        <span className="block truncate text-xs leading-4 text-ink-500">
+                          {a.actor}
+                          {campos.length ? ` · ${campos.map(rotuloCampo).join(", ")}` : ""}
+                        </span>
+                      </span>
+                    </button>
+                    {unidade && (
+                      <Link
+                        to="/ia/unidades"
+                        search={{
+                          unidade,
+                          ...(a.entidade === "excecao" ? { secao: "excecoes" as const } : {}),
+                        }}
+                        className="shrink-0 text-xs font-medium text-purple-800 underline-offset-4 hover:underline"
+                      >
+                        Abrir unidade
+                      </Link>
+                    )}
+                  </div>
+                  {aberto ? (
+                    <div className="overflow-x-auto bg-base-50 px-3 py-2 sm:pl-[5.25rem]">
+                      <table className="w-full min-w-[28rem] text-xs">
+                        <thead>
+                          <tr className="text-left text-ink-500">
+                            <th className="w-40 pb-1 pr-3 font-medium">Campo</th>
+                            <th className="pb-1 pr-3 font-medium">Antes</th>
+                            <th className="pb-1 font-medium">Depois</th>
+                          </tr>
+                        </thead>
+                        <tbody className="align-top">
+                          {campos.map((k) => (
+                            <tr key={k} className="border-t border-base-200">
+                              <td className="py-1 pr-3 font-medium text-ink-900">
+                                {rotuloCampo(k)}
+                              </td>
+                              <td className="py-1 pr-3">
+                                <pre className="whitespace-pre-wrap break-words font-sans text-ink-500">
+                                  {textoValor(k, a.antes?.[k])}
+                                </pre>
+                              </td>
+                              <td className="py-1">
+                                <pre className="whitespace-pre-wrap break-words font-sans text-ink-900">
+                                  {textoValor(k, a.depois?.[k])}
+                                </pre>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  </details>
-                )}
-              </Cartao>
-            );
-          })}
-        </section>
-      ))}
-      {q.hasNextPage && (
-        <Button
-          className="min-h-11"
-          variant="outline"
-          disabled={q.isFetchingNextPage}
-          onClick={() => q.fetchNextPage()}
-        >
-          {q.isFetchingNextPage ? "Carregando…" : "Carregar mais"}
-        </Button>
-      )}
+                  ) : null}
+                </article>
+              );
+            })}
+          </section>
+        ))}
+        {q.hasNextPage ? (
+          <div ref={fimLista} className="p-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full"
+              disabled={q.isFetchingNextPage}
+              onClick={() => void q.fetchNextPage()}
+            >
+              {q.isFetchingNextPage ? "Carregando…" : "Carregar mais"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

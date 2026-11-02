@@ -14,9 +14,14 @@ export const obterModulosEmpresa = createServerFn({ method: "POST" })
     const g = await import("./gateway/painel.server");
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
-      const { dados } = await t.chamar<ModulosEmpresa>("GET", ["modulos"]);
+      // Supervisor e funcionário só precisam saber quais telas a empresa usa: sem isso o menu
+      // esconderia Pedidos e Cardápio. O catálogo de módulos continua com gestor e plataforma.
+      const gere = t.papel === "plataforma" || t.papel === "gestor";
+      const { dados } = gere
+        ? await t.chamar<ModulosEmpresa>("GET", ["modulos"])
+        : await t.leituraDeApoio<ModulosEmpresa>(["modulos"]);
       return {
-        itens: Array.isArray(dados.itens) ? dados.itens : [],
+        itens: gere && Array.isArray(dados.itens) ? dados.itens : [],
         em_uso: Array.isArray(dados.em_uso) ? dados.em_uso : [],
         telas: Array.isArray(dados.telas) ? dados.telas : [],
       } satisfies ModulosEmpresa;

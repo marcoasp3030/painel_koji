@@ -139,6 +139,9 @@ export type MensagemGateway = {
   direcao: "entrada" | "saida";
   origem: string;
   enviada_em: string | null;
+  tipo?: string | null;
+  /** Nome do arquivo, quando a mensagem traz um. */
+  arquivo?: string | null;
 };
 
 export type ResultadoSimulacao = {

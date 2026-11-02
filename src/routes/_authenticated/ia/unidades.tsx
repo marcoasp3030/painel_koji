@@ -3,7 +3,7 @@ import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { GestaoUnidades } from "@/components/luxtia/GestaoUnidades";
 import type { SecaoUnidade } from "@/lib/gateway/gestao";
 
-const SECOES = ["agenda", "horarios", "excecoes", "pagamentos"] as const;
+const SECOES = ["agenda", "horarios", "excecoes", "pagamentos", "entrega"] as const;
 
 export const Route = createFileRoute("/_authenticated/ia/unidades")({
   validateSearch: (s: Record<string, unknown>): { unidade?: string; secao?: SecaoUnidade } => ({
@@ -24,6 +24,7 @@ function PaginaUnidades() {
       titulo="Unidades e horários"
       descricao="Abra a agenda, os horários ou as exceções direto em cada unidade. A situação vem do gateway."
       papeis={["plataforma", "gestor", "supervisor"]}
+      telaCheia
     >
       {(ctx) => (
         <GestaoUnidades

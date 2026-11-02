@@ -3,6 +3,7 @@ import { criarClienteGateway } from "./cliente.server";
 import { criarModuloGateway } from "./modulo.server";
 import { esquecerNomesRecentes, executarPedidos } from "./pedidos.server";
 import {
+  proximoPasso,
   acoesPedido,
   nomeClientePedido,
   tempoDesde,
@@ -300,4 +301,12 @@ test("pagamento na lista: rótulo, troco e traço quando o pedido antigo não te
   expect(
     textoPagamento({ forma: "dinheiro", rotulo: "Dinheiro", troco_para: 50, troco: 12.5 }),
   ).toBe(`Dinheiro · troco ${reais(12.5)}`);
+});
+
+test("proximoPasso avança e nunca oferece recusar ou cancelar", () => {
+  expect(proximoPasso(["confirmado", "recusado"])?.status).toBe("confirmado");
+  expect(proximoPasso(["recusado", "cancelado"])).toBeNull();
+  expect(proximoPasso([])).toBeNull();
+  expect(proximoPasso(undefined)).toBeNull();
+  expect(proximoPasso(["status_novo", "concluido"])?.rotulo).toBe("Concluir");
 });

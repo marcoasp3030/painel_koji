@@ -43,11 +43,11 @@ export function VisaoGeral({
   )[];
 
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <Cartao className="p-6">
+    <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <Cartao className="p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-xl text-purple-800">Prontidão</h2>
-          <p className="text-sm text-ink-500">
+          <h2 className="text-sm font-medium text-ink-900">Prontidão</h2>
+          <p className="text-xs text-ink-500">
             {prontos} de {total} itens prontos
           </p>
         </div>
@@ -68,13 +68,13 @@ export function VisaoGeral({
         </div>
       </Cartao>
 
-      <div className="space-y-6">
-        <Cartao className="p-6">
-          <h2 className="font-display text-xl text-purple-800">{CAMPO_AGENTE.status.rotulo}</h2>
+      <div className="space-y-3">
+        <Cartao className="p-4">
+          <h2 className="text-sm font-medium text-ink-900">{CAMPO_AGENTE.status.rotulo}</h2>
           <Ajuda>{CAMPO_AGENTE.status.ajuda}</Ajuda>
           {podeEditar ? (
             <div
-              className="mt-4 inline-flex rounded-lg border border-base-200 bg-base-50 p-1"
+              className="mt-2 inline-flex rounded-lg border border-base-200 bg-base-50 p-0.5"
               role="radiogroup"
               aria-label={CAMPO_AGENTE.status.rotulo}
             >
@@ -90,7 +90,7 @@ export function VisaoGeral({
                     aria-checked={atual}
                     disabled={salvando || atual || bloqueado}
                     onClick={() => onSituacao(s)}
-                    className={`rounded-md px-4 py-1.5 text-sm transition-colors disabled:cursor-default ${
+                    className={`rounded-md px-3 py-1 text-sm transition-colors disabled:cursor-default ${
                       atual
                         ? "bg-purple-700 text-base-50"
                         : "text-ink-700 hover:bg-purple-50 disabled:opacity-50"
@@ -140,14 +140,19 @@ function Testar({ ctx, agente }: { ctx: ContextoGateway; agente: AgenteDetalhe }
   });
 
   return (
-    <Cartao className="p-6">
-      <h2 className="font-display text-xl text-purple-800">Testar o agente</h2>
+    <Cartao className="p-4">
+      <h2 className="text-sm font-medium text-ink-900">Testar o agente</h2>
       <Ajuda>
         {modo === "live"
           ? "Envia uma mensagem de teste ao Skyone. Nada vai para os clientes."
           : `Respostas em ${RESPOSTAS["mock"]}: o teste responde sem chamar a IA.`}
       </Ajuda>
-      <Button className="mt-4" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+      <Button
+        size="sm"
+        className="mt-2"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending}
+      >
         {mutation.isPending ? (
           <Loader2 className="size-4 animate-spin" aria-hidden />
         ) : (

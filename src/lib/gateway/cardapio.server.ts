@@ -15,6 +15,7 @@ export function projetarItem(v: unknown, admin = false): ItemCardapio {
     categoria_id: i["categoria_id"] as number,
     posicao: i["posicao"] as number | null,
     prato: (i["prato"] as NonNullable<ItemCardapio["prato"]>) ?? null,
+    qtd_opcoes: (i["qtd_opcoes"] as number | undefined) ?? 0,
     esgotado_ate: i["esgotado_ate"] as string | null,
     esgotado_motivo: i["esgotado_motivo"] as string | null,
     arquivado: i["arquivado"] as boolean,
@@ -137,6 +138,20 @@ export async function executarCardapio(
       if (d.acao === "obter") return { ok: true, dados: item(dados) as unknown as Json };
       if (d.acao === "historico") return { ok: true, dados: historico(dados) };
       return { ok: true, dados: dados as Json };
+    }
+    if (d.acao === "opcoes" || d.acao === "salvar_opcoes") {
+      const partes = ["catalogo", "itens", String(d.item_id), "opcoes"];
+      if (d.acao === "opcoes") {
+        autorizar(t.papel, "GET", partes, undefined);
+        return { ok: true, dados: (await t.chamar("GET", partes)).dados as Json };
+      }
+      const corpo = {
+        grupos: d.grupos,
+        ...(d.atualizado_em ? { atualizado_em: d.atualizado_em } : {}),
+        ...(d.aplicar_em ? { aplicar_em: d.aplicar_em } : {}),
+      } as Json;
+      autorizar(t.papel, "PUT", partes, corpo);
+      return { ok: true, dados: (await t.chamar("PUT", partes, { corpo })).dados as Json };
     }
     if (d.acao === "panorama") {
       const itens: ItemCardapio[] = [];

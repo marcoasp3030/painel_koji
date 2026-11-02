@@ -35,6 +35,7 @@ export const ROTULO_TELA: Record<TelaModulo, string> = {
 /** Itens de menu ligados a uma tela declarada pelos módulos. */
 export const TELA_DO_CAMINHO: Record<string, TelaModulo> = {
   "/ia/cardapio": "cardapio",
+  "/ia/configuracoes/aparencia": "cardapio",
   "/ia/pedidos": "pedidos",
   "/ia/configuracoes/avisos": "avisos_de_pedido",
 };

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { UsuariosTela } from "@/components/luxtia/Usuarios";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { gerarLinkRedefinicao } from "@/lib/entrada.functions";
 import {
   alterarUsuario,
@@ -26,11 +27,7 @@ export const Route = createFileRoute("/_authenticated/equipe")({
 
 function Pagina() {
   return (
-    <PaginaGateway
-      titulo="Usuários"
-      semCabecalho
-      papeis={["plataforma", "gestor", "supervisor"]}
-    >
+    <PaginaGateway titulo="Usuários" telaCheia papeis={["plataforma", "gestor", "supervisor"]}>
       {(ctx) => <Equipe ctx={ctx} />}
     </PaginaGateway>
   );
@@ -52,8 +49,12 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
   });
   const invalida = () => cache.invalidateQueries({ queryKey: ["usuarios", ctx.empresa] });
   const criar = useMutation({
-    mutationFn: (d: { email: string; nome: string; papel: "gestor" | "supervisor" | "funcionario"; unidades: string[] }) =>
-      convidar({ data: { ...d, empresa: ctx.empresa } }),
+    mutationFn: (d: {
+      email: string;
+      nome: string;
+      papel: "gestor" | "supervisor" | "funcionario";
+      unidades: string[];
+    }) => convidar({ data: { ...d, empresa: ctx.empresa } }),
     onSuccess: (r) => {
       setLink(r.link);
       setAviso(r.link ? null : r.aviso);
@@ -63,8 +64,12 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
     onError: (e: Error) => toast.error(e.message),
   });
   const mudar = useMutation({
-    mutationFn: (d: { id: string; papel?: "gestor" | "supervisor" | "funcionario"; unidades?: string[]; ativo?: boolean }) =>
-      alterar({ data: { ...d, empresa: ctx.empresa } }),
+    mutationFn: (d: {
+      id: string;
+      papel?: "gestor" | "supervisor" | "funcionario";
+      unidades?: string[];
+      ativo?: boolean;
+    }) => alterar({ data: { ...d, empresa: ctx.empresa } }),
     onSuccess: () => {
       toast.success("Acesso atualizado.");
       void invalida();
@@ -102,12 +107,17 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-  if (q.isPending) return <p className="text-sm text-ink-500">Carregando usuários…</p>;
-  if (q.isError) return <p role="alert">{q.error.message}</p>;
+  if (q.isPending) return <p className="p-4 text-sm text-ink-500">Carregando usuários…</p>;
+  if (q.isError)
+    return (
+      <p role="alert" className="p-4 text-sm text-destructive">
+        {q.error.message}
+      </p>
+    );
   return (
     <UsuariosTela
-      empresa={q.data.empresa}
       concediveis={q.data.concediveis}
+      podeRedefinirSenha={peloMenos(q.data.papel, "gestor")}
       unidades={q.data.unidades}
       usuarios={q.data.usuarios}
       ocupado={
@@ -120,11 +130,15 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
       aviso={aviso}
       linkConvite={link}
       convitePorEmail={q.data.convitePorEmail}
-      onConvidar={(d) => criar.mutate(d)}
-      onAlterar={(d) => mudar.mutate(d)}
+      onConvidar={(d, pronto) => criar.mutate(d, { onSuccess: pronto })}
+      onAlterar={(d, pronto) => mudar.mutate(d, { onSuccess: pronto })}
       onReenviar={(id) => deNovo.mutate(id)}
       onRevogar={(id) => revogarUm.mutate(id)}
       onRedefinirSenha={(userId) => novaSenha.mutate(userId)}
+      onFecharLink={() => {
+        setLink(null);
+        setAviso(null);
+      }}
     />
   );
 }

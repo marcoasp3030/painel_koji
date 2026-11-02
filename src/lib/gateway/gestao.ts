@@ -80,7 +80,60 @@ export function dataRecebida(v: string | null) {
     ? `${m[3]}/${m[2]}/${m[1]} ${m[4]} (${m[5] === "Z" ? "UTC" : m[5] ? "UTC" + m[5] : "horário do servidor"})`
     : v;
 }
-export type SecaoUnidade = "agenda" | "horarios" | "excecoes" | "pagamentos";
+export type SecaoUnidade = "agenda" | "horarios" | "excecoes" | "pagamentos" | "entrega";
+/** Dia e hora de um instante no fuso pedido. Nulo se o valor não for uma data legível. */
+export function momentoNoFuso(valor: string, zona: string) {
+  const instante = new Date(valor.replace(" ", "T"));
+  if (Number.isNaN(instante.getTime())) return null;
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: zona,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instante);
+  const de = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? "";
+  return {
+    dia: `${de("day")}/${de("month")}/${de("year")}`,
+    hora: `${de("hour")}:${de("minute")}`,
+  };
+}
+
+/** "Hoje" e "Ontem" no fuso da empresa; o resto fica na data. */
+export function rotuloDia(dia: string, zona: string, agora = Date.now()) {
+  const data = (ms: number) => momentoNoFuso(new Date(ms).toISOString(), zona)?.dia;
+  if (dia === data(agora)) return "Hoje";
+  if (dia === data(agora - 86_400_000)) return "Ontem";
+  return dia;
+}
+
+/** Rótulo curto do selo da unidade. */
+export function resumoSituacao(s: Situacao) {
+  if (s.aberta_agora === true) return "Aberta";
+  if (s.motivo === "pausa") return "Pausada";
+  if (s.aberta_agora === null || s.motivo === "sem_horario") return "Sem horário";
+  if (s.motivo === "inativa") return "Inativa";
+  if (s.motivo === "excecao") return "Exceção";
+  return "Fechada";
+}
+
+/** "2026-11-03T18:00:00-03:00" vira "03/11 18:00"; com `soHora`, "18:00". Sem data legível, nulo. */
+function momentoCurto(v: string | null | undefined, soHora = false) {
+  const m = /^\d{4}-(\d{2})-(\d{2})(?:T| )(\d{2}:\d{2})/.exec(v ?? "");
+  if (!m) return null;
+  return soHora ? m[3]! : `${m[2]}/${m[1]} ${m[3]}`;
+}
+
+/** A situação em uma linha, com o que importa a seguir: quando fecha ou quando abre. */
+export function linhaSituacao(s: Situacao) {
+  const fecha = momentoCurto(s.fecha_as, true);
+  if (s.aberta_agora === true) return fecha ? `Fecha às ${fecha}` : "Aberta agora";
+  const abre = momentoCurto(s.proxima_abertura);
+  return abre ? `${textoSituacao(s)} · abre ${abre}` : textoSituacao(s);
+}
+
 export function textoSituacao(s: Situacao) {
   if (s.aberta_agora === null) return "Horário não informado";
   if (s.aberta_agora) return "Aberta";
@@ -210,6 +263,8 @@ const dadosUnidade = z
     uf: z.enum(UFS).nullable().optional(),
     // Entrega/pagamento: o servidor só encaminha com pedidos em uso.
     taxa_entrega: dinheiro,
+    taxa_modo: z.enum(["fixa", "bairro", "cep"]).nullable().optional(),
+    frete_gratis_acima: dinheiro,
     pedido_minimo: dinheiro,
     area_entrega: z.string().trim().max(2000).nullable().optional(),
     aceita_retirada: z.boolean().nullable().optional(),
@@ -261,6 +316,36 @@ export const gestaoSchema = z.discriminatedUnion("acao", [
     .strict(),
   z.object({ ...alvo, acao: z.literal("reabrir"), id: uid }).strict(),
   z.object({ ...alvo, acao: z.literal("pagamentos"), id: uid }).strict(),
+  z.object({ ...alvo, acao: z.literal("taxas"), id: uid }).strict(),
+  z
+    .object({
+      ...alvo,
+      acao: z.literal("salvar_taxas"),
+      id: uid,
+      itens: z
+        .array(
+          z
+            .object({
+              tipo: z.enum(["bairro", "cep"]),
+              bairro: z.string().trim().min(2).max(80).optional(),
+              apelidos: z.array(z.string().trim().min(2).max(80)).max(10).optional(),
+              atendido: z.boolean().optional(),
+              cep_inicio: z
+                .string()
+                .regex(/^\d{8}$/)
+                .optional(),
+              cep_fim: z
+                .string()
+                .regex(/^\d{8}$/)
+                .optional(),
+              taxa: z.number().min(0).max(999.99).nullable(),
+              ativo: z.boolean(),
+            })
+            .strict(),
+        )
+        .max(500, "No máximo 500 linhas."),
+    })
+    .strict(),
   z
     .object({
       ...alvo,

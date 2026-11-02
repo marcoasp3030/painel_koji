@@ -85,14 +85,14 @@ export function PagamentosUnidade({
   }
   return (
     <section
-      className="space-y-3 rounded-xl border border-base-200 bg-card p-4"
+      className="space-y-2 rounded-lg border border-base-200 bg-card p-3"
       aria-labelledby="pag-titulo"
     >
       <div>
-        <h3 id="pag-titulo" className="font-display text-lg text-purple-800">
+        <h3 id="pag-titulo" className="sr-only">
           Pagamentos
         </h3>
-        <p className="text-sm text-ink-500">
+        <p className="text-xs text-ink-500">
           Cada forma tem código, rótulo e se está ativa. Aceitar troco só vale para dinheiro. A
           ordem desta lista é a ordem mostrada ao cliente.
         </p>
@@ -108,7 +108,7 @@ export function PagamentosUnidade({
           Nenhuma forma cadastrada. O pedido segue com a unidade confirmando o pagamento.
         </p>
       ) : null}
-      <ul className="space-y-3">
+      <ul className="space-y-2">
         {lista.map((item, i) => (
           <li
             key={`${item.codigo}-${i}`}
@@ -137,7 +137,7 @@ export function PagamentosUnidade({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm">
-              <label className="flex min-h-11 items-center gap-2">
+              <label className="flex h-10 sm:h-8 items-center gap-2">
                 <input
                   type="checkbox"
                   checked={item.ativo}
@@ -146,7 +146,7 @@ export function PagamentosUnidade({
                 />
                 Ativo
               </label>
-              <label className="flex min-h-11 items-center gap-2">
+              <label className="flex h-10 sm:h-8 items-center gap-2">
                 <input
                   type="checkbox"
                   checked={item.aceita_troco}
@@ -172,7 +172,7 @@ export function PagamentosUnidade({
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11"
+                  className="h-10 sm:h-8"
                   disabled={g.busy || i === 0}
                   onClick={() => mover(i, -1)}
                 >
@@ -181,7 +181,7 @@ export function PagamentosUnidade({
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11"
+                  className="h-10 sm:h-8"
                   disabled={g.busy || i === lista.length - 1}
                   onClick={() => mover(i, 1)}
                 >
@@ -190,7 +190,7 @@ export function PagamentosUnidade({
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11"
+                  className="h-10 sm:h-8"
                   disabled={g.busy}
                   onClick={() => setItens(lista.filter((_, j) => j !== i))}
                 >
@@ -208,7 +208,7 @@ export function PagamentosUnidade({
               key={s.codigo}
               type="button"
               variant="outline"
-              className="min-h-11"
+              className="h-10 sm:h-8"
               disabled={g.busy || lista.length >= 12}
               onClick={() =>
                 setItens([
@@ -229,7 +229,7 @@ export function PagamentosUnidade({
           <Button
             type="button"
             variant="outline"
-            className="min-h-11"
+            className="h-10 sm:h-8"
             disabled={g.busy || lista.length >= 12}
             onClick={() =>
               setItens([
@@ -250,7 +250,7 @@ export function PagamentosUnidade({
       {podeEditar ? (
         <Button
           type="button"
-          className="min-h-11"
+          className="h-10 sm:h-8"
           disabled={g.busy || !sujo}
           onClick={async () => {
             const ok = await g.salvar({

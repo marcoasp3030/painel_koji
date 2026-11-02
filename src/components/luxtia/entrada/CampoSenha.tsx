@@ -37,7 +37,7 @@ export function CampoSenha({
           required={required}
           minLength={minLength}
           autoComplete={autoComplete}
-          className="bg-base-50 pr-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700"
+          className="h-11 bg-base-50 pr-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700"
           onChange={(e) => onChange(e.target.value)}
           onKeyUp={(e) => setCaps(e.getModifierState?.("CapsLock") ?? false)}
           onKeyDown={(e) => setCaps(e.getModifierState?.("CapsLock") ?? false)}

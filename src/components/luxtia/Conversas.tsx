@@ -6,6 +6,7 @@ import {
   reativarOptOut,
 } from "@/lib/gateway-followup.functions";
 import { AtendimentosConversa } from "./AtendimentosConversa";
+import { EtiquetasDaConversa, PONTO_ETIQUETA } from "./EtiquetasConversa";
 import { BlocoFollowUp, SeloOptOut } from "./FollowUpConversa";
 import { BotaoRespostas, useMenuRespostas } from "./RespostasRapidas";
 import {
@@ -41,12 +42,16 @@ import {
   apagarNota,
   atenderConversa,
   atribuirConversa,
+  buscarNaConversa,
   criarNota,
   editarNomeContato,
+  enviarArquivo,
   listarConversas,
   listarEquipeConversas,
+  listarEtiquetas,
   listarNotas,
   obterCursorEventos,
+  linkCardapioDaConversa,
 } from "@/lib/gateway-conversas.functions";
 import {
   canalDaConversa,
@@ -54,8 +59,12 @@ import {
   esperaCurta,
   estadoConversa,
   juntarMensagens,
+  ACEITA_ARQUIVO,
+  legendaDoArquivo,
   LIMITE_NOTA,
   linhaDoTempo,
+  problemaNoArquivo,
+  tamanhoLegivel,
   nomeContato,
   nomeSemCadastro,
   ordenarConversas,
@@ -73,6 +82,7 @@ import {
   MOTIVO_NOME,
   type Conversa,
   type EstadoConversa,
+  type Etiqueta,
   type Leitura,
   type OrigemNome,
   type PessoaEquipe,
@@ -88,10 +98,14 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   CalendarClock,
   Clock,
+  FileText,
   Lock,
   PanelRight,
+  Paperclip,
+  UtensilsCrossed,
   Pencil,
   Search,
   Send,
@@ -99,6 +113,7 @@ import {
   SlidersHorizontal,
   Trash2,
   UserRoundCheck,
+  X,
 } from "lucide-react";
 import type { CanalGateway } from "@/lib/gateway/tipos";
 import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
@@ -158,6 +173,15 @@ function useTelaLarga() {
     () => window.matchMedia(CONSULTA_TELA_LARGA).matches,
     () => false,
   );
+}
+
+function paraBase64(arquivo: File) {
+  return new Promise<string>((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onerror = () => reject(new Error("Não foi possível ler o arquivo."));
+    leitor.onload = () => resolve(String(leitor.result).split(",")[1] ?? "");
+    leitor.readAsDataURL(arquivo);
+  });
 }
 
 /** Atalhos de uma tecla não valem com a pessoa digitando. */
@@ -259,6 +283,7 @@ export function Conversas({
   const [agente, setAgente] = useState(""),
     [canal, setCanal] = useState("");
   const [minhas, setMinhas] = useState(false);
+  const [etiqueta, setEtiqueta] = useState("");
   const [estado, setEstado] = useState<"" | EstadoConversa>(""),
     [ordem, setOrdem] = useState<"recentes" | "id">("recentes"),
     [busca, setBusca] = useState(""),
@@ -322,7 +347,18 @@ export function Conversas({
     queryFn: () => buscarCanais({ data: { empresa: ctx.empresa } }),
   });
   const lista = useInfiniteQuery({
-    queryKey: ["conversas", ctx.empresa, agente, canal, estado, minhas, ordem, filtroBusca, desde],
+    queryKey: [
+      "conversas",
+      ctx.empresa,
+      agente,
+      canal,
+      estado,
+      minhas,
+      etiqueta,
+      ordem,
+      filtroBusca,
+      desde,
+    ],
     enabled: cursorInicial.isSuccess && !soAguardando,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
@@ -333,6 +369,7 @@ export function Conversas({
           aguardando: false,
           ordem,
           ...(minhas ? { minhas: true } : {}),
+          ...(etiqueta ? { etiqueta: Number(etiqueta) } : {}),
           ...(agente ? { agente } : {}),
           ...(canal ? { canal } : {}),
           ...(estado ? { estado: [estado] } : {}),
@@ -345,7 +382,7 @@ export function Conversas({
     refetchIntervalInBackground: false,
   });
   const espera = useQuery({
-    queryKey: ["conversas", ctx.empresa, "aguardando", agente, canal, filtroBusca, desde],
+    queryKey: ["conversas", ctx.empresa, "aguardando", agente, canal, etiqueta, filtroBusca, desde],
     // Roda em todas as abas: a contagem e "Abrir próxima" dependem dela. Com outro estado
     // escolhido, a fila só não entra na lista.
     enabled: cursorInicial.isSuccess,
@@ -354,6 +391,7 @@ export function Conversas({
         data: {
           empresa: ctx.empresa,
           aguardando: true,
+          ...(etiqueta ? { etiqueta: Number(etiqueta) } : {}),
           ...(agente ? { agente } : {}),
           ...(canal ? { canal } : {}),
           ...(filtroBusca ? { busca: filtroBusca } : {}),
@@ -381,6 +419,13 @@ export function Conversas({
     staleTime: 5 * 60_000,
   });
   const equipe = equipeQuery.data?.itens;
+  const buscarEtiquetas = useServerFn(listarEtiquetas);
+  const etiquetasQuery = useQuery({
+    queryKey: ["conversas-etiquetas", ctx.empresa],
+    queryFn: () => buscarEtiquetas({ data: { empresa: ctx.empresa } }),
+    staleTime: 60_000,
+  });
+  const todasEtiquetas = etiquetasQuery.data?.itens ?? [];
   const acompanhamento = useQuery({
     queryKey: ["conversas-eventos", ctx.empresa],
     enabled: cursorInicial.isSuccess,
@@ -487,6 +532,7 @@ export function Conversas({
     Number(Boolean(agente)) +
     Number(Boolean(canal)) +
     Number(Boolean(desde)) +
+    Number(Boolean(etiqueta)) +
     Number(ordem !== "recentes");
 
   const painelLista = useRef<HTMLDivElement>(null);
@@ -621,6 +667,21 @@ export function Conversas({
                 </select>
               </label>
               <label className="block text-xs text-ink-500">
+                Etiqueta
+                <select
+                  className="mt-1 h-8 w-full rounded-md border bg-card px-2 text-sm text-ink-900"
+                  value={etiqueta}
+                  onChange={(e) => setEtiqueta(e.target.value)}
+                >
+                  <option value="">Todas</option>
+                  {todasEtiquetas.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs text-ink-500">
                 Ordenar
                 <select
                   className="mt-1 h-8 w-full rounded-md border bg-card px-2 text-sm text-ink-900 disabled:opacity-60"
@@ -651,6 +712,7 @@ export function Conversas({
                     setCanal("");
                     setDesde("");
                     setOrdem("recentes");
+                    setEtiqueta("");
                   }}
                 >
                   Limpar filtros
@@ -840,6 +902,9 @@ export function Conversas({
             voltar={() => setSelecionada(null)}
             rascunhos={rascunhos.current}
             equipe={equipe ?? []}
+            todasEtiquetas={todasEtiquetas}
+            temProxima={Boolean(proxima)}
+            depoisDeEncerrar={() => setSelecionada(proxima)}
           />
         ) : (
           <div className="flex min-h-0 w-full flex-col items-center justify-center bg-base-100 px-8 text-center">
@@ -903,6 +968,7 @@ const LinhaConversa = memo(function LinhaConversa({
       : null,
     c.pedido_aberto ? `Pedido #${c.pedido_aberto.numero}` : null,
     c.follow_up?.estado === "agendado" ? "Follow-up agendado" : null,
+    ...(c.etiquetas ?? []).map((e) => e.nome),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -949,6 +1015,13 @@ const LinhaConversa = memo(function LinhaConversa({
         </span>
         <span className="flex items-center gap-1.5">
           <UltimaMensagemResumo conversa={c} />
+          {c.etiquetas?.length ? (
+            <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
+              {c.etiquetas.slice(0, 3).map((e) => (
+                <span key={e.id} className={`size-2 rounded-full ${PONTO_ETIQUETA[e.cor]}`} />
+              ))}
+            </span>
+          ) : null}
           {c.pedido_aberto ? (
             <ShoppingBag className="size-3.5 shrink-0 text-purple-700" aria-label="Pedido aberto" />
           ) : null}
@@ -1086,6 +1159,9 @@ function Atendimento({
   voltar,
   rascunhos,
   equipe,
+  todasEtiquetas,
+  temProxima,
+  depoisDeEncerrar,
 }: {
   ctx: ContextoGateway;
   conversa: Conversa;
@@ -1096,6 +1172,10 @@ function Atendimento({
   /** O texto em digitação de cada conversa sobrevive à troca entre elas. */
   rascunhos: Map<string, string>;
   equipe: PessoaEquipe[];
+  todasEtiquetas: Etiqueta[];
+  temProxima: boolean;
+  /** Abre a próxima da fila, ou fecha a conversa quando não há ninguém esperando. */
+  depoisDeEncerrar: () => void;
 }) {
   const enc = useServerFn(gerirAtendimentos);
   const listarFollow = useServerFn(listarFollowUps);
@@ -1128,6 +1208,16 @@ function Atendimento({
     },
     [rascunhos, conversaId],
   );
+  const pedirLinkCardapio = useServerFn(linkCardapioDaConversa);
+  const linkCardapio = useMutation({
+    mutationFn: () => pedirLinkCardapio({ data: { empresa: ctx.empresa, conversa: conversaId } }),
+    onSuccess: (r) => {
+      const inicio = texto.trim();
+      escrever(`${inicio ? `${inicio}\n` : "Monte seu pedido por aqui: "}${r.url}`);
+      campoTexto.current?.focus();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const mensagens = useInfiniteQuery({
     queryKey: ["conversa-mensagens", ctx.empresa, conversa.conversation_id, atendimentoId],
     initialPageParam: null as number | null,
@@ -1254,6 +1344,134 @@ function Atendimento({
     onError: (e: Error) => toast.error(e.message),
     retry: false,
   });
+  const encerrarEProxima = useMutation({
+    mutationFn: () => agirAtendimento("encerrar"),
+    onSuccess: (r) => {
+      setConfirmaEncerrar(false);
+      if (!r.ok) {
+        toast.error(r.mensagem);
+        return;
+      }
+      toast.success("Atendimento encerrado.");
+      void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+      depoisDeEncerrar();
+    },
+    onError: (e: Error) => {
+      setConfirmaEncerrar(false);
+      toast.error(e.message);
+    },
+    retry: false,
+  });
+  const [confirmaEncerrar, setConfirmaEncerrar] = useState(false);
+  useEffect(() => {
+    if (!confirmaEncerrar) return;
+    const t = window.setTimeout(() => setConfirmaEncerrar(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [confirmaEncerrar]);
+  // Busca dentro da conversa.
+  const [buscando, setBuscando] = useState(false);
+  const [termo, setTermo] = useState("");
+  const [termoFinal, setTermoFinal] = useState("");
+  const [achado, setAchado] = useState(0);
+  const [destaque, setDestaque] = useState<string | null>(null);
+  const tempoDestaque = useRef<number | undefined>(undefined);
+  const procurar = useServerFn(buscarNaConversa);
+  useEffect(() => {
+    const t = window.setTimeout(() => setTermoFinal(termo.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [termo]);
+  const achados = useQuery({
+    queryKey: ["conversa-busca", ctx.empresa, conversaId, termoFinal],
+    enabled: buscando && termoFinal.length >= 2,
+    queryFn: () =>
+      procurar({ data: { empresa: ctx.empresa, conversa: conversaId, q: termoFinal } }),
+  });
+  const linhaAtual = useRef(linha);
+  linhaAtual.current = linha;
+  const irPara = useCallback(
+    async (item: { tipo: "mensagem" | "nota"; id: number }) => {
+      const carregado = () =>
+        linhaAtual.current.some((l) =>
+          item.tipo === "nota"
+            ? l.tipo === "nota" && l.nota.id === item.id
+            : l.tipo === "mensagem" && l.mensagem.id === item.id,
+        );
+      coladoNoFim.current = false;
+      // Mensagem antiga: carrega o histórico até ela, mantendo o limite de páginas.
+      for (let pagina = 0; pagina < 60 && !carregado(); pagina++) {
+        const el = painel.current;
+        if (el) alturaAntes.current = el.scrollHeight;
+        preservarRolagem.current = true;
+        const r = await mensagens.fetchNextPage();
+        await new Promise((fim) => window.setTimeout(fim, 30));
+        if (!r.hasNextPage) break;
+      }
+      const chave = `${item.tipo}-${item.id}`;
+      window.requestAnimationFrame(() => {
+        const alvo = painel.current?.querySelector(`[data-item="${chave}"]`);
+        if (!alvo) return void toast.error("Este trecho não está no recorte aberto.");
+        alvo.scrollIntoView({ block: "center" });
+        setDestaque(chave);
+        window.clearTimeout(tempoDestaque.current);
+        tempoDestaque.current = window.setTimeout(() => setDestaque(null), 2500);
+      });
+    },
+    [mensagens],
+  );
+  const itensAchados = achados.data?.itens ?? [];
+  const irParaAchado = useCallback(
+    (indice: number) => {
+      const total = itensAchados.length;
+      if (!total) return;
+      const proximo = (indice + total) % total;
+      setAchado(proximo);
+      const item = itensAchados[proximo];
+      if (item) void irPara(item);
+    },
+    [itensAchados, irPara],
+  );
+  useEffect(() => {
+    setAchado(0);
+    const primeiro = achados.data?.itens[0];
+    if (primeiro) void irPara(primeiro);
+    // Só quando chega um resultado novo; a navegação fica com as setas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [achados.data]);
+  // Envio de arquivo: a mensagem digitada vira a legenda.
+  const seletorArquivo = useRef<HTMLInputElement>(null);
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const enviarArq = useServerFn(enviarArquivo);
+  const mandarArquivo = useMutation({
+    mutationFn: async (a: File) => {
+      const conteudo = await paraBase64(a);
+      return enviarArq({
+        data: {
+          empresa: ctx.empresa,
+          conversa: conversaId,
+          nome: a.name,
+          conteudo,
+          ...(texto.trim() ? { legenda: texto.trim() } : {}),
+        },
+      });
+    },
+    onSuccess: (r) => {
+      setArquivo(null);
+      escrever("");
+      toast.success(
+        r.send_mode === "dry"
+          ? "Arquivo registrado em teste. Nada enviado ao cliente."
+          : "Arquivo enviado.",
+      );
+      coladoNoFim.current = true;
+      void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+      void mensagens.refetch();
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      void cache.invalidateQueries({ queryKey: ["conversas", ctx.empresa] });
+    },
+    retry: false,
+  });
   const atribuir = useServerFn(atribuirConversa);
   const transferir = useMutation({
     mutationFn: (para: string) =>
@@ -1370,7 +1588,11 @@ function Atendimento({
   });
   const pendentes = modo === "mensagem" ? variaveisPendentes(texto) : [];
   const podeEnviar =
-    Boolean(texto.trim()) && !pendentes.length && !acao.isPending && !deOutraPessoa;
+    Boolean(texto.trim() || arquivo) &&
+    !pendentes.length &&
+    !acao.isPending &&
+    !mandarArquivo.isPending &&
+    !deOutraPessoa;
   const podeNota = Boolean(textoNota.trim()) && !salvarNota.isPending;
   const emNota = modo === "nota";
   const encerrada = estado === "encerrada";
@@ -1438,6 +1660,12 @@ function Atendimento({
           />
         ) : null}
       </section>
+      <EtiquetasDaConversa
+        ctx={ctx}
+        conversa={conversaId}
+        aplicadas={conversa.etiquetas ?? []}
+        todas={todasEtiquetas}
+      />
       {conversa.pedido_aberto ? (
         <section aria-label="Pedido aberto" className="border-b border-base-200 px-4 py-3">
           <Link
@@ -1557,7 +1785,28 @@ function Atendimento({
                 disabled={acao.isPending}
                 onClick={() => acao.mutate("devolver")}
               >
-                Devolver ao agente
+                Devolver
+              </Button>
+            ) : null}
+            {peloMenos(ctx.papel, "supervisor") &&
+            !encerrada &&
+            conversa.atendimento &&
+            conversa.atendimento.estado !== "encerrado" ? (
+              <Button
+                variant={confirmaEncerrar ? "destructive" : "outline"}
+                size="sm"
+                className="h-8 px-2.5"
+                disabled={encerrarEProxima.isPending}
+                title="Encerra o atendimento e abre quem aguarda há mais tempo. Nada é enviado ao cliente."
+                onClick={() =>
+                  confirmaEncerrar ? encerrarEProxima.mutate() : setConfirmaEncerrar(true)
+                }
+              >
+                {confirmaEncerrar
+                  ? "Confirmar encerramento"
+                  : temProxima
+                    ? "Encerrar e próxima"
+                    : "Encerrar"}
               </Button>
             ) : null}
             {podeTransferir ? (
@@ -1592,6 +1841,20 @@ function Atendimento({
                 </PopoverContent>
               </Popover>
             ) : null}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              aria-label="Buscar nesta conversa"
+              aria-pressed={buscando}
+              title="Buscar nesta conversa"
+              onClick={() => {
+                setBuscando((b) => !b);
+                setTermo("");
+              }}
+            >
+              <Search aria-hidden />
+            </Button>
             {!telaLarga ? (
               <Button
                 variant="ghost"
@@ -1613,6 +1876,69 @@ function Atendimento({
             {seloEspera(conversa.aguardando_atendente_desde, agora)}
             {conversa.aguardando_motivo ? ` · ${MOTIVO_ATENDENTE[conversa.aguardando_motivo]}` : ""}
           </p>
+        ) : null}
+        {buscando ? (
+          <div className="flex shrink-0 items-center gap-1.5 border-b border-base-200 bg-base-50 px-3 py-1">
+            <Input
+              autoFocus
+              value={termo}
+              maxLength={100}
+              className="h-7 min-w-0 flex-1 bg-card text-sm"
+              aria-label="Texto para buscar nesta conversa"
+              placeholder="Buscar nesta conversa"
+              onChange={(e) => setTermo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setBuscando(false);
+                  setTermo("");
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  irParaAchado(achado + (e.shiftKey ? -1 : 1));
+                }
+              }}
+            />
+            <span className="shrink-0 text-xs tabular-nums text-ink-500" aria-live="polite">
+              {termoFinal.length < 2
+                ? ""
+                : achados.isFetching
+                  ? "Buscando…"
+                  : itensAchados.length
+                    ? `${achado + 1} de ${itensAchados.length}${achados.data?.limitado ? "+" : ""}`
+                    : "Nada encontrado"}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Resultado mais recente"
+              disabled={!itensAchados.length}
+              onClick={() => irParaAchado(achado - 1)}
+            >
+              <ArrowDown aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Resultado mais antigo"
+              disabled={!itensAchados.length}
+              onClick={() => irParaAchado(achado + 1)}
+            >
+              <ArrowUp aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Fechar busca"
+              onClick={() => {
+                setBuscando(false);
+                setTermo("");
+              }}
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
         ) : null}
         {deOutraPessoa ? (
           <p className="flex shrink-0 items-center gap-1.5 bg-purple-100/70 px-3 py-1 text-xs font-medium text-purple-800">
@@ -1682,7 +2008,11 @@ function Atendimento({
               if (item.tipo === "nota") {
                 const n = item.nota;
                 return (
-                  <div key={`nota-${n.id}`} className="pb-1">
+                  <div
+                    key={`nota-${n.id}`}
+                    data-item={`nota-${n.id}`}
+                    className={`pb-1 ${destaque === `nota-${n.id}` ? "rounded-lg ring-2 ring-purple-400" : ""}`}
+                  >
                     {separador}
                     <article
                       aria-label="Nota interna"
@@ -1727,7 +2057,11 @@ function Atendimento({
                 proxima.origem !== m.origem ||
                 diaDaMensagem(proxima.enviada_em) !== dia;
               return (
-                <div key={m.id} className={fechaGrupo ? "pb-1" : ""}>
+                <div
+                  key={m.id}
+                  data-item={`mensagem-${m.id}`}
+                  className={`${fechaGrupo ? "pb-1" : ""} ${destaque === `mensagem-${m.id}` ? "rounded-xl ring-2 ring-purple-400" : ""}`}
+                >
                   {separador}
                   <div className={`flex ${saida ? "justify-end" : "justify-start"}`}>
                     <div
@@ -1739,9 +2073,18 @@ function Atendimento({
                             : "rounded-xl rounded-bl-sm border border-base-200 bg-card text-ink-900"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words text-sm leading-snug">
-                        {m.conteudo ?? "Mensagem sem texto"}
-                      </p>
+                      {humano && m.arquivo ? (
+                        <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                          <FileText className="size-4 shrink-0" aria-hidden />
+                          <span className="min-w-0 truncate">{m.arquivo}</span>
+                        </p>
+                      ) : null}
+                      {humano && m.arquivo && !legendaDoArquivo(m.conteudo) ? null : (
+                        <p className="whitespace-pre-wrap break-words text-sm leading-snug">
+                          {(humano && m.arquivo ? legendaDoArquivo(m.conteudo) : m.conteudo) ??
+                            "Mensagem sem texto"}
+                        </p>
+                      )}
                       {fechaGrupo ? (
                         <p
                           className={`mt-0.5 text-right text-[10px] leading-3 ${saida && !humano ? "text-purple-200" : "text-ink-500"}`}
@@ -1776,7 +2119,8 @@ function Atendimento({
             }
             if (podeEnviar) {
               coladoNoFim.current = true;
-              acao.mutate("mensagens");
+              if (arquivo) mandarArquivo.mutate(arquivo);
+              else acao.mutate("mensagens");
             }
           }}
         >
@@ -1823,8 +2167,69 @@ function Atendimento({
               Complete {pendentes.join(" e ")} antes de enviar.
             </p>
           ) : null}
+          {!emNota && arquivo ? (
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-700">
+              <FileText className="size-3.5 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate font-medium">{arquivo.name}</span>
+              <span className="shrink-0 text-ink-500">
+                {tamanhoLegivel(arquivo.size)} · o texto abaixo vai como legenda
+              </span>
+              <button
+                type="button"
+                className="shrink-0"
+                aria-label="Remover arquivo"
+                disabled={mandarArquivo.isPending}
+                onClick={() => setArquivo(null)}
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            </p>
+          ) : null}
+          <input
+            ref={seletorArquivo}
+            type="file"
+            accept={ACEITA_ARQUIVO}
+            className="hidden"
+            aria-label="Arquivo para enviar"
+            onChange={(e) => {
+              const escolhido = e.target.files?.[0];
+              e.target.value = "";
+              if (!escolhido) return;
+              const problema = problemaNoArquivo(escolhido);
+              if (problema) toast.error(problema);
+              else setArquivo(escolhido);
+            }}
+          />
           <div className="flex items-end gap-1.5">
             {emNota ? null : <BotaoRespostas onClick={respostas.abrirPeloBotao} />}
+            {emNota ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0 text-purple-700"
+                aria-label="Inserir link do cardápio"
+                title="Inserir o link do cardápio na mensagem"
+                disabled={deOutraPessoa || linkCardapio.isPending}
+                onClick={() => linkCardapio.mutate()}
+              >
+                <UtensilsCrossed aria-hidden />
+              </Button>
+            )}
+            {emNota ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0 text-purple-700"
+                aria-label="Anexar arquivo"
+                title="Enviar PDF, JPG ou PNG de até 10 MB"
+                disabled={deOutraPessoa || mandarArquivo.isPending}
+                onClick={() => seletorArquivo.current?.click()}
+              >
+                <Paperclip aria-hidden />
+              </Button>
+            )}
             <Textarea
               id="atendimento-texto"
               ref={campoTexto}
@@ -1849,7 +2254,7 @@ function Atendimento({
                   ? "Só a equipe vê. O cliente e o agente não recebem."
                   : deOutraPessoa
                     ? `Conversa com ${responsavel}.`
-                    : "Mensagem, ou / para respostas rápidas…"
+                    : "Mensagem ou /"
               }
               aria-label={emNota ? "Nota interna para a equipe" : "Sua mensagem ao contato"}
             />
@@ -1870,7 +2275,7 @@ function Atendimento({
                 disabled={!podeEnviar}
               >
                 <Send aria-hidden />
-                {acao.isPending ? "Enviando…" : "Enviar"}
+                {acao.isPending || mandarArquivo.isPending ? "Enviando…" : "Enviar"}
               </Button>
             )}
           </div>

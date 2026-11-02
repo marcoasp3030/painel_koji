@@ -126,6 +126,7 @@ function Integracoes() {
               enabled={item.enabled}
               updatedAt={item.updatedAt}
               fields={item.fields}
+              webhookToken={item.webhookToken}
               canEdit={data.canEdit}
               lastTestOk={item.lastTestOk ?? null}
               lastTestAt={item.lastTestAt ?? null}
@@ -146,6 +147,7 @@ function IntegrationCard({
   fields,
   canEdit,
   lastTestOk,
+  webhookToken,
   lastTestAt,
   lastTestMessage,
 }: {
@@ -156,6 +158,7 @@ function IntegrationCard({
   fields: Record<string, { value: string; filled: boolean; secret: boolean }>;
   canEdit: boolean;
   lastTestOk: boolean | null;
+  webhookToken: string | null;
   lastTestAt: string | null;
   lastTestMessage: string | null;
 }) {
@@ -173,7 +176,9 @@ function IntegrationCard({
   }, [cooldown]);
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(def.fields.map((f) => [f.key, f.secret ? "" : (fields[f.key]?.value ?? "")])),
+    Object.fromEntries(
+      def.fields.map((f) => [f.key, f.secret ? "" : (fields[f.key]?.value ?? "")]),
+    ),
   );
   const [status, setStatus] = useState<{
     ok: boolean | null;
@@ -304,7 +309,7 @@ function IntegrationCard({
           </div>
         ))}
 
-        {provider === "food99" ? <WebhookUrl provider={provider} /> : null}
+        {provider === "food99" ? <WebhookUrl provider={provider} token={webhookToken} /> : null}
       </div>
 
       <div className="mt-6 flex items-center justify-between">
@@ -353,7 +358,8 @@ function IntegrationCard({
               {result.steps.map((step, i) => (
                 <span key={i} className="block text-xs text-ink-700">
                   {step.ok ? "OK" : "Falhou"} · {step.label}
-                  {step.status ? ` · HTTP ${step.status}` : ""} · {(step.durationMs / 1000).toFixed(1)}s
+                  {step.status ? ` · HTTP ${step.status}` : ""} ·{" "}
+                  {(step.durationMs / 1000).toFixed(1)}s
                 </span>
               ))}
             </span>
@@ -365,10 +371,10 @@ function IntegrationCard({
 }
 
 /** URL de webhook do sistema, somente leitura, para cadastrar no painel da 99Food. */
-function WebhookUrl({ provider }: { provider: ProviderKey }) {
+function WebhookUrl({ provider, token }: { provider: ProviderKey; token: string | null }) {
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
-  const url = origin ? `${origin}/api/public/${provider}/webhook` : "";
+  const url = origin && token ? `${origin}/api/public/${provider}/webhook?t=${token}` : "";
 
   return (
     <div className="space-y-2 rounded-md border border-base-200 bg-base-100 p-4">
@@ -391,8 +397,9 @@ function WebhookUrl({ provider }: { provider: ProviderKey }) {
         </Button>
       </div>
       <p className="text-xs text-ink-500">
-        Cadastre este endereço no painel da 99Food para receber eventos em tempo real. As
-        assinaturas dos webhooks usam o próprio App Secret.
+        {token
+          ? "Cadastre este endereço no painel da 99Food para receber eventos em tempo real. Ele contém uma chave secreta: não o compartilhe."
+          : "Salve a integração para gerar o endereço."}
       </p>
     </div>
   );
@@ -403,7 +410,13 @@ type TestResult = {
   message: string;
   durationMs?: number;
   checkedAt?: string;
-  steps?: { label: string; ok: boolean; status: number | null; durationMs: number; detail: string }[];
+  steps?: {
+    label: string;
+    ok: boolean;
+    status: number | null;
+    durationMs: number;
+    detail: string;
+  }[];
 };
 
 export const PROVIDER_COUNT = PROVIDERS.length;

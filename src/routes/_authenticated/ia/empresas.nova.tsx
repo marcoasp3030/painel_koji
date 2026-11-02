@@ -725,7 +725,9 @@ function PassoSimular({
           </ul>
         ) : null}
       </Cartao>
-      <Simulador ctx={ctx} agenteInicial={agente.id} agenteFixo />
+      <div className="flex h-[min(70vh,40rem)] flex-col overflow-hidden rounded-xl border border-base-200">
+        <Simulador ctx={ctx} agenteInicial={agente.id} agenteFixo />
+      </div>
       <div className="flex justify-end">
         <Button onClick={onConcluir}>Concluir e abrir o agente</Button>
       </div>

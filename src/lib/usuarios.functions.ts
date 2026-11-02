@@ -17,6 +17,7 @@ import {
 import { EMAIL_CONTA_EMERGENCIA } from "@/lib/acesso/segunda-etapa";
 import { podeConceder, peloMenos, papelAcesso, type PapelAcesso } from "@/lib/acesso/papeis";
 import { SENHA_MAX, SENHA_MIN, validarSenhaNova } from "@/lib/acesso/senha";
+import { podeGerirUsuario, unidadesAcrescentadas, unidadesFinais } from "@/lib/acesso/usuarios";
 import { empresa } from "@/lib/gateway/esquemas";
 
 const TOKEN_CONVITE = z.string().regex(/^[A-Za-z0-9_-]{43,128}$/);
@@ -36,6 +37,9 @@ type LinhaUsuario = {
   ultimo_acesso: string | null;
   convitePendente: boolean;
   conviteExpiraEm: string | null;
+  /** A própria pessoa: o servidor recusa alterar o próprio acesso. */
+  eu: boolean;
+  podeGerir: boolean;
 };
 
 async function empresaDo(context: unknown, pedida: string | null | undefined) {
@@ -96,83 +100,130 @@ function conferirUnidades(
   }
 }
 
+/** Papel e unidades atuais do alvo, recusando quem está fora do alcance de quem pede. */
+async function conferirAlvo(
+  supabaseAdmin: Awaited<ReturnType<typeof empresaDo>>["supabaseAdmin"],
+  t: Awaited<ReturnType<typeof empresaDo>>["t"],
+  id: string,
+) {
+  const { data: membro } = await supabaseAdmin
+    .from("tenant_users")
+    .select("papel_id")
+    .eq("id", id)
+    .maybeSingle();
+  const { data: linha } = membro?.papel_id
+    ? await supabaseAdmin
+        .from("papeis")
+        .select("papel_gateway")
+        .eq("id", membro.papel_id)
+        .maybeSingle()
+    : { data: null };
+  const { data: ligacoes } = await supabaseAdmin
+    .from("usuario_unidades")
+    .select("unidade_codigo")
+    .eq("tenant_user_id", id);
+  const alvo = {
+    papel: papelAcesso(linha?.papel_gateway) ?? "funcionario",
+    unidades: (ligacoes ?? []).map((l) => l.unidade_codigo),
+  };
+  if (!podeGerirUsuario(t.papel, t.unidades, alvo)) {
+    throw new Error("Seu acesso não altera este usuário.");
+  }
+  return alvo;
+}
+
 export const listarUsuarios = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
-  .handler(async ({ data, context }): Promise<{
-    empresa: string;
-    papel: PapelAcesso;
-    concediveis: PapelAcesso[];
-    unidades: { codigo: string; nome: string }[];
-    usuarios: LinhaUsuario[];
-    convitePorEmail: boolean;
-  }> => {
-    const { t, tenant, supabaseAdmin } = await empresaDo(context, data.empresa);
-    const { papeisConcediveis } = await import("@/lib/acesso/papeis");
-    const { data: membros, error } = await supabaseAdmin
-      .from("tenant_users")
-      .select("id, user_id, email, full_name, ativo, papel_id, convidado_em")
-      .eq("tenant_id", tenant.id)
-      .order("email");
-    if (error) throw new Error("Não foi possível listar os usuários.");
-    const idsPapel = [
-      ...new Set((membros ?? []).map((m) => m.papel_id).filter((id): id is string => Boolean(id))),
-    ];
-    const { data: papeisLinha } = idsPapel.length
-      ? await supabaseAdmin.from("papeis").select("id, papel_gateway").in("id", idsPapel)
-      : { data: [] };
-    const porPapel = new Map((papeisLinha ?? []).map((p) => [p.id, p.papel_gateway]));
-    const ids = (membros ?? []).map((m) => m.id);
-    const { data: ligacoes } = ids.length
-      ? await supabaseAdmin
-          .from("usuario_unidades")
-          .select("tenant_user_id, unidade_codigo")
-          .in("tenant_user_id", ids)
-      : { data: [] };
-    const { data: convites } = ids.length
-      ? await supabaseAdmin
-          .from("convites")
-          .select("tenant_user_id, expira_em, usado_em, revogado_em")
-          .in("tenant_user_id", ids)
-      : { data: [] };
-    const agora = new Date();
-    const usuarios: LinhaUsuario[] = [];
-    for (const m of membros ?? []) {
-      const papel = papelAcesso(m.papel_id ? porPapel.get(m.papel_id) : null) ?? "funcionario";
-      const { data: auth } = await supabaseAdmin.auth.admin.getUserById(m.user_id);
-      const pendente = (convites ?? [])
-        .filter((c) => c.tenant_user_id === m.id && conviteAberto(c, agora))
-        .sort((a, b) => b.expira_em.localeCompare(a.expira_em))[0];
-      usuarios.push({
-        id: m.id,
-        user_id: m.user_id,
-        email: m.email,
-        nome: m.full_name,
-        papel,
-        ativo: m.ativo,
-        unidades: (ligacoes ?? [])
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      empresa: string;
+      papel: PapelAcesso;
+      concediveis: PapelAcesso[];
+      unidades: { codigo: string; nome: string }[];
+      usuarios: LinhaUsuario[];
+      convitePorEmail: boolean;
+    }> => {
+      const { t, tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
+      const { papeisConcediveis } = await import("@/lib/acesso/papeis");
+      const { data: membros, error } = await supabaseAdmin
+        .from("tenant_users")
+        .select("id, user_id, email, full_name, ativo, papel_id, convidado_em")
+        .eq("tenant_id", tenant.id)
+        .order("email");
+      if (error) throw new Error("Não foi possível listar os usuários.");
+      const idsPapel = [
+        ...new Set(
+          (membros ?? []).map((m) => m.papel_id).filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const { data: papeisLinha } = idsPapel.length
+        ? await supabaseAdmin.from("papeis").select("id, papel_gateway").in("id", idsPapel)
+        : { data: [] };
+      const porPapel = new Map((papeisLinha ?? []).map((p) => [p.id, p.papel_gateway]));
+      const ids = (membros ?? []).map((m) => m.id);
+      const { data: ligacoes } = ids.length
+        ? await supabaseAdmin
+            .from("usuario_unidades")
+            .select("tenant_user_id, unidade_codigo")
+            .in("tenant_user_id", ids)
+        : { data: [] };
+      const { data: convites } = ids.length
+        ? await supabaseAdmin
+            .from("convites")
+            .select("tenant_user_id, expira_em, usado_em, revogado_em")
+            .in("tenant_user_id", ids)
+        : { data: [] };
+      const agora = new Date();
+      const usuarios: LinhaUsuario[] = [];
+      for (const m of membros ?? []) {
+        const papel = papelAcesso(m.papel_id ? porPapel.get(m.papel_id) : null) ?? "funcionario";
+        const { data: auth } = await supabaseAdmin.auth.admin.getUserById(m.user_id);
+        const pendente = (convites ?? [])
+          .filter((c) => c.tenant_user_id === m.id && conviteAberto(c, agora))
+          .sort((a, b) => b.expira_em.localeCompare(a.expira_em))[0];
+        const unidadesDele = (ligacoes ?? [])
           .filter((l) => l.tenant_user_id === m.id)
-          .map((l) => l.unidade_codigo),
-        convidado_em: m.convidado_em,
-        ultimo_acesso: auth.user?.last_sign_in_at ?? null,
-        convitePendente: Boolean(pendente),
-        conviteExpiraEm: pendente?.expira_em ?? null,
-      });
-    }
-    const unidades = await unidadesDaEmpresa(t).catch(() => []);
-    const visiveis =
-      t.unidades === "*" ? unidades : unidades.filter((u) => t.unidades.includes(u.codigo));
-    return {
-      empresa: tenant.name,
-      papel: t.papel,
-      concediveis: papeisConcediveis(t.papel).filter((p) => p !== "plataforma"),
-      unidades: visiveis,
-      usuarios: usuarios.filter(
-        (u) => t.unidades === "*" || u.papel === "gestor" || u.unidades.some((c) => t.unidades.includes(c)),
-      ),
-      convitePorEmail: convitePorEmail(process.env["SMTP_HOST"]),
-    };
-  });
+          .map((l) => l.unidade_codigo);
+        const eu = m.user_id === sessao.perfil.userId;
+        usuarios.push({
+          id: m.id,
+          user_id: m.user_id,
+          email: m.email,
+          nome: m.full_name,
+          papel,
+          ativo: m.ativo,
+          unidades: unidadesDele,
+          convidado_em: m.convidado_em,
+          ultimo_acesso: auth.user?.last_sign_in_at ?? null,
+          convitePendente: Boolean(pendente),
+          conviteExpiraEm: pendente?.expira_em ?? null,
+          eu,
+          podeGerir:
+            !eu && podeGerirUsuario(t.papel, t.unidades, { papel, unidades: unidadesDele }),
+        });
+      }
+      const unidades = await unidadesDaEmpresa(t).catch(() => []);
+      const visiveis =
+        t.unidades === "*" ? unidades : unidades.filter((u) => t.unidades.includes(u.codigo));
+      return {
+        empresa: tenant.name,
+        papel: t.papel,
+        concediveis: papeisConcediveis(t.papel).filter((p) => p !== "plataforma"),
+        unidades: visiveis,
+        usuarios: usuarios.filter(
+          (u) =>
+            t.unidades === "*" ||
+            u.papel === "gestor" ||
+            u.unidades.some((c) => t.unidades.includes(c)),
+        ),
+        convitePorEmail: convitePorEmail(process.env["SMTP_HOST"]),
+      };
+    },
+  );
 
 const convite = z.object({
   empresa,
@@ -230,9 +281,11 @@ export const convidarUsuario = createServerFn({ method: "POST" })
       );
     }
     if (data.papel !== "gestor") {
-      await supabaseAdmin.from("usuario_unidades").insert(
-        data.unidades.map((unidade_codigo) => ({ tenant_user_id: vinculoId, unidade_codigo })),
-      );
+      await supabaseAdmin
+        .from("usuario_unidades")
+        .insert(
+          data.unidades.map((unidade_codigo) => ({ tenant_user_id: vinculoId, unidade_codigo })),
+        );
     }
     let link: string | null = null;
     let aviso = conta.aviso;
@@ -272,12 +325,18 @@ export const alterarUsuario = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !row || row.tenant_id !== tenant.id) throw new Error("Usuário não encontrado.");
     if (row.user_id === sessao.perfil.userId) throw new Error("Você não altera o próprio acesso.");
+    const alvo = await conferirAlvo(supabaseAdmin, t, row.id);
     if (data.papel && !podeConceder(t.papel, data.papel)) {
       throw new Error("Você não pode conceder este papel.");
     }
+    const papelFinal = data.papel ?? alvo.papel;
     if (data.unidades) {
       const existentes = await unidadesDaEmpresa(t);
-      conferirUnidades(t.unidades, data.unidades, existentes);
+      conferirUnidades(t.unidades, unidadesAcrescentadas(alvo.unidades, data.unidades), existentes);
+    }
+    const finais = unidadesFinais(t.unidades, alvo.unidades, data.unidades ?? alvo.unidades);
+    if ((data.papel || data.unidades) && papelFinal !== "gestor" && finais.length === 0) {
+      throw new Error("Escolha ao menos uma unidade.");
     }
     const papelId = data.papel ? await papelSistema(supabaseAdmin, data.papel) : undefined;
     const { error: gravar } = await supabaseAdmin
@@ -288,13 +347,11 @@ export const alterarUsuario = createServerFn({ method: "POST" })
       })
       .eq("id", row.id);
     if (gravar) throw new Error("Não foi possível atualizar o acesso.");
-    if (data.unidades && data.papel !== "gestor") {
+    if (data.unidades && papelFinal !== "gestor") {
       await supabaseAdmin.from("usuario_unidades").delete().eq("tenant_user_id", row.id);
-      if (data.unidades.length) {
-        await supabaseAdmin.from("usuario_unidades").insert(
-          data.unidades.map((unidade_codigo) => ({ tenant_user_id: row.id, unidade_codigo })),
-        );
-      }
+      await supabaseAdmin
+        .from("usuario_unidades")
+        .insert(finais.map((unidade_codigo) => ({ tenant_user_id: row.id, unidade_codigo })));
     }
     if (data.papel === "gestor") {
       await supabaseAdmin.from("usuario_unidades").delete().eq("tenant_user_id", row.id);
@@ -305,7 +362,14 @@ export const alterarUsuario = createServerFn({ method: "POST" })
       tenantId: tenant.id,
       action: data.ativo === false ? "Desativação de usuário" : "Alteração de usuário",
       target: row.email,
-      detail: data.papel ?? (data.ativo === false ? "inativo" : "ativo"),
+      detail:
+        data.ativo !== undefined
+          ? data.ativo
+            ? "ativo"
+            : "inativo"
+          : [data.papel, data.unidades ? `unidades: ${finais.join(", ")}` : null]
+              .filter(Boolean)
+              .join("; "),
     });
     return { ok: true as const };
   });
@@ -314,13 +378,14 @@ export const reenviarConvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ empresa, id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
+    const { t, tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
     const { data: row } = await supabaseAdmin
       .from("tenant_users")
       .select("id, email, user_id, tenant_id")
       .eq("id", data.id)
       .maybeSingle();
     if (!row || row.tenant_id !== tenant.id) throw new Error("Usuário não encontrado.");
+    await conferirAlvo(supabaseAdmin, t, row.id);
     if (row.email.trim().toLowerCase() === EMAIL_CONTA_EMERGENCIA) {
       return {
         ok: false as const,
@@ -361,13 +426,14 @@ export const revogarConvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ empresa, id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
+    const { t, tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
     const { data: row } = await supabaseAdmin
       .from("tenant_users")
       .select("id, email, user_id, tenant_id")
       .eq("id", data.id)
       .maybeSingle();
     if (!row || row.tenant_id !== tenant.id) throw new Error("Usuário não encontrado.");
+    await conferirAlvo(supabaseAdmin, t, row.id);
     const agora = new Date().toISOString();
     await supabaseAdmin
       .from("convites")
@@ -483,7 +549,12 @@ async function criarUsuarioConvite(supabaseAdmin: Admin, email: string, nome: st
   return id;
 }
 
-async function prepararConta(supabaseAdmin: Admin, email: string, nome: string | null, porEmail: boolean) {
+async function prepararConta(
+  supabaseAdmin: Admin,
+  email: string,
+  nome: string | null,
+  porEmail: boolean,
+) {
   const { data: existente } = await supabaseAdmin.rpc("usuario_id_por_email", { alvo: email });
   let usuarioId = existente ?? null;
   const emergencia = email === EMAIL_CONTA_EMERGENCIA;

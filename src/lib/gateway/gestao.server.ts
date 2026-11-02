@@ -64,6 +64,12 @@ export async function executarGestao(
     partes = ["unidades", d.id, "reabrir"];
     metodo = "POST";
   }
+  if (d.acao === "taxas") partes = ["unidades", d.id, "taxas"];
+  if (d.acao === "salvar_taxas") {
+    partes = ["unidades", d.id, "taxas"];
+    metodo = "PUT";
+    corpo = { itens: d.itens };
+  }
   if (d.acao === "pagamentos") partes = ["unidades", d.id, "pagamentos"];
   if (d.acao === "salvar_pagamentos") {
     partes = ["unidades", d.id, "pagamentos"];
@@ -167,6 +173,8 @@ export async function executarGestao(
       const limpo = { ...(corpo as Record<string, unknown>) };
       for (const k of [
         "taxa_entrega",
+        "taxa_modo",
+        "frete_gratis_acima",
         "pedido_minimo",
         "area_entrega",
         "aceita_retirada",

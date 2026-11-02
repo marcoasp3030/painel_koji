@@ -14,8 +14,11 @@ import {
   LIMITE_NOTA,
   MOTIVO_NOME,
   validarNomeCadastro,
+  type AchadoConversa,
   type ContatoPainel,
   type Conversa,
+  CORES_ETIQUETA,
+  type Etiqueta,
   type EstadoConversa,
   type Eventos,
   type NotaInterna,
@@ -35,6 +38,7 @@ export const listarConversas = createServerFn({ method: "POST" })
         aguardando: z.boolean().optional(),
         minhas: z.boolean().optional(),
         conversa: conversa.optional(),
+        etiqueta: z.number().int().positive().optional(),
         status: z.enum(["ativa", "pausada"]).optional(),
         estado: z.array(z.enum(ESTADOS)).min(1).max(4).optional(),
         ordem: z.enum(["id", "recentes"]).optional(),
@@ -289,6 +293,38 @@ export const criarNota = createServerFn({ method: "POST" })
     });
   });
 
+/** Link do cardápio interativo desta conversa, para o atendente mandar ao cliente. */
+export const linkCardapioDaConversa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, conversa }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      return (
+        await t.chamar<{ url: string; expira_em: string }>("POST", [
+          "conversas",
+          data.conversa,
+          "cardapio-link",
+        ])
+      ).dados;
+    });
+  });
+
+/** Link de prévia: mostra a página como o cliente vê, sem enviar pedido. */
+export const previaCardapio = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      return (await t.chamar<{ url: string; expira_em: string }>("POST", ["cardapio", "previa"]))
+        .dados;
+    });
+  });
+
 export const apagarNota = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -306,6 +342,128 @@ export const apagarNota = createServerFn({ method: "POST" })
           "notas",
           String(data.nota),
         ])
+      ).dados;
+    });
+  });
+
+export const buscarNaConversa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, conversa, q: z.string().trim().min(2).max(100) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      return (
+        await t.chamar<{ itens: AchadoConversa[]; limitado: boolean }>(
+          "GET",
+          ["conversas", data.conversa, "busca"],
+          { query: { q: data.q } },
+        )
+      ).dados;
+    });
+  });
+
+/** O arquivo vai em base64 e não fica guardado. Acima dos 60 s do envio ao provedor no gateway. */
+export const enviarArquivo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        conversa,
+        nome: z.string().trim().min(1).max(120),
+        conteudo: z.string().min(4).max(14_500_000),
+        legenda: z.string().trim().max(1000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      return (
+        await t.chamar<{ ok: boolean; send_mode: string }>(
+          "POST",
+          ["conversas", data.conversa, "midia"],
+          {
+            corpo: {
+              nome: data.nome,
+              conteudo: data.conteudo,
+              ...(data.legenda ? { legenda: data.legenda } : {}),
+            },
+            tempoLimiteMs: 75_000,
+          },
+        )
+      ).dados;
+    });
+  });
+
+export const listarEtiquetas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        return (await t.chamar<{ itens: Etiqueta[] }>("GET", ["etiquetas"])).dados;
+      } catch (erro) {
+        // Gateway anterior às etiquetas: a conversa segue funcionando.
+        const { GatewayErro } = await import("./gateway/erros");
+        if (erro instanceof GatewayErro && erro.status === 404) return { itens: [] };
+        throw erro;
+      }
+    });
+  });
+
+export const gravarEtiqueta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ empresa, nome: z.string().trim().min(1).max(30), cor: z.enum(CORES_ETIQUETA) })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      return (
+        await t.chamar<Etiqueta>("POST", ["etiquetas"], {
+          corpo: { nome: data.nome, cor: data.cor },
+        })
+      ).dados;
+    });
+  });
+
+export const removerEtiqueta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, id: z.number().int().positive() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      return (await t.chamar<{ ok: boolean }>("DELETE", ["etiquetas", String(data.id)])).dados;
+    });
+  });
+
+export const aplicarEtiquetas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, conversa, ids: z.array(z.number().int().positive()).max(10) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      await (await import("./gateway/ocultos")).exigirConversaVisivel(t, data.conversa);
+      return (
+        await t.chamar<{ itens: Etiqueta[] }>("PUT", ["conversas", data.conversa, "etiquetas"], {
+          corpo: { ids: data.ids },
+        })
       ).dados;
     });
   });

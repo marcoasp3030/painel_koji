@@ -5,8 +5,9 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  ExternalLink,
+  FolderPlus,
   MoreHorizontal,
-  Pencil,
   Plus,
   Search,
   SlidersHorizontal,
@@ -15,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -51,6 +53,7 @@ const FILTROS_RAPIDOS: { id: FiltroCardapio; nome: string }[] = [
   { id: "indisponiveis", nome: "Indisponíveis" },
   { id: "esgotados", nome: "Esgotados" },
   { id: "sem_preco", nome: "Sem preço" },
+  { id: "sem_descricao", nome: "Sem descrição" },
 ];
 
 const FILTROS_MAIS: { id: FiltroCardapio; nome: string }[] = [
@@ -95,6 +98,7 @@ export function CardapioCat3({
   unidades,
   admin,
   grade = false,
+  verComoCliente,
   servicos,
   executar,
   filtros,
@@ -109,6 +113,7 @@ export function CardapioCat3({
   admin: boolean;
   /** Supervisor edita disponibilidade e horários, sem preço nem exclusão. */
   grade?: boolean;
+  verComoCliente?: () => void;
   servicos: ServicosCat2;
   executar: ExecutarCat3;
   filtros: BuscaCardapio;
@@ -125,6 +130,8 @@ export function CardapioCat3({
     [categoriasBusy, setCategoriasBusy] = useState(true);
   const [aba, setAba] = useState("itens"),
     [editar, setEditar] = useState<ItemCardapio | null | undefined>(undefined),
+    [novoSeq, setNovoSeq] = useState(0),
+    [categoriaNovo, setCategoriaNovo] = useState<number | null>(null),
     [selecionados, setSelecionados] = useState<number[]>([]),
     [lote, setLote] = useState(false),
     [busy, setBusy] = useState(false);
@@ -143,7 +150,39 @@ export function CardapioCat3({
     id: number;
     categoria?: number;
   } | null>(null);
-  const [verFiltros, setVerFiltros] = useState(false);
+  const campoBusca = useRef<HTMLInputElement>(null);
+  // O campo tem estado próprio: ligado direto ao endereço, digitar rápido perdia letras.
+  const [busca, setBusca] = useState(filtros.busca);
+  const filtrosAtuais = useRef(filtros);
+  filtrosAtuais.current = filtros;
+  useEffect(() => setBusca(filtros.busca), [filtros.busca]);
+  useEffect(() => {
+    if (busca === filtrosAtuais.current.busca) return;
+    const t = window.setTimeout(() => mudarFiltros({ ...filtrosAtuais.current, busca }), 200);
+    return () => window.clearTimeout(t);
+  }, [busca, mudarFiltros]);
+  // Depois do clique na categoria, a rolagem não muda o destaque: a última seção pode não chegar ao topo.
+  const categoriaEscolhidaEm = useRef(0);
+  // Por item: esgotar um não trava os outros na hora de maior movimento.
+  const [ocupados, setOcupados] = useState<Set<number>>(new Set());
+  const marcarOcupado = (id: number, sim: boolean) =>
+    setOcupados((prev) => {
+      const n = new Set(prev);
+      if (sim) n.add(id);
+      else n.delete(id);
+      return n;
+    });
+  useEffect(() => {
+    function tecla(e: KeyboardEvent) {
+      if (e.key !== "/" || e.altKey || e.ctrlKey || e.metaKey) return;
+      if ((e.target as HTMLElement | null)?.closest?.("input, textarea, select")) return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      e.preventDefault();
+      campoBusca.current?.focus();
+    }
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, []);
   const [fechadas, setFechadas] = useState<Set<number>>(new Set());
   const [categoriaAtiva, setCategoriaAtiva] = useState<number | null>(null);
   const listaRef = useRef<HTMLDivElement>(null);
@@ -206,6 +245,11 @@ export function CardapioCat3({
       filtro: "sem_preco" as const,
     },
     {
+      nome: "Sem descrição",
+      valor: daUnidade.filter((i) => !i.descricao?.trim()).length,
+      filtro: "sem_descricao" as const,
+    },
+    {
       nome: "Esgotados",
       valor: daUnidade.filter((i) => i.esgotado_agora ?? i.indisponivel_motivo === "esgotado")
         .length,
@@ -245,9 +289,10 @@ export function CardapioCat3({
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
         if (!visivel) return;
         const id = Number((visivel.target as HTMLElement).dataset["categoriaId"]);
-        if (Number.isFinite(id)) setCategoriaAtiva(id);
+        if (Number.isFinite(id) && Date.now() - categoriaEscolhidaEm.current > 1200)
+          setCategoriaAtiva(id);
       },
-      { root: null, rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.25, 0.5] },
+      { root, rootMargin: "0px 0px -70% 0px", threshold: [0, 0.25, 0.5] },
     );
     for (const el of root.querySelectorAll<HTMLElement>("[data-categoria-id]")) obs.observe(el);
     return () => obs.disconnect();
@@ -274,8 +319,54 @@ export function CardapioCat3({
     }
   }
 
-  async function ativo(i: ItemCardapio) {
+  /** A cópia abre pronta para ajustar: quase sempre muda o nome e o preço. */
+  async function duplicar(i: ItemCardapio) {
     setBusy(true);
+    try {
+      const r = await executar({ acao: "item", id: i.item_id, operacao: "duplicar" });
+      if (!r.ok) {
+        toast.error(r.erro.mensagem);
+        return;
+      }
+      toast.success("Cópia criada, ainda inativa. Ajuste e ative quando estiver pronta.");
+      reler();
+      setEditar(r.dados as unknown as ItemCardapio);
+    } catch {
+      toast.error("Resultado não confirmado. Atualize antes de repetir.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Esgotar e repor são os gestos mais frequentes: um clique, com volta no próprio aviso. */
+  async function esgotarOuRepor(i: ItemCardapio, esgotado: boolean) {
+    marcarOcupado(i.item_id, true);
+    try {
+      const r = await executar({
+        acao: "item",
+        id: i.item_id,
+        operacao: esgotado ? "repor" : "esgotar",
+      });
+      if (!r.ok) {
+        toast.error(r.erro.mensagem);
+        return;
+      }
+      toast.success(`${i.nome}: ${esgotado ? "reposto" : "esgotado até o fim do dia"}.`, {
+        action: {
+          label: "Desfazer",
+          onClick: () => void esgotarOuRepor(i, !esgotado),
+        },
+      });
+      reler();
+    } catch {
+      toast.error("Resultado não confirmado. Atualize antes de repetir.");
+    } finally {
+      marcarOcupado(i.item_id, false);
+    }
+  }
+
+  async function ativo(i: ItemCardapio) {
+    marcarOcupado(i.item_id, true);
     try {
       const r = await servicos.editar(i, { ativo: !i.ativo, aplicar_em: "este" });
       if (!r.ok) {
@@ -291,7 +382,7 @@ export function CardapioCat3({
     } catch {
       toast.error("Não foi possível confirmar a alteração.");
     } finally {
-      setBusy(false);
+      marcarOcupado(i.item_id, false);
     }
   }
 
@@ -378,6 +469,7 @@ export function CardapioCat3({
   };
 
   function irParaCategoria(id: number) {
+    categoriaEscolhidaEm.current = Date.now();
     setCategoriaAtiva(id);
     setFechadas((prev) => {
       const n = new Set(prev);
@@ -399,51 +491,22 @@ export function CardapioCat3({
   }
 
   const campoSelect =
-    "h-10 w-full rounded-lg border border-base-200 bg-card px-3 text-sm text-ink-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500";
+    "h-8 w-full rounded-md border border-base-200 bg-card px-2 text-sm text-ink-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500";
+  const pilula = (ativa: boolean) =>
+    `inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+      ativa ? "bg-purple-100 text-purple-950" : "text-ink-600 hover:bg-base-100"
+    }`;
+  const emFiltro = filtros.filtro !== "todos" || Boolean(filtros.busca.trim() || filtros.prato);
 
   return (
-    <div className="mt-4 space-y-4 pb-28">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-purple-950">
-            Cardápio
-          </h2>
-          <p className="mt-0.5 text-sm text-ink-500">
-            Encontre, edite e organize itens por unidade e categoria.
-          </p>
-        </div>
-        <div
-          role="tablist"
-          aria-label="Visão do cardápio"
-          className="flex h-10 rounded-lg border border-base-200 bg-card p-0.5"
-        >
-          {(
-            [
-              ["itens", "Itens"],
-              ["pratos", "Pratos iguais"],
-            ] as const
-          ).map(([id, rotulo]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={aba === id}
-              onClick={() => setAba(id)}
-              className={`rounded-md px-3 text-sm font-medium transition-colors ${
-                aba === id ? "bg-purple-800 text-white" : "text-ink-700 hover:bg-base-100"
-              }`}
-            >
-              {rotulo}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {aba === "pratos" ? (
-        <SugestoesCat3 executar={executar} admin={admin} atualizar={reler} />
-      ) : (
-        <>
-          <div role="tablist" aria-label="Unidade" className="flex gap-1.5 overflow-x-auto pb-1">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 space-y-1 border-b border-base-200 bg-card px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            role="tablist"
+            aria-label="Unidade"
+            className="flex h-8 max-w-full shrink-0 overflow-x-auto rounded-lg border border-base-200 bg-base-50 p-0.5 [scrollbar-width:none]"
+          >
             {unidades.map((u) => {
               const qtd = itens.filter((i) => i.unidade === u.codigo).length;
               const ativa = unidade === u.codigo;
@@ -455,159 +518,95 @@ export function CardapioCat3({
                   type="button"
                   role="tab"
                   aria-selected={ativa}
+                  title={
+                    semCardapio
+                      ? filtros.filtro === "arquivados"
+                        ? "Sem arquivados"
+                        : "Sem cardápio"
+                      : undefined
+                  }
                   onClick={() => moverUnidade(u.codigo)}
-                  className={`shrink-0 rounded-lg border px-3.5 py-2 text-left transition focus-visible:ring-2 focus-visible:ring-purple-500 ${
-                    ativa
-                      ? "border-purple-800 bg-purple-900 text-white shadow-sm"
-                      : "border-base-200 bg-card text-ink-700 hover:border-purple-300"
+                  className={`shrink-0 whitespace-nowrap rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 ${
+                    ativa ? "bg-purple-800 text-white" : "text-ink-700 hover:bg-base-100"
                   }`}
                 >
-                  <span className="block text-sm font-semibold leading-tight">{u.nome}</span>
+                  {u.nome}
                   <span
-                    className={`mt-0.5 block text-[11px] ${ativa ? "text-white/75" : "text-ink-500"}`}
+                    className={`ml-1.5 tabular-nums ${ativa ? "text-white/75" : "text-ink-500"}`}
                   >
-                    {qtd} {qtd === 1 ? "item" : "itens"}
-                    {semCardapio
-                      ? ` · ${filtros.filtro === "arquivados" ? "sem arquivados" : "sem cardápio"}`
-                      : ""}
+                    {qtd}
                   </span>
                 </button>
               );
             })}
           </div>
-
-          <div className="sticky top-0 z-20 -mx-1 space-y-3 rounded-xl border border-base-200 bg-card/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative min-w-[200px] flex-1">
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400"
-                  aria-hidden
-                />
-                <Input
-                  aria-label="Buscar no cardápio"
-                  placeholder="Buscar por nome, código ou descrição…"
-                  className="h-10 rounded-lg pl-9"
-                  value={filtros.busca}
-                  onChange={(e) => mudarFiltros({ ...filtros, busca: e.target.value })}
-                />
-                {filtros.busca ? (
-                  <button
-                    type="button"
-                    aria-label="Limpar busca"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ink-400 hover:bg-base-100 hover:text-ink-700"
-                    onClick={() => mudarFiltros({ ...filtros, busca: "" })}
-                  >
-                    <X className="size-4" />
-                  </button>
-                ) : null}
-              </div>
-              <Button
+          <div className="relative min-w-40 flex-1">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400"
+              aria-hidden
+            />
+            <Input
+              ref={campoBusca}
+              aria-label="Buscar no cardápio"
+              placeholder="Buscar nome, código ou descrição"
+              className="h-8 bg-base-50 pl-8 pr-7 text-sm"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+            {busca ? (
+              <button
                 type="button"
-                variant="outline"
-                className="h-10 gap-1.5 rounded-lg"
-                aria-expanded={verFiltros}
-                onClick={() => setVerFiltros((v) => !v)}
+                aria-label="Limpar busca"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink-400 hover:bg-base-100 hover:text-ink-700"
+                onClick={() => {
+                  setBusca("");
+                  mudarFiltros({ ...filtros, busca: "" });
+                }}
               >
-                <SlidersHorizontal className="size-4" aria-hidden />
-                <span className="hidden sm:inline">Filtros</span>
-                {filtrosAtivos > 0 ? (
-                  <span className="rounded-full bg-purple-800 px-1.5 text-[11px] font-semibold text-white">
-                    {filtrosAtivos}
-                  </span>
-                ) : null}
-              </Button>
-              {admin && (
-                <>
-                  <Button
-                    className="h-10 rounded-lg"
-                    disabled={!unidade || categoriasBusy}
-                    onClick={() => setEditar(null)}
-                  >
-                    <Plus className="size-4" /> Novo item
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-10 rounded-lg"
-                    disabled={!unidade}
-                    onClick={() => abrir({ acao: "criar_categoria" })}
-                  >
-                    Nova categoria
-                  </Button>
-                </>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {resumo.map((r) => (
-                <button
-                  key={r.nome}
-                  type="button"
-                  onClick={() => mudarFiltros({ ...filtros, filtro: r.filtro })}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition focus-visible:ring-2 focus-visible:ring-purple-500 ${
-                    filtros.filtro === r.filtro
-                      ? "border-purple-800 bg-purple-100 text-purple-950"
-                      : "border-base-200 bg-base-50 text-ink-700 hover:border-purple-300"
-                  }`}
-                >
-                  {r.nome}
-                  <strong className="tabular-nums">{carregando ? "—" : r.valor}</strong>
-                </button>
-              ))}
-              <span className="mx-1 hidden h-4 w-px bg-base-200 sm:inline-block" aria-hidden />
-              {FILTROS_RAPIDOS.filter((f) => !resumo.some((r) => r.filtro === f.id)).map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  aria-pressed={filtros.filtro === f.id}
-                  onClick={() => mudarFiltros({ ...filtros, filtro: f.id })}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                    filtros.filtro === f.id
-                      ? "border-purple-800 bg-purple-100 text-purple-950"
-                      : "border-transparent bg-transparent text-ink-600 hover:bg-base-100"
-                  }`}
-                >
-                  {f.nome}
-                </button>
-              ))}
-              {FILTROS_MAIS.map((f) =>
-                filtros.filtro === f.id || verFiltros ? (
-                  <button
-                    key={f.id}
-                    type="button"
-                    aria-pressed={filtros.filtro === f.id}
-                    onClick={() => mudarFiltros({ ...filtros, filtro: f.id })}
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                      filtros.filtro === f.id
-                        ? "border-purple-800 bg-purple-100 text-purple-950"
-                        : "border-transparent bg-transparent text-ink-600 hover:bg-base-100"
-                    }`}
-                  >
-                    {f.nome}
-                  </button>
-                ) : null,
-              )}
-              {filtrosAtivos > 0 ? (
-                <button
-                  type="button"
-                  className="ml-auto text-xs font-medium text-purple-800 hover:underline"
-                  onClick={() =>
-                    mudarFiltros({
-                      ...filtros,
-                      busca: "",
-                      filtro: "todos",
-                      categoria: "",
-                      prato: "",
-                    })
-                  }
-                >
-                  Limpar filtros
-                </button>
-              ) : null}
-            </div>
-
-            {verFiltros ? (
-              <div className="grid gap-2 border-t border-base-100 pt-3 sm:grid-cols-2">
-                <label className="space-y-1 text-xs font-medium text-ink-500">
+                <X className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
+          <div
+            role="tablist"
+            aria-label="Visão do cardápio"
+            className="flex h-8 shrink-0 rounded-lg border border-base-200 bg-base-50 p-0.5"
+          >
+            {(
+              [
+                ["itens", "Itens"],
+                ["pratos", "Pratos iguais"],
+              ] as const
+            ).map(([id, rotulo]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={aba === id}
+                onClick={() => setAba(id)}
+                className={`rounded-md px-2.5 text-xs font-medium transition-colors ${
+                  aba === id ? "bg-purple-800 text-white" : "text-ink-700 hover:bg-base-100"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+          {aba === "itens" && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 px-2.5">
+                  <SlidersHorizontal className="size-3.5" aria-hidden />
+                  Filtros
+                  {filtrosAtivos > 0 ? (
+                    <span className="rounded-full bg-purple-800 px-1.5 text-[10px] font-semibold tabular-nums text-white">
+                      {filtrosAtivos}
+                    </span>
+                  ) : null}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 space-y-3 p-3">
+                <label className="block space-y-1 text-xs font-medium text-ink-500">
                   Categoria
                   <select
                     aria-label="Filtrar por categoria"
@@ -623,7 +622,7 @@ export function CardapioCat3({
                     ))}
                   </select>
                 </label>
-                <label className="space-y-1 text-xs font-medium text-ink-500">
+                <label className="block space-y-1 text-xs font-medium text-ink-500">
                   Prato ligado
                   <select
                     aria-label="Filtrar por prato"
@@ -639,14 +638,137 @@ export function CardapioCat3({
                     ))}
                   </select>
                 </label>
-              </div>
-            ) : null}
+                <fieldset className="space-y-1 text-xs font-medium text-ink-500">
+                  <legend>Mostrar</legend>
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {FILTROS_MAIS.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        aria-pressed={filtros.filtro === f.id}
+                        onClick={() =>
+                          mudarFiltros({
+                            ...filtros,
+                            filtro: filtros.filtro === f.id ? "todos" : f.id,
+                          })
+                        }
+                        className={pilula(filtros.filtro === f.id)}
+                      >
+                        {f.nome}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                {filtrosAtivos > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-full"
+                    onClick={() =>
+                      mudarFiltros({
+                        ...filtros,
+                        busca: "",
+                        filtro: "todos",
+                        categoria: "",
+                        prato: "",
+                      })
+                    }
+                  >
+                    Limpar filtros
+                  </Button>
+                ) : null}
+              </PopoverContent>
+            </Popover>
+          )}
+          {grade && verComoCliente ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 px-2.5"
+              title="Abre a página como o cliente vê. Nenhum pedido é enviado."
+              onClick={verComoCliente}
+            >
+              <ExternalLink className="size-3.5" aria-hidden /> Ver como cliente
+            </Button>
+          ) : null}
+          {admin && aba === "itens" && (
+            <>
+              <Button
+                size="sm"
+                className="h-8 px-2.5"
+                disabled={!unidade || categoriasBusy}
+                onClick={() => {
+                  setCategoriaNovo(categoriaAtiva);
+                  setEditar(null);
+                }}
+              >
+                <Plus className="size-3.5" /> Novo produto
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8"
+                aria-label="Nova categoria"
+                title="Nova categoria"
+                disabled={!unidade}
+                onClick={() => abrir({ acao: "criar_categoria" })}
+              >
+                <FolderPlus className="size-3.5" />
+              </Button>
+            </>
+          )}
+        </div>
+        {aba === "itens" && (
+          <div className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none]">
+            {resumo.map((r) => (
+              <button
+                key={r.nome}
+                type="button"
+                aria-pressed={filtros.filtro === r.filtro}
+                onClick={() => mudarFiltros({ ...filtros, filtro: r.filtro })}
+                className={pilula(filtros.filtro === r.filtro)}
+              >
+                {r.nome}
+                <span className="font-semibold tabular-nums">{carregando ? "—" : r.valor}</span>
+              </button>
+            ))}
+            {FILTROS_RAPIDOS.filter((f) => !resumo.some((r) => r.filtro === f.id)).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed={filtros.filtro === f.id}
+                onClick={() => mudarFiltros({ ...filtros, filtro: f.id })}
+                className={pilula(filtros.filtro === f.id)}
+              >
+                {f.nome}
+              </button>
+            ))}
+            {FILTROS_MAIS.filter((f) => filtros.filtro === f.id).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed
+                onClick={() => mudarFiltros({ ...filtros, filtro: "todos" })}
+                className={pilula(true)}
+              >
+                {f.nome}
+                <X className="size-3" aria-hidden />
+              </button>
+            ))}
           </div>
+        )}
+      </div>
 
+      {aba === "pratos" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto bg-base-100 p-3">
+          <SugestoesCat3 executar={executar} admin={admin} atualizar={reler} />
+        </div>
+      ) : (
+        <>
           {(erro || categoriaErro) && (
             <p
               role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+              className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-800"
             >
               {erro || categoriaErro}{" "}
               <button type="button" className="font-medium underline" onClick={reler}>
@@ -654,41 +776,53 @@ export function CardapioCat3({
               </button>
             </p>
           )}
-          {resultados.length > 0 && <ResultadoCat3 linhas={resultados} />}
+          {resultados.length > 0 && (
+            <div className="max-h-40 shrink-0 overflow-y-auto border-b border-base-200 p-2">
+              <ResultadoCat3 linhas={resultados} />
+            </div>
+          )}
 
           {carregando || categoriasBusy ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            <div className="min-h-0 flex-1 space-y-2 bg-card p-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-11 w-full rounded-lg" />
               ))}
             </div>
           ) : (
-            <div className="grid items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div className="flex min-h-0 flex-1 bg-card">
               <nav
                 aria-label="Categorias"
-                className="sticky top-[9.5rem] hidden max-h-[calc(100vh-11rem)] overflow-y-auto rounded-xl border border-base-200 bg-card p-2 lg:block"
+                className="hidden w-52 shrink-0 overflow-y-auto border-r border-base-200 bg-base-50 p-2 lg:block"
               >
-                <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-                  Categorias
-                </p>
-                <ul className="space-y-0.5">
+                <ul className="space-y-px">
                   {categoriasVisiveis.map((c) => {
                     const qtd = filtrados.filter((i) => i.categoria_id === c.id).length;
                     const ativa = categoriaAtiva === c.id;
+                    const comEsgotado = daUnidade.some(
+                      (i) =>
+                        i.categoria_id === c.id &&
+                        (i.esgotado_agora ?? i.indisponivel_motivo === "esgotado"),
+                    );
                     return (
                       <li key={c.id}>
                         <button
                           type="button"
                           onClick={() => irParaCategoria(c.id)}
-                          className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+                          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
                             ativa
-                              ? "bg-purple-100 font-semibold text-purple-950"
+                              ? "bg-purple-100 font-medium text-purple-950"
                               : "text-ink-700 hover:bg-base-100"
-                          }`}
+                          } ${qtd === 0 && emFiltro ? "opacity-50" : ""}`}
                         >
-                          <span className="truncate">{c.nome}</span>
+                          <span className="min-w-0 flex-1 truncate">{c.nome}</span>
+                          {comEsgotado ? (
+                            <span
+                              className="size-1.5 shrink-0 rounded-full bg-amber-500"
+                              title="Tem item esgotado"
+                            />
+                          ) : null}
                           <span
-                            className={`tabular-nums text-xs ${ativa ? "text-purple-700" : "text-ink-400"}`}
+                            className={`text-xs tabular-nums ${ativa ? "text-purple-700" : "text-ink-400"}`}
                           >
                             {qtd}
                           </span>
@@ -702,21 +836,20 @@ export function CardapioCat3({
                 ) : null}
               </nav>
 
-              <div ref={listaRef} className="min-w-0 space-y-3">
-                <div className="flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+              <div
+                ref={listaRef}
+                className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
+              >
+                <div className="sticky top-0 z-20 flex gap-1 overflow-x-auto border-b border-base-200 bg-card px-3 py-1.5 [scrollbar-width:none] lg:hidden">
                   {categoriasVisiveis.map((c) => (
                     <button
                       key={c.id}
                       type="button"
                       onClick={() => irParaCategoria(c.id)}
-                      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${
-                        categoriaAtiva === c.id
-                          ? "border-purple-800 bg-purple-100 text-purple-950"
-                          : "border-base-200 bg-card text-ink-700"
-                      }`}
+                      className={pilula(categoriaAtiva === c.id)}
                     >
                       {c.nome}
-                      <span className="ml-1 text-ink-400">
+                      <span className="tabular-nums text-ink-400">
                         {filtrados.filter((i) => i.categoria_id === c.id).length}
                       </span>
                     </button>
@@ -726,12 +859,14 @@ export function CardapioCat3({
                 {categoriasVisiveis.map((c, ci) => {
                   const linhas = ordenarItens(filtrados.filter((i) => i.categoria_id === c.id));
                   const fechada = fechadas.has(c.id);
+                  // Com busca ou filtro, categoria sem resultado só ocupa espaço.
+                  if (!linhas.length && emFiltro) return null;
                   return (
                     <section
                       id={`cat-${c.id}`}
                       key={c.id}
                       data-categoria-id={c.id}
-                      className="scroll-mt-36 overflow-hidden rounded-xl border border-base-200 bg-card shadow-sm"
+                      className="group/categoria scroll-mt-10 lg:scroll-mt-0"
                       onDragOver={(e) => {
                         if (drag?.tipo === "categoria") e.preventDefault();
                       }}
@@ -743,55 +878,25 @@ export function CardapioCat3({
                         }
                       }}
                     >
-                      <header className="sticky top-[8.75rem] z-10 flex flex-wrap items-center gap-1 border-b border-base-100 bg-purple-50/95 px-2 py-2 backdrop-blur sm:px-3">
+                      <header className="sticky top-10 z-10 flex h-8 items-center gap-0.5 border-b border-base-200 bg-base-50 px-2 lg:top-0">
                         <button
                           type="button"
                           aria-expanded={!fechada}
                           aria-label={`${fechada ? "Expandir" : "Recolher"} ${c.nome}`}
-                          className="rounded p-1.5 text-ink-600 hover:bg-purple-100"
+                          className="rounded p-1 text-ink-600 hover:bg-base-100"
                           onClick={() => alternarCategoria(c.id)}
                         >
                           {fechada ? (
-                            <ChevronRight className="size-4" />
+                            <ChevronRight className="size-3.5" />
                           ) : (
-                            <ChevronDown className="size-4" />
+                            <ChevronDown className="size-3.5" />
                           )}
                         </button>
-                        {admin && (
-                          <div className="flex items-center opacity-60 transition group-hover:opacity-100 hover:opacity-100">
-                            <button
-                              aria-label={`Arrastar categoria ${c.nome}`}
-                              draggable
-                              disabled={busy}
-                              onDragStart={() => setDrag({ tipo: "categoria", id: c.id })}
-                              onDragEnd={() => setDrag(null)}
-                              className="cursor-grab rounded p-1.5 hover:bg-purple-100"
-                            >
-                              <GripVertical className="size-4" />
-                            </button>
-                            <button
-                              aria-label={`Subir categoria ${c.nome}`}
-                              disabled={busy || ci === 0}
-                              className="rounded p-1 hover:bg-purple-100 disabled:opacity-30"
-                              onClick={() => categoriaOrdem(c.id, categorias[ci - 1]!.id)}
-                            >
-                              <ArrowUp className="size-3.5" />
-                            </button>
-                            <button
-                              aria-label={`Descer categoria ${c.nome}`}
-                              disabled={busy || ci === categorias.length - 1}
-                              className="rounded p-1 hover:bg-purple-100 disabled:opacity-30"
-                              onClick={() => categoriaOrdem(c.id, categorias[ci + 1]!.id)}
-                            >
-                              <ArrowDown className="size-3.5" />
-                            </button>
-                          </div>
-                        )}
                         {admin && linhas.length > 0 && (
                           <input
                             aria-label={`Selecionar todos de ${c.nome}`}
                             type="checkbox"
-                            className="mx-1 size-4 accent-purple-800"
+                            className="mx-1 size-3.5 accent-purple-800"
                             checked={linhas.every((i) => selecionados.includes(i.item_id))}
                             onChange={(e) =>
                               setSelecionados((x) =>
@@ -802,47 +907,76 @@ export function CardapioCat3({
                             }
                           />
                         )}
-                        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-purple-950">
+                        <h3 className="min-w-0 truncate font-sans text-xs font-semibold text-ink-900">
                           {c.nome}
-                          <span className="ml-2 text-xs font-normal text-ink-500">
-                            {linhas.length} {linhas.length === 1 ? "item" : "itens"}
-                          </span>
                         </h3>
+                        <span className="ml-1.5 text-xs tabular-nums text-ink-500">
+                          {linhas.length}
+                        </span>
+                        <span className="flex-1" />
                         {admin && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-8"
-                                aria-label={`Opções da categoria ${c.nome}`}
-                              >
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onSelect={() => abrir({ acao: "renomear", id: c.id, nome: c.nome })}
-                              >
-                                Renomear
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  abrir({ acao: "arquivar_categoria", id: c.id, nome: c.nome })
-                                }
-                              >
-                                Arquivar categoria
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover/categoria:opacity-100 max-lg:opacity-100">
+                            <button
+                              aria-label={`Arrastar categoria ${c.nome}`}
+                              draggable
+                              disabled={busy}
+                              onDragStart={() => setDrag({ tipo: "categoria", id: c.id })}
+                              onDragEnd={() => setDrag(null)}
+                              className="cursor-grab rounded p-1 text-ink-500 hover:bg-base-100"
+                            >
+                              <GripVertical className="size-3.5" />
+                            </button>
+                            <button
+                              aria-label={`Subir categoria ${c.nome}`}
+                              disabled={busy || ci === 0}
+                              className="rounded p-1 text-ink-500 hover:bg-base-100 disabled:opacity-30"
+                              onClick={() => categoriaOrdem(c.id, categorias[ci - 1]!.id)}
+                            >
+                              <ArrowUp className="size-3" />
+                            </button>
+                            <button
+                              aria-label={`Descer categoria ${c.nome}`}
+                              disabled={busy || ci === categorias.length - 1}
+                              className="rounded p-1 text-ink-500 hover:bg-base-100 disabled:opacity-30"
+                              onClick={() => categoriaOrdem(c.id, categorias[ci + 1]!.id)}
+                            >
+                              <ArrowDown className="size-3" />
+                            </button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-6"
+                                  aria-label={`Opções da categoria ${c.nome}`}
+                                >
+                                  <MoreHorizontal className="size-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    abrir({ acao: "renomear", id: c.id, nome: c.nome })
+                                  }
+                                >
+                                  Renomear
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    abrir({ acao: "arquivar_categoria", id: c.id, nome: c.nome })
+                                  }
+                                >
+                                  Arquivar categoria
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         )}
                       </header>
 
                       {!fechada && !linhas.length && (
-                        <p className="px-4 py-8 text-center text-sm text-ink-500">
-                          {filtros.filtro === "sem_preco"
-                            ? "Nenhum item sem preço nesta categoria."
-                            : "Nenhum item com estes filtros."}
+                        <p className="px-3 py-3 text-xs text-ink-500">
+                          Nenhum item nesta categoria.
                         </p>
                       )}
 
@@ -851,10 +985,14 @@ export function CardapioCat3({
                           const selo = seloStatus(i);
                           const esgotadoTxt = textoEsgotado(i, unidades);
                           const esgotado = i.esgotado_agora ?? i.indisponivel_motivo === "esgotado";
+                          const ocupado = ocupados.has(i.item_id);
+                          const normal = selo.texto === "Disponível";
                           return (
                             <article
                               key={i.item_id}
-                              className="group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2 border-b border-base-100 px-2 py-2.5 last:border-b-0 hover:bg-base-50/80 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-x-3 sm:px-3"
+                              className={`group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 border-b border-base-200/70 px-2 py-1 transition-colors hover:bg-purple-50/50 sm:grid-cols-[auto_minmax(0,1fr)_auto] ${
+                                selecionados.includes(i.item_id) ? "bg-purple-50" : ""
+                              } ${!i.ativo || i.arquivado ? "opacity-60" : ""}`}
                               onDragOver={(e) => {
                                 if (drag?.tipo === "item" && drag.categoria === c.id)
                                   e.preventDefault();
@@ -869,11 +1007,25 @@ export function CardapioCat3({
                               }}
                             >
                               {admin ? (
-                                <div className="flex items-center gap-0.5 self-start pt-0.5">
+                                <div className="flex items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    draggable
+                                    disabled={busy}
+                                    aria-label={`Arrastar item ${i.nome}`}
+                                    className="hidden cursor-grab rounded p-0.5 text-ink-300 opacity-0 transition-opacity hover:text-ink-600 group-hover:opacity-100 sm:block"
+                                    onDragStart={(e) => {
+                                      e.stopPropagation();
+                                      setDrag({ tipo: "item", id: i.item_id, categoria: c.id });
+                                    }}
+                                    onDragEnd={() => setDrag(null)}
+                                  >
+                                    <GripVertical className="size-3.5" />
+                                  </button>
                                   <input
                                     type="checkbox"
                                     aria-label={`Selecionar ${i.nome}`}
-                                    className="size-4 accent-purple-800"
+                                    className="size-3.5 accent-purple-800"
                                     checked={selecionados.includes(i.item_id)}
                                     onChange={(e) =>
                                       setSelecionados((x) =>
@@ -883,44 +1035,6 @@ export function CardapioCat3({
                                       )
                                     }
                                   />
-                                  <button
-                                    type="button"
-                                    draggable
-                                    disabled={busy}
-                                    aria-label={`Arrastar item ${i.nome}`}
-                                    className="cursor-grab rounded p-1 text-ink-300 opacity-0 transition group-hover:opacity-100 hover:bg-base-100 hover:text-ink-600"
-                                    onDragStart={(e) => {
-                                      e.stopPropagation();
-                                      setDrag({ tipo: "item", id: i.item_id, categoria: c.id });
-                                    }}
-                                    onDragEnd={() => setDrag(null)}
-                                  >
-                                    <GripVertical className="size-4" />
-                                  </button>
-                                  <div className="hidden flex-col opacity-0 transition group-hover:opacity-100 sm:flex">
-                                    <button
-                                      type="button"
-                                      disabled={busy || ii === 0}
-                                      aria-label={`Subir item ${i.nome}`}
-                                      className="rounded p-0.5 text-ink-400 hover:bg-base-100 disabled:opacity-20"
-                                      onClick={() =>
-                                        itemOrdem(c.id, i.item_id, linhas[ii - 1]!.item_id)
-                                      }
-                                    >
-                                      <ArrowUp className="size-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={busy || ii === linhas.length - 1}
-                                      aria-label={`Descer item ${i.nome}`}
-                                      className="rounded p-0.5 text-ink-400 hover:bg-base-100 disabled:opacity-20"
-                                      onClick={() =>
-                                        itemOrdem(c.id, i.item_id, linhas[ii + 1]!.item_id)
-                                      }
-                                    >
-                                      <ArrowDown className="size-3" />
-                                    </button>
-                                  </div>
                                 </div>
                               ) : (
                                 <span className="w-1" aria-hidden />
@@ -928,34 +1042,50 @@ export function CardapioCat3({
 
                               <button
                                 type="button"
-                                className="min-w-0 rounded text-left focus-visible:ring-2 focus-visible:ring-purple-500"
+                                className="min-w-0 rounded py-0.5 text-left focus-visible:ring-2 focus-visible:ring-purple-500"
+                                aria-label={`Abrir ${i.nome}`}
                                 onClick={() => setEditar(i)}
                               >
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <strong className="text-sm font-semibold text-ink-900">
+                                <span className="flex min-w-0 items-center gap-1.5">
+                                  {normal ? (
+                                    <span
+                                      className="size-1.5 shrink-0 rounded-full bg-emerald-600"
+                                      title="Disponível"
+                                    />
+                                  ) : null}
+                                  <span className="min-w-0 truncate text-sm font-medium text-ink-900">
                                     {i.nome}
-                                  </strong>
-                                  <span
-                                    className={`inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${selo.classe}`}
-                                  >
-                                    {selo.texto}
                                   </span>
+                                  {normal ? (
+                                    <span className="sr-only">Disponível</span>
+                                  ) : (
+                                    <span
+                                      className={`shrink-0 rounded px-1.5 text-[11px] font-semibold ${selo.classe}`}
+                                    >
+                                      {selo.texto}
+                                    </span>
+                                  )}
+                                  {i.qtd_opcoes ? (
+                                    <span className="shrink-0 rounded bg-purple-100 px-1.5 text-[11px] font-medium text-purple-900">
+                                      Com opções
+                                    </span>
+                                  ) : null}
                                   {i.codigo ? (
-                                    <span className="font-mono text-[11px] text-ink-400">
+                                    <span className="hidden shrink-0 font-mono text-[11px] text-ink-400 md:inline">
                                       {i.codigo}
                                     </span>
                                   ) : null}
-                                </div>
+                                </span>
                                 {(i.descricao || i.disponibilidade?.resumo || esgotadoTxt) && (
-                                  <p className="mt-0.5 line-clamp-1 text-xs text-ink-500">
-                                    {[i.descricao, i.disponibilidade?.resumo, esgotadoTxt]
+                                  <span className="block truncate text-xs leading-4 text-ink-500">
+                                    {[esgotadoTxt, i.disponibilidade?.resumo, i.descricao]
                                       .filter(Boolean)
                                       .join(" · ")}
-                                  </p>
+                                  </span>
                                 )}
                               </button>
 
-                              <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 sm:col-span-1 sm:flex-nowrap">
+                              <div className="col-span-2 flex items-center justify-end gap-1.5 sm:col-span-1">
                                 <div className="min-w-[4.5rem] text-right text-sm font-semibold tabular-nums text-ink-900">
                                   {admin ? (
                                     <PrecoRapido item={i} servicos={servicos} />
@@ -964,63 +1094,57 @@ export function CardapioCat3({
                                   )}
                                 </div>
                                 {admin && (
-                                  <label className="flex items-center gap-1.5 text-xs text-ink-600">
-                                    <Switch
-                                      checked={i.ativo}
-                                      disabled={busy || i.arquivado}
-                                      onCheckedChange={() => void ativo(i)}
-                                      aria-label={`Disponível: ${i.nome}`}
-                                    />
-                                    <span className="hidden xl:inline">Ativo</span>
-                                  </label>
+                                  <Switch
+                                    checked={i.ativo}
+                                    disabled={ocupado || i.arquivado}
+                                    onCheckedChange={() => void ativo(i)}
+                                    aria-label={`Disponível: ${i.nome}`}
+                                    title={i.ativo ? "Ativo" : "Inativo"}
+                                  />
                                 )}
                                 <Button
                                   size="sm"
                                   variant={esgotado ? "secondary" : "outline"}
-                                  className="h-8 rounded-lg px-2.5 text-xs"
-                                  disabled={busy || i.arquivado}
-                                  onClick={() =>
-                                    void agir({
-                                      acao: "item",
-                                      id: i.item_id,
-                                      operacao: esgotado ? "repor" : "esgotar",
-                                    })
-                                  }
+                                  className="h-7 w-[4.25rem] rounded-md px-0 text-xs"
+                                  disabled={ocupado || i.arquivado}
+                                  onClick={() => void esgotarOuRepor(i, esgotado)}
                                 >
                                   {esgotado ? "Repor" : "Esgotar"}
                                 </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="size-8"
-                                  aria-label={`Editar ${i.nome}`}
-                                  onClick={() => setEditar(i)}
-                                >
-                                  <Pencil className="size-3.5" />
-                                </Button>
-                                {admin && (
+                                {admin ? (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="size-8"
+                                        className="size-7"
                                         aria-label={`Opções de ${i.nome}`}
                                       >
-                                        <MoreHorizontal className="size-4" />
+                                        <MoreHorizontal className="size-3.5" />
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onSelect={() => setEditar(i)}>
+                                        Editar
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem
+                                        disabled={busy || ii === 0}
                                         onSelect={() =>
-                                          void agir({
-                                            acao: "item",
-                                            id: i.item_id,
-                                            operacao: "duplicar",
-                                          })
+                                          itemOrdem(c.id, i.item_id, linhas[ii - 1]!.item_id)
                                         }
                                       >
-                                        Duplicar (inativo)
+                                        Subir na categoria
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        disabled={busy || ii === linhas.length - 1}
+                                        onSelect={() =>
+                                          itemOrdem(c.id, i.item_id, linhas[ii + 1]!.item_id)
+                                        }
+                                      >
+                                        Descer na categoria
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onSelect={() => void duplicar(i)}>
+                                        Duplicar
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onSelect={() =>
@@ -1054,6 +1178,8 @@ export function CardapioCat3({
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
+                                ) : (
+                                  <span className="w-1" aria-hidden />
                                 )}
                               </div>
                             </article>
@@ -1064,7 +1190,7 @@ export function CardapioCat3({
                 })}
 
                 {!categorias.length && (
-                  <div className="rounded-xl border border-dashed border-base-300 bg-card px-6 py-14 text-center">
+                  <div className="px-6 py-14 text-center">
                     <p className="text-sm font-medium text-ink-800">
                       Esta unidade ainda não tem categorias.
                     </p>
@@ -1082,14 +1208,15 @@ export function CardapioCat3({
                 )}
 
                 {categorias.length > 0 && !filtrados.length && (
-                  <div className="rounded-xl border border-base-200 bg-card px-6 py-10 text-center">
+                  <div className="px-6 py-10 text-center">
                     <p className="text-sm font-medium text-ink-800">Nenhum item encontrado.</p>
                     <p className="mt-1 text-sm text-ink-500">
                       Ajuste a busca ou os filtros para ver o cardápio.
                     </p>
                     <Button
                       variant="outline"
-                      className="mt-4"
+                      size="sm"
+                      className="mt-3"
                       onClick={() =>
                         mudarFiltros({
                           ...filtros,
@@ -1109,17 +1236,23 @@ export function CardapioCat3({
           )}
 
           {admin && selecionados.length > 0 && (
-            <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-purple-950 p-3.5 text-white shadow-lg">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-purple-950 px-3 py-2 text-white">
               <span className="text-sm font-medium">
                 {selecionados.length}{" "}
                 {selecionados.length === 1 ? "item selecionado" : "itens selecionados"}
               </span>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={() => setSelecionados([])}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setSelecionados([])}
+                >
                   Limpar
                 </Button>
                 <Button
                   size="sm"
+                  className="h-8"
                   disabled={selecionados.length > 500}
                   onClick={() => setLote(true)}
                 >
@@ -1137,7 +1270,13 @@ export function CardapioCat3({
       {editar !== undefined &&
         (admin ? (
           <ItemCat3
+            key={editar ? editar.item_id : `novo-${novoSeq}`}
             item={editar}
+            categoriaInicial={categoriaNovo}
+            maisUm={(categoria) => {
+              setCategoriaNovo(categoria);
+              setNovoSeq((n) => n + 1);
+            }}
             unidade={unidade}
             categorias={categorias}
             itens={daUnidade}

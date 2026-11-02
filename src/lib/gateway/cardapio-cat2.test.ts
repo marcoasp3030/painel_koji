@@ -54,7 +54,9 @@ async function montar(papel: PapelGateway = "gestor", respostas: Response[] = []
           gatewayTenantId: "teste",
           ativo: true,
           admin: papel === "gestor",
-          ...(papel === "plataforma" ? {} : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
+          ...(papel === "plataforma"
+            ? {}
+            : { papel, unidades: papel === "gestor" ? ("*" as const) : ["centro"] }),
         },
       ],
     }),
@@ -285,11 +287,10 @@ test("CAT2 validação do servidor: detalhes.campo chega ao campo certo", async 
   }
 });
 
-test("CAT2 leituras: item e categorias para o funcionário; prévia para o supervisor; histórico só o gestor", async () => {
+test("CAT2 leituras: item e categorias para o funcionário; prévia para o supervisor; histórico a partir do supervisor", async () => {
   const m = await montar("funcionario", [
     Response.json(ITEM),
     Response.json({ unidade: "patio_guedala", categorias: [] }),
-    Response.json({ resumo: null, disponivel_agora: true }),
   ]);
   expect((await executarCardapio(m.sessao, { acao: "obter", item_id: 666 })).ok).toBe(true);
   expect(m.chamadas[0]?.url.pathname).toBe("/admin/v1/tenants/teste/catalogo/itens/666");
@@ -312,8 +313,8 @@ test("CAT2 leituras: item e categorias para o funcionário; prévia para o super
     "/admin/v1/tenants/teste/catalogo/disponibilidade/previa",
   );
   expect(sup.chamadas[0]?.body).toEqual({ unidade: "patio_guedala", disponibilidade: regra });
-  expect((await executarCardapio(m.sessao, { acao: "historico", item_id: 666 })).ok).toBe(true);
-  expect(m.chamadas).toHaveLength(3);
+  expect((await executarCardapio(m.sessao, { acao: "historico", item_id: 666 })).ok).toBe(false);
+  expect(m.chamadas).toHaveLength(2);
 
   const a = await montar("gestor", [
     Response.json({

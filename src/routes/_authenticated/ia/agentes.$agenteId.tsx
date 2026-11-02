@@ -12,7 +12,16 @@ import { ModulosDoAgente } from "@/components/luxtia/agente/ModulosDoAgente";
 import { VisaoGeral } from "@/components/luxtia/agente/VisaoGeral";
 import { peloMenos } from "@/lib/acesso/papeis";
 import { Etiqueta, PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
-import { CabecalhoPagina, Cartao, EstadoVazio } from "@/components/luxtia/Superficie";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   alterarAgente,
@@ -24,6 +33,18 @@ import { listarCanais } from "@/lib/gateway-canais.functions";
 import { ehAgenteDeTeste } from "@/lib/gateway/ocultos";
 import { prontidao, type AcaoProntidao } from "@/lib/gateway/prontidao";
 import { ENVIO, RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
+
+type Situacao = "ativo" | "pausado" | "rascunho";
+
+const EFEITO_SITUACAO: Record<Situacao, string> = {
+  ativo: "O agente passa a responder às mensagens recebidas.",
+  pausado: "O agente para de responder. As mensagens recebidas são ignoradas até reativar.",
+  rascunho: "O agente para de responder. As mensagens recebidas são ignoradas.",
+};
+
+const CLASSE_ABA =
+  "h-9 flex-none rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 text-sm shadow-none data-[state=active]:border-purple-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none";
+const CLASSE_CONTEUDO = "mt-0 min-h-0 flex-1 overflow-y-auto bg-base-50 p-3";
 
 const ABAS = ["visao", "comportamento", "modulos", "conexao", "canais", "avancado"] as const;
 type Aba = (typeof ABAS)[number];
@@ -45,7 +66,7 @@ function PaginaAgente() {
       titulo="Agente"
       papeis={["plataforma", "gestor", "supervisor"]}
       empresaFixa={empresa ?? null}
-      semCabecalho
+      telaCheia
     >
       {(ctx) => <Agente key={`${ctx.empresa}:${agenteId}`} ctx={ctx} agenteId={agenteId} />}
     </PaginaGateway>
@@ -63,6 +84,7 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const alterar = useServerFn(alterarAgente);
   const plataforma = ctx.papel === "plataforma";
   const [criandoCanal, setCriandoCanal] = useState(false);
+  const [mudarPara, setMudarPara] = useState<Situacao | null>(null);
 
   const adminOuPlataforma = peloMenos(ctx.papel, "gestor");
   const aba: Aba =
@@ -95,10 +117,11 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   });
 
   const situacao = useMutation({
-    mutationFn: (status: "ativo" | "pausado" | "rascunho") =>
+    mutationFn: (status: Situacao) =>
       alterar({ data: { empresa: ctx.empresa, agente: agenteId, dados: { status } } }),
     onSuccess: async (a) => {
       toast.success(`Agente ${SITUACAO_AGENTE[a.status]?.rotulo.toLowerCase() ?? "atualizado"}.`);
+      setMudarPara(null);
       await queryClient.invalidateQueries({ queryKey: chave });
       await queryClient.invalidateQueries({ queryKey: ["gateway", "agentes", ctx.empresa] });
     },
@@ -109,23 +132,21 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const voltar = (
     <Link
       to="/ia/agentes"
-      className="inline-flex items-center gap-1 text-sm text-purple-700 underline-offset-2 hover:underline"
+      aria-label="Voltar para agentes"
+      className="rounded p-1 text-ink-500 hover:bg-purple-50 hover:text-purple-800"
     >
-      <ArrowLeft className="size-4" aria-hidden /> Agentes
+      <ArrowLeft className="size-4" aria-hidden />
     </Link>
   );
 
-  if (detalhe.isLoading) return <p className="mt-8 text-ink-500">Carregando…</p>;
+  if (detalhe.isLoading) return <p className="p-4 text-sm text-ink-500">Carregando…</p>;
   if (detalhe.error || !agente) {
     return (
-      <div className="mt-2 space-y-4">
+      <div className="flex items-center gap-2 border-b border-base-200 bg-card px-3 py-2">
         {voltar}
-        <Cartao>
-          <EstadoVazio
-            titulo="Não foi possível abrir o agente"
-            texto={(detalhe.error as Error | null)?.message ?? "Tente de novo."}
-          />
-        </Cartao>
+        <p role="alert" className="text-sm text-destructive">
+          {(detalhe.error as Error | null)?.message ?? "Não foi possível abrir o agente."}
+        </p>
       </div>
     );
   }
@@ -138,7 +159,7 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   const situacaoAtual = SITUACAO_AGENTE[agente.status];
 
   function acao(a: AcaoProntidao) {
-    if (a === "ativar") situacao.mutate("ativo");
+    if (a === "ativar") setMudarPara("ativo");
     else if (a === "criar_canal") {
       irPara("canais");
       setCriandoCanal(true);
@@ -147,65 +168,85 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      {voltar}
-      <CabecalhoPagina
-        sobretitulo="Agente"
-        titulo={agente.nome}
-        descricao={
-          plataforma
-            ? `Modelo: ${nomeModelo ?? agente.modelo_id.replace(/_/g, " ")} · Respostas: ${respostas} · Envio aos clientes: ${envio}`
-            : `Modelo: ${nomeModelo ?? agente.modelo_id.replace(/_/g, " ")}`
-        }
-      />
-      <div className="flex flex-wrap gap-1.5">
-        <Etiqueta tom={situacaoAtual?.tom ?? "neutro"}>
-          {situacaoAtual?.rotulo ?? agente.status}
-        </Etiqueta>
+    <div className="flex min-h-0 flex-1 flex-col bg-card">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-base-200 px-3 py-1.5">
+        {voltar}
+        <div className="min-w-0 flex-1 basis-40">
+          <h2 className="truncate text-sm font-medium text-ink-900">{agente.nome}</h2>
+          <p className="truncate text-xs text-ink-500">
+            {nomeModelo ?? agente.modelo_id.replace(/_/g, " ")}
+            {plataforma ? ` · Respostas: ${respostas} · Envio aos clientes: ${envio}` : ""}
+          </p>
+        </div>
         {ehAgenteDeTeste(agente.nome) ? (
           <Etiqueta tom="alerta">Teste: escondido da empresa</Etiqueta>
         ) : null}
+        <Etiqueta tom={situacaoAtual?.tom ?? "neutro"}>
+          {situacaoAtual?.rotulo ?? agente.status}
+        </Etiqueta>
       </div>
 
-      <Tabs value={aba} onValueChange={(v) => irPara(v as Aba)}>
-        <TabsList className="h-auto flex-wrap justify-start bg-base-200/60">
-          <TabsTrigger value="visao">Visão geral</TabsTrigger>
-          <TabsTrigger value="comportamento">Comportamento</TabsTrigger>
-          {adminOuPlataforma ? <TabsTrigger value="modulos">Módulos</TabsTrigger> : null}
-          {plataforma ? <TabsTrigger value="conexao">Conexão com IA</TabsTrigger> : null}
-          <TabsTrigger value="canais">Canais</TabsTrigger>
-          {plataforma ? <TabsTrigger value="avancado">Avançado</TabsTrigger> : null}
+      <Tabs
+        value={aba}
+        onValueChange={(v) => irPara(v as Aba)}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <TabsList className="h-auto w-full shrink-0 justify-start overflow-x-auto rounded-none border-b border-base-200 bg-card p-0 px-2 [scrollbar-width:none]">
+          <TabsTrigger className={CLASSE_ABA} value="visao">
+            Visão geral
+          </TabsTrigger>
+          <TabsTrigger className={CLASSE_ABA} value="comportamento">
+            Comportamento
+          </TabsTrigger>
+          {adminOuPlataforma ? (
+            <TabsTrigger className={CLASSE_ABA} value="modulos">
+              Módulos
+            </TabsTrigger>
+          ) : null}
+          {plataforma ? (
+            <TabsTrigger className={CLASSE_ABA} value="conexao">
+              Conexão com IA
+            </TabsTrigger>
+          ) : null}
+          <TabsTrigger className={CLASSE_ABA} value="canais">
+            Canais
+          </TabsTrigger>
+          {plataforma ? (
+            <TabsTrigger className={CLASSE_ABA} value="avancado">
+              Avançado
+            </TabsTrigger>
+          ) : null}
         </TabsList>
 
         {plataforma ? (
-          <TabsContent value="avancado" className="mt-6">
+          <TabsContent value="avancado" className={CLASSE_CONTEUDO}>
             <Capacidade empresa={ctx.empresa!} agente={agenteId} />
           </TabsContent>
         ) : null}
-        <TabsContent value="visao" className="mt-6">
+        <TabsContent value="visao" className={CLASSE_CONTEUDO}>
           <VisaoGeral
             ctx={ctx}
             agente={agente}
             itens={itens}
             salvando={situacao.isPending}
             onAcao={acao}
-            onSituacao={(s) => situacao.mutate(s)}
+            onSituacao={setMudarPara}
           />
         </TabsContent>
-        <TabsContent value="comportamento" className="mt-6">
+        <TabsContent value="comportamento" className={CLASSE_CONTEUDO}>
           <Comportamento ctx={ctx} agente={agente} />
         </TabsContent>
         {adminOuPlataforma ? (
-          <TabsContent value="modulos" className="mt-6">
+          <TabsContent value="modulos" className={CLASSE_CONTEUDO}>
             <ModulosDoAgente ctx={ctx} agenteId={agente.id} />
           </TabsContent>
         ) : null}
         {plataforma ? (
-          <TabsContent value="conexao" className="mt-6">
+          <TabsContent value="conexao" className={CLASSE_CONTEUDO}>
             <ConexaoIA ctx={ctx} agente={agente} />
           </TabsContent>
         ) : null}
-        <TabsContent value="canais" className="mt-6">
+        <TabsContent value="canais" className={CLASSE_CONTEUDO}>
           <CanaisDoAgente
             ctx={ctx}
             agente={agente}
@@ -215,6 +256,35 @@ function Agente({ ctx, agenteId }: { ctx: ContextoGateway; agenteId: string }) {
           />
         </TabsContent>
       </Tabs>
+
+      <AlertDialog
+        open={mudarPara !== null}
+        onOpenChange={(a) => !a && !situacao.isPending && setMudarPara(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Mudar {agente.nome} para{" "}
+              {mudarPara ? SITUACAO_AGENTE[mudarPara]?.rotulo.toLowerCase() : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {mudarPara ? EFEITO_SITUACAO[mudarPara] : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={situacao.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (mudarPara) situacao.mutate(mudarPara);
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -132,3 +132,29 @@ export function conferirPiloto(efetiva: Record<string, unknown>, dados: Record<s
 export function tocaPiloto(dados: Record<string, unknown>) {
   return "modo_piloto" in dados || "contatos_permitidos" in dados;
 }
+
+/** Em modo piloto, o gateway grava a mensagem de quem não está na lista, mas o agente não responde. */
+export function foraDoPiloto(efetiva: Record<string, unknown>, cliente: string) {
+  if (efetiva["modo_piloto"] !== true) return false;
+  const lista = efetiva["contatos_permitidos"];
+  return !(Array.isArray(lista) && lista.includes(cliente.trim()));
+}
+
+const paraBusca = (t: string) =>
+  t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+/** Lista de agentes: a busca olha nome e id; a situação é a exata do gateway. */
+export function filtrarAgentes<T extends { id: string; nome: string; status: string }>(
+  agentes: readonly T[],
+  filtros: { busca: string; status: string },
+) {
+  const termo = paraBusca(filtros.busca).trim();
+  return agentes.filter(
+    (a) =>
+      (!filtros.status || a.status === filtros.status) &&
+      (!termo || paraBusca(`${a.nome} ${a.id}`).includes(termo)),
+  );
+}

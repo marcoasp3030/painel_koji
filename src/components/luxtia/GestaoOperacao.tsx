@@ -5,7 +5,6 @@ import { peloMenos } from "@/lib/acesso/papeis";
 import type { ContextoGateway } from "./Gateway";
 import { Etiqueta } from "./Gateway";
 import { useGestao, EditorFaixas } from "./gestao-base";
-import { Cartao } from "./Superficie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +22,8 @@ import {
   instanteLocal,
   pendentesDe,
   problemaGrade,
+  linhaSituacao,
+  resumoSituacao,
   textoSituacao,
   FUSO_PAINEL,
   type Agenda,
@@ -62,78 +63,107 @@ export function VisaoHoje({
       .filter((d) => d.origem === "excecao")
       .map((d) => ({ unidade: u, dia: d })),
   );
+  const lerErro = itens.flatMap((u, i) => (agendas[i]?.error ? [{ u, i }] : []));
   return (
-    <Cartao className="space-y-4 p-4 sm:p-5">
-      <div>
-        <h2 className="font-display text-2xl text-purple-800">Hoje</h2>
-        <p className="text-sm text-ink-500">
-          Situação e pausas vêm da lista. Exceções vêm da agenda de sete dias de cada unidade.
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {itens.map((u) => (
-          <button key={u.id} type="button" className="min-h-11" onClick={() => onAbrir(u.id)}>
-            <Etiqueta
-              tom={
-                u.situacao.aberta_agora === true
-                  ? "sucesso"
-                  : u.situacao.motivo === "pausa"
-                    ? "alerta"
-                    : "neutro"
-              }
-            >
-              {u.nome}: {textoSituacao(u.situacao)}
-            </Etiqueta>
-          </button>
-        ))}
-      </div>
-      <div>
-        <h3 className="font-semibold">Pausas ativas</h3>
-        {pausas.length === 0 ? (
-          <p className="text-sm text-ink-500">Nenhuma pausa ativa.</p>
-        ) : (
-          <ul className="mt-1 space-y-1 text-sm">
-            {pausas.map((u) => (
-              <li key={u.id}>
-                {u.nome}: {textoSituacao(u.situacao)}
-                {u.pausa_motivo ? ` · ${u.pausa_motivo}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div>
-        <h3 className="font-semibold">Exceções nos próximos 7 dias</h3>
-        {agendas.some((a) => a.isPending) && excecoes.length === 0 ? (
-          <Skeleton className="mt-2 h-8" />
-        ) : null}
-        {itens.map((u, i) =>
-          agendas[i]?.error ? (
-            <p key={u.id} role="alert" className="text-sm">
-              Não foi possível ler a agenda de {u.nome}. {agendas[i]?.error.message}{" "}
+    <div className="space-y-3">
+      <section aria-label="Situação de hoje" className="rounded-lg border border-base-200 bg-card">
+        <h2 className="border-b border-base-200 px-3 py-2 font-sans text-sm font-semibold text-ink-900">
+          Hoje
+        </h2>
+        <ul className="divide-y divide-base-200/70">
+          {itens.map((u) => (
+            <li key={u.id}>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-purple-50"
+                onClick={() => onAbrir(u.id)}
+              >
+                <span className="w-32 shrink-0 truncate text-sm font-medium text-ink-900">
+                  {u.nome}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-ink-500">
+                  {linhaSituacao(u.situacao)}
+                  {u.situacao.motivo === "pausa" && u.pausa_motivo ? ` · ${u.pausa_motivo}` : ""}
+                </span>
+                <Etiqueta
+                  tom={
+                    u.situacao.aberta_agora === true
+                      ? "sucesso"
+                      : u.situacao.motivo === "pausa"
+                        ? "alerta"
+                        : "neutro"
+                  }
+                >
+                  {resumoSituacao(u.situacao)}
+                </Etiqueta>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <div className="grid items-start gap-3 md:grid-cols-2">
+        <section aria-label="Pausas ativas" className="rounded-lg border border-base-200 bg-card">
+          <h3 className="border-b border-base-200 px-3 py-2 font-sans text-sm font-semibold text-ink-900">
+            Pausas ativas
+          </h3>
+          {pausas.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-ink-500">Nenhuma pausa ativa.</p>
+          ) : (
+            <ul className="divide-y divide-base-200/70 text-sm">
+              {pausas.map((u) => (
+                <li key={u.id} className="px-3 py-1.5">
+                  <span className="font-medium text-ink-900">{u.nome}</span>
+                  <span className="block truncate text-xs text-ink-500">
+                    {textoSituacao(u.situacao)}
+                    {u.pausa_motivo ? ` · ${u.pausa_motivo}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section
+          aria-label="Exceções nos próximos 7 dias"
+          className="rounded-lg border border-base-200 bg-card"
+        >
+          <h3 className="border-b border-base-200 px-3 py-2 font-sans text-sm font-semibold text-ink-900">
+            Exceções nos próximos 7 dias
+          </h3>
+          {agendas.some((a) => a.isPending) && excecoes.length === 0 ? (
+            <div className="p-3">
+              <Skeleton className="h-8" />
+            </div>
+          ) : null}
+          {lerErro.map(({ u, i }) => (
+            <p key={u.id} role="alert" className="px-3 py-1.5 text-sm">
+              Não foi possível ler a agenda de {u.nome}. {agendas[i]?.error?.message}{" "}
               <button type="button" className="underline" onClick={() => agendas[i]?.refetch()}>
                 Tentar novamente
               </button>
             </p>
-          ) : null,
-        )}
-        {agendas.every((a) => !a.isPending) && excecoes.length === 0 ? (
-          <p className="text-sm text-ink-500">Nenhuma exceção nos próximos 7 dias.</p>
-        ) : (
-          <ul className="mt-1 space-y-1 text-sm">
-            {excecoes.map(({ unidade, dia }) => (
-              <li key={`${unidade.id}:${dia.data}`}>
-                {dataCurta(dia.data)} · {unidade.nome} ·{" "}
-                {dia.fechado
-                  ? "Fechado o dia inteiro"
-                  : dia.faixas.map((f) => f.join("–")).join(", ") || "Sem faixa"}
-                {dia.motivo ? ` · ${dia.motivo}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
+          ))}
+          {agendas.every((a) => !a.isPending) && excecoes.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-ink-500">Nenhuma exceção nos próximos 7 dias.</p>
+          ) : (
+            <ul className="divide-y divide-base-200/70 text-sm">
+              {excecoes.map(({ unidade, dia }) => (
+                <li key={`${unidade.id}:${dia.data}`} className="px-3 py-1.5">
+                  <span className="font-medium text-ink-900">
+                    {dataCurta(dia.data).slice(0, 5)} · {unidade.nome}
+                  </span>
+                  <span className="block truncate text-xs text-ink-500">
+                    {dia.fechado
+                      ? "Fechado o dia inteiro"
+                      : dia.faixas.map((f) => f.join("–")).join(", ") || "Sem faixa"}
+                    {dia.motivo ? ` · ${dia.motivo}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
-    </Cartao>
+    </div>
   );
 }
 
@@ -153,22 +183,33 @@ export function OperacaoVarias({
   const escolhidas = unidades.filter((u) => selecionadas.includes(u.id));
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <Button className="min-h-11" variant="outline" onClick={() => setModo("feriados")}>
-          Sugerir feriados nacionais
-        </Button>
-        {escolhidas.length > 0 && (
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-t border-base-200 bg-base-50 p-2">
+        {escolhidas.length > 0 ? (
           <>
-            <Button className="min-h-11" onClick={() => setModo("pausa")}>
-              Pausar {escolhidas.length} selecionada(s)
+            <Button size="sm" className="h-7 px-2 text-xs" onClick={() => setModo("pausa")}>
+              Pausar {escolhidas.length}
             </Button>
-            <Button className="min-h-11" variant="outline" onClick={() => setModo("excecao")}>
-              Exceção nas selecionadas
+            <Button
+              size="sm"
+              className="h-7 px-2 text-xs"
+              variant="outline"
+              onClick={() => setModo("excecao")}
+            >
+              Exceção
             </Button>
-            <Button className="min-h-11" variant="ghost" onClick={onLimpar}>
+            <Button size="sm" className="h-7 px-2 text-xs" variant="ghost" onClick={onLimpar}>
               Limpar seleção
             </Button>
           </>
+        ) : (
+          <Button
+            size="sm"
+            className="h-7 px-2 text-xs"
+            variant="ghost"
+            onClick={() => setModo("feriados")}
+          >
+            Sugerir feriados nacionais
+          </Button>
         )}
       </div>
       {modo === "pausa" && (

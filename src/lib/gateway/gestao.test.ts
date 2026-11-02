@@ -3,6 +3,10 @@ import { executarGestao } from "./gestao.server";
 import { criarModuloGateway } from "./modulo.server";
 import { criarClienteGateway } from "./cliente.server";
 import {
+  linhaSituacao,
+  momentoNoFuso,
+  rotuloDia,
+  resumoSituacao,
   problemaGrade,
   textoSituacao,
   dataRecebida,
@@ -127,7 +131,7 @@ test("G1 membro lê unidade/agenda e pausa/reabre, sem grade nem configurações
     }
   }
 });
-test("G1 funcionário não altera unidade, grade nem exceções; o histórico ele lê", async () => {
+test("G1 funcionário não altera unidade, grade nem exceções; o histórico fica com o supervisor", async () => {
   for (const op of [
     { acao: "editar", id: "uni", dados: { nome: "x" } },
     { acao: "criar", dados: { nome: "x" } },
@@ -144,7 +148,12 @@ test("G1 funcionário não altera unidade, grade nem exceções; o histórico el
     await expect(executarGestao(c.sessao, { ...op, empresa: "bykoji" })).rejects.toThrow();
     expect(c.chamadas).toHaveLength(0);
   }
-  const leitura = await montar("funcionario");
+  const recusado = await montar("funcionario");
+  await expect(
+    executarGestao(recusado.sessao, { acao: "historico", empresa: "bykoji" }),
+  ).rejects.toThrow();
+  expect(recusado.chamadas).toHaveLength(0);
+  const leitura = await montar("supervisor");
   expect((await executarGestao(leitura.sessao, { acao: "historico", empresa: "bykoji" })).ok).toBe(
     true,
   );
@@ -543,4 +552,42 @@ test("pagamentos da unidade substituem a lista; troco só em dinheiro", async ()
   });
   expect(ruim.ok).toBe(false);
   expect(troco.chamadas).toHaveLength(0);
+});
+
+test("linhaSituacao mostra o próximo passo da unidade", () => {
+  const base = { aberta_agora: true, motivo: null, fecha_as: null, proxima_abertura: null };
+  const s = (o: object) => ({ ...base, ...o }) as Parameters<typeof linhaSituacao>[0];
+  expect(linhaSituacao(s({ fecha_as: "2026-11-01T23:00:00-03:00" }))).toBe("Fecha às 23:00");
+  expect(linhaSituacao(s({}))).toBe("Aberta agora");
+  expect(
+    linhaSituacao(
+      s({ aberta_agora: false, motivo: "horario", proxima_abertura: "2026-11-02T11:00:00-03:00" }),
+    ),
+  ).toBe("Fechada neste horário · abre 02/11 11:00");
+  expect(linhaSituacao(s({ aberta_agora: null }))).toBe("Horário não informado");
+});
+
+test("resumoSituacao separa sem horário de fechada", () => {
+  const s = (o: object) => o as Parameters<typeof resumoSituacao>[0];
+  expect(resumoSituacao(s({ aberta_agora: true }))).toBe("Aberta");
+  expect(resumoSituacao(s({ aberta_agora: false, motivo: "pausa" }))).toBe("Pausada");
+  expect(resumoSituacao(s({ aberta_agora: null }))).toBe("Sem horário");
+  expect(resumoSituacao(s({ aberta_agora: false, motivo: "horario" }))).toBe("Fechada");
+});
+
+test("momentoNoFuso mostra a hora da empresa, não a do servidor", () => {
+  expect(momentoNoFuso("2026-11-01T04:19:00+00:00", "America/Sao_Paulo")).toEqual({
+    dia: "01/11/2026",
+    hora: "01:19",
+  });
+  // Madrugada em UTC ainda é o dia anterior em Brasília.
+  expect(momentoNoFuso("2026-11-01 01:00:00+00:00", "America/Sao_Paulo")?.dia).toBe("31/10/2026");
+  expect(momentoNoFuso("data ruim", "America/Sao_Paulo")).toBeNull();
+});
+
+test("rotuloDia troca o dia recente por palavras", () => {
+  const agora = Date.parse("2026-11-02T12:00:00-03:00");
+  expect(rotuloDia("02/11/2026", "America/Sao_Paulo", agora)).toBe("Hoje");
+  expect(rotuloDia("01/11/2026", "America/Sao_Paulo", agora)).toBe("Ontem");
+  expect(rotuloDia("31/10/2026", "America/Sao_Paulo", agora)).toBe("31/10/2026");
 });

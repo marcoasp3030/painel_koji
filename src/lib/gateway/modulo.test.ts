@@ -2,7 +2,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { criarClienteGateway, lerTentarApos, type MetodoGateway } from "./cliente.server";
 import { GatewayErro } from "./erros";
-import { AcessoNegado, autorizar, criarModuloGateway, type PerfilGateway } from "./modulo.server";
+import {
+  AcessoNegado,
+  autorizar,
+  criarModuloGateway,
+  resolverTenant,
+  type PerfilGateway,
+} from "./modulo.server";
 import { agentesOcultos, exigirConversaVisivel } from "./ocultos";
 
 const CHAVE = "chave-de-teste-nao-usar-0123456789";
@@ -413,11 +419,13 @@ describe("papéis", () => {
       ["PATCH", ["contatos", "ct_1"], { nome: null }],
       ["GET", ["unidades"]],
       ["GET", ["conversas", "c", "follow-ups"]],
-      ["GET", ["gestao", "alteracoes"]],
     ];
     for (const op of permitidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: false });
     }
+    expect(rede.chamadas).toHaveLength(permitidas.length);
+    // O histórico de gestão começa em supervisor, como no gateway.
+    expect(await recusada(t, ["GET", ["gestao", "alteracoes"]])).toBeTruthy();
     expect(rede.chamadas).toHaveLength(permitidas.length);
   });
 
@@ -758,6 +766,19 @@ describe("conferência de agentes ocultos", () => {
   });
 });
 
+describe("telas da empresa no menu", () => {
+  test("funcionário lê as telas em uso, sem ganhar a rota de módulos", async () => {
+    const { modulo, rede } = montar([Response.json({ itens: [], em_uso: [], telas: ["pedidos"] })]);
+    const sessao = await modulo.sessao({ userId: "membroA", email: null });
+    const t = await sessao.tenant();
+    const { dados } = await t.leituraDeApoio<{ telas: string[] }>(["modulos"]);
+    expect(dados.telas).toEqual(["pedidos"]);
+    expect(rede.chamadas).toHaveLength(1);
+    await expect(t.chamar("GET", ["modulos"])).rejects.toBeInstanceOf(AcessoNegado);
+    expect(rede.chamadas).toHaveLength(1);
+  });
+});
+
 describe("rotas do atendimento alcançam quem atende", () => {
   // A lista do painel nega por padrão: rota esquecida aqui só apareceria para quem não é plataforma.
   const ROTAS: [MetodoGateway, string[], unknown][] = [
@@ -769,12 +790,26 @@ describe("rotas do atendimento alcançam quem atende", () => {
     ["GET", ["conversas", "c", "notas"], undefined],
     ["POST", ["conversas", "c", "notas"], { texto: "x" }],
     ["DELETE", ["conversas", "c", "notas", "1"], undefined],
+    ["GET", ["conversas", "c", "busca"], undefined],
+    ["POST", ["conversas", "c", "midia"], { nome: "a.pdf", conteudo: "QUJD", legenda: "x" }],
+    ["PUT", ["conversas", "c", "etiquetas"], { ids: [1] }],
+    ["GET", ["etiquetas"], undefined],
   ];
   for (const papel of ["funcionario", "supervisor", "gestor"] as const) {
     test(papel, () => {
       for (const [metodo, partes, corpo] of ROTAS) autorizar(papel, metodo, partes, corpo);
     });
   }
+  test("gerir etiquetas e ver a operação ficam a partir de supervisor", () => {
+    for (const [metodo, partes, corpo] of [
+      ["POST", ["etiquetas"], { nome: "VIP", cor: "roxo" }],
+      ["DELETE", ["etiquetas", "1"], undefined],
+      ["GET", ["operacao"], undefined],
+    ] as [MetodoGateway, string[], unknown][]) {
+      autorizar("supervisor", metodo, partes, corpo);
+      expect(() => autorizar("funcionario", metodo, partes, corpo)).toThrow(AcessoNegado);
+    }
+  });
   test("transferir para um colega fica a partir de supervisor", () => {
     const corpo = { para: "a@b.test" };
     autorizar("supervisor", "POST", ["conversas", "c", "atribuir"], corpo);
@@ -790,4 +825,15 @@ describe("rotas do atendimento alcançam quem atende", () => {
       autorizar("funcionario", "POST", ["conversas", "c", "notas"], { autor: "x" }),
     ).toThrow(AcessoNegado);
   });
+});
+
+test("papel Plataforma em vínculo de empresa é recusado; só o super admin o tem", () => {
+  const perfil: PerfilGateway = {
+    userId: "u",
+    email: null,
+    superAdmin: false,
+    vinculos: [{ gatewayTenantId: "empresa_a", ativo: true, admin: true, papel: "plataforma" }],
+  };
+  expect(() => resolverTenant(perfil, "empresa_a")).toThrow(AcessoNegado);
+  expect(resolverTenant({ ...perfil, superAdmin: true }, "empresa_a").papel).toBe("plataforma");
 });

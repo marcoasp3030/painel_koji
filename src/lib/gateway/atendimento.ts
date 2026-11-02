@@ -170,6 +170,9 @@ export const ROTULO_CAMPO: Record<string, string> = {
   transbordo_alerta: "Telefone de alerta da equipe",
   transbordo_horario_equipe: "Horário da equipe",
   transbordo_fora_do_horario: "Mensagem com a equipe fora do horário",
+  transbordo_destino_externo: "Transbordo para destino externo",
+  aviso_espera_modo: "Aviso de espera",
+  aviso_espera_textos: "Textos do aviso de espera",
   send_mode: "Envio",
   agente_mode: "Modo do agente",
   modo_piloto: "Modo piloto",
@@ -235,6 +238,8 @@ export const ROTULO_OPCAO: Record<string, string> = {
   leve: "Leve",
   on: "Ligado",
   off: "Desligado",
+  presenca: "Presença",
+  presenca_e_texto_contextual: "Presença e texto contextual",
   atender: "Atender",
   so_avisar: "Só avisar",
   recusar: "Recusar",
@@ -265,12 +270,17 @@ export const ROTULO_GRUPO: Record<string, string> = {
   transbordo: "Transbordo para a equipe",
   operacao: "Operação",
   follow_up: "Follow-up",
+  perfil_identidade: "Identidade",
+  perfil_jeito: "Jeito de falar",
+  perfil_regras: "Regras e transferência",
+  perfil_mensagens: "Boas-vindas e despedida",
 };
 export const ROTULO_ORIGEM: Record<string, string> = {
   plataforma: "Padrão da plataforma",
   segmento: "Padrão do segmento",
   empresa: "Da empresa",
   agente: "Do agente",
+  cadastro: "Do cadastro",
 };
 export const ROTULO_SEGMENTO: Record<string, string> = {
   delivery_restaurante: "Delivery de restaurante",
@@ -411,6 +421,63 @@ export function gruposDoEsquema(
     else grupos.push({ grupo, campos: [[campo, def]] });
   }
   return grupos;
+}
+
+/** O gateway não agrupa o perfil: a divisão em assuntos é só da tela. */
+const GRUPO_PERFIL: Record<string, string> = {
+  nome_empresa: "perfil_identidade",
+  descricao_negocio: "perfil_identidade",
+  nome_atendente: "perfil_identidade",
+  apresentacao_inicial: "perfil_identidade",
+  tom: "perfil_jeito",
+  emojis: "perfil_jeito",
+  tamanho_respostas: "perfil_jeito",
+  tratamento: "perfil_jeito",
+  pedir_nome: "perfil_jeito",
+  sugestoes: "perfil_jeito",
+  regras_da_casa: "perfil_regras",
+  assuntos_proibidos: "perfil_regras",
+  motivos_transferencia: "perfil_regras",
+  mensagem_boas_vindas: "perfil_mensagens",
+  mensagem_despedida: "perfil_mensagens",
+};
+/** Campo novo do gateway sem assunto definido cai na identidade, para nunca sumir da tela. */
+const grupoDoPerfil = (campo: string) => GRUPO_PERFIL[campo] ?? "perfil_identidade";
+
+export function gruposDoPerfil(esquema: Esquema) {
+  const grupos: { grupo: string; campos: [string, CampoEsquema][] }[] = [];
+  for (const par of Object.entries(esquema.perfil ?? {})) {
+    const grupo = grupoDoPerfil(par[0]);
+    const g = grupos.find((x) => x.grupo === grupo);
+    if (g) g.campos.push(par);
+    else grupos.push({ grupo, campos: [par] });
+  }
+  const ordem = Object.values(GRUPO_PERFIL);
+  return grupos.sort((a, b) => ordem.indexOf(a.grupo) - ordem.indexOf(b.grupo));
+}
+
+/** Seção da tela onde está o campo de um erro: "comportamentos.fallback[1]" → "mensagens". */
+export function secaoDoCaminho(esquema: Esquema, caminho: string) {
+  const [parte, campo = ""] = chaveCampo(caminho).split(".");
+  if (parte === "perfil") return grupoDoPerfil(campo);
+  return esquema.comportamentos?.[campo]?.grupo ?? "outros";
+}
+
+/** Sem acento e com o plural em "-ões" no singular: "Reações" casa com "reação". */
+const paraBusca = (t: string) =>
+  t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/oes\b/g, "ao");
+
+/** Busca de campos: olha o nome e a ajuda, sem diferenciar acento nem maiúsculas. */
+export function campoCasaBusca(campo: string, busca: string) {
+  const alvo = paraBusca(`${rotuloCampo(campo)} ${AJUDA_CAMPO[campo] ?? ""}`);
+  return paraBusca(busca)
+    .trim()
+    .split(/\s+/)
+    .every((termo) => alvo.includes(termo));
 }
 
 export type Edicoes = Record<Parte, Record<string, Json>>;

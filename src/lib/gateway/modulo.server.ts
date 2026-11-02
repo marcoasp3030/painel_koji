@@ -199,6 +199,13 @@ const REGRAS: Regra[] = [
   },
   { metodo: "POST", caminho: ["unidades", "*", "reabrir"], papeis: SUP, corpo: semCorpo },
   { metodo: "PUT", caminho: ["unidades", "*", "horarios"], papeis: GEST },
+  { metodo: "GET", caminho: ["unidades", "*", "taxas"], papeis: SUP },
+  {
+    metodo: "PUT",
+    caminho: ["unidades", "*", "taxas"],
+    papeis: GEST,
+    corpo: soChaves(["itens"], "A lista de taxas é inválida."),
+  },
   { metodo: "GET", caminho: ["unidades", "*", "pagamentos"], papeis: FUNC },
   {
     metodo: "PUT",
@@ -218,7 +225,7 @@ const REGRAS: Regra[] = [
   { metodo: "GET", caminho: ["unidades", "*", "excecoes"], papeis: SUP },
   { metodo: "POST", caminho: ["unidades", "*", "excecoes"], papeis: SUP },
   { metodo: "DELETE", caminho: ["unidades", "*", "excecoes", "*"], papeis: SUP },
-  { metodo: "GET", caminho: ["gestao", "alteracoes"], papeis: FUNC },
+  { metodo: "GET", caminho: ["gestao", "alteracoes"], papeis: SUP },
   // Conversas e atendimento humano.
   { metodo: "GET", caminho: ["conversas"], papeis: FUNC },
   { metodo: "GET", caminho: ["conversas", "*", "mensagens"], papeis: FUNC },
@@ -231,7 +238,36 @@ const REGRAS: Regra[] = [
     papeis: SUP,
     corpo: soChaves(["para"], "Campos de transferência inválidos."),
   },
+  // Busca na conversa, envio de arquivo, etiquetas e números da operação.
+  { metodo: "GET", caminho: ["conversas", "*", "busca"], papeis: FUNC },
+  {
+    metodo: "POST",
+    caminho: ["conversas", "*", "midia"],
+    papeis: FUNC,
+    corpo: soChaves(["nome", "conteudo", "legenda"], "Campos do arquivo inválidos."),
+  },
+  {
+    metodo: "PUT",
+    caminho: ["conversas", "*", "etiquetas"],
+    papeis: FUNC,
+    corpo: soChaves(["ids"], "Campos das etiquetas inválidos."),
+  },
+  { metodo: "GET", caminho: ["etiquetas"], papeis: FUNC },
+  {
+    metodo: "POST",
+    caminho: ["etiquetas"],
+    papeis: SUP,
+    corpo: soChaves(["nome", "cor"], "Campos da etiqueta inválidos."),
+  },
+  { metodo: "DELETE", caminho: ["etiquetas", "*"], papeis: SUP },
+  { metodo: "GET", caminho: ["operacao"], papeis: SUP },
   // Notas internas. O gateway confere quem apaga: quem escreveu ou, a partir de gestor, a equipe.
+  { metodo: "POST", caminho: ["conversas", "*", "cardapio-link"], papeis: FUNC },
+  { metodo: "POST", caminho: ["cardapio", "previa"], papeis: SUP },
+  { metodo: "GET", caminho: ["cardapio", "aparencia"], papeis: GEST },
+  { metodo: "PUT", caminho: ["cardapio", "aparencia"], papeis: GEST },
+  { metodo: "DELETE", caminho: ["cardapio", "aparencia"], papeis: GEST },
+  { metodo: "POST", caminho: ["cardapio", "aparencia", "imagem"], papeis: GEST },
   { metodo: "GET", caminho: ["conversas", "*", "notas"], papeis: FUNC },
   {
     metodo: "POST",
@@ -382,6 +418,13 @@ const REGRAS: Regra[] = [
   ...regrasAtendimento(["agentes", "*"]),
   // CAT2: consulta e prévia para todos; edição e histórico apenas administradores.
   { metodo: "GET", caminho: ["catalogo", "itens", "*"], papeis: FUNC },
+  { metodo: "GET", caminho: ["catalogo", "itens", "*", "opcoes"], papeis: FUNC },
+  {
+    metodo: "PUT",
+    caminho: ["catalogo", "itens", "*", "opcoes"],
+    papeis: GEST,
+    corpo: soChaves(["grupos", "atualizado_em", "aplicar_em"], "Campos de opções inválidos."),
+  },
   { metodo: "GET", caminho: ["catalogo", "categorias"], papeis: FUNC },
   {
     metodo: "POST",
@@ -616,6 +659,8 @@ export function resolverTenant(
     throw new AcessoNegado("Escolha a empresa.");
   }
   const papel = vinculo.papel ?? (vinculo.admin ? "gestor" : "funcionario");
+  // Plataforma vem de user_roles. Num vínculo de empresa, é cadastro adulterado.
+  if (papel === "plataforma") throw new AcessoNegado("Seu acesso não é válido nesta empresa.");
   // Sem a lista (só em teste antigo) usa uma unidade fictícia. O cadastro real sempre manda o array.
   const unidades: "*" | string[] =
     papel === "gestor" ? "*" : Array.isArray(vinculo.unidades) ? vinculo.unidades : ["centro"];
@@ -669,15 +714,17 @@ export function criarModuloGateway(deps: {
             unidades,
             /**
              * Leitura de apoio do próprio servidor, para saber o que esconder. Funcionário não lê
-             * agentes e canais, mas toda a tela de conversas depende dessa conferência. Só estas
-             * duas rotas passam aqui, e o resultado não vai ao navegador.
+             * agentes e canais, mas toda a tela de conversas depende dessa conferência, e o menu
+             * depende das telas da empresa. Só estas rotas passam aqui. De agentes e canais nada
+             * vai ao navegador; de módulos, a função só devolve as telas em uso.
              */
             async leituraDeApoio<T = unknown>(
-              partes: ["agentes"] | ["agentes", string] | ["canais", string],
+              partes: ["agentes"] | ["agentes", string] | ["canais", string] | ["modulos"],
               opcoes: Pick<Opcoes, "query"> = {},
             ) {
               try {
-                return await chamar<T>("supervisor", "GET", ["tenants", id, ...partes], {
+                const nivel = partes[0] === "modulos" ? "gestor" : "supervisor";
+                return await chamar<T>(nivel, "GET", ["tenants", id, ...partes], {
                   ...opcoes,
                   unidades: "*",
                   ...(papel === "plataforma" ? {} : { escopoEmpresa: id }),

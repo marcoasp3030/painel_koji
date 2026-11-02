@@ -35,7 +35,10 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
   const [{ data: papeisLinha, error: erroPapel }, { data: unidadesLinha, error: erroUnidades }] =
     await Promise.all([
       idsPapel.length
-        ? supabaseAdmin.from("papeis").select("id, papel_gateway, escopo_unidades").in("id", idsPapel)
+        ? supabaseAdmin
+            .from("papeis")
+            .select("id, papel_gateway, escopo_unidades")
+            .in("id", idsPapel)
         : Promise.resolve({ data: [], error: null }),
       idsVinculo.length
         ? supabaseAdmin
@@ -57,7 +60,7 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
       const linha = v.papel_id ? porPapel.get(v.papel_id) : undefined;
       const papel = papelAcesso(linha?.papel_gateway);
       // Papel que o gateway não conhece não vira chamada. O vínculo fica inativo.
-      const papelValido = Boolean(papel);
+      const papelValido = Boolean(papel) && papel !== "plataforma";
       const codigos = (unidadesLinha ?? [])
         .filter((u) => u.tenant_user_id === v.id)
         .map((u) => u.unidade_codigo);
@@ -66,9 +69,8 @@ export async function carregarPerfil(usuario: UsuarioSessao): Promise<PerfilGate
           gatewayTenantId: t.gateway_tenant_id,
           ativo: t.status === "active" && v.ativo !== false && (papelValido || !v.papel_id),
           admin: Boolean(v.is_tenant_admin),
-          ...(papel ? { papel } : {}),
-          unidades:
-            papel === "gestor" || linha?.escopo_unidades === "todas" ? "*" : codigos,
+          ...(papel && papelValido ? { papel } : {}),
+          unidades: papel === "gestor" || linha?.escopo_unidades === "todas" ? "*" : codigos,
         },
       ];
     }),
@@ -108,10 +110,7 @@ export function sessaoGateway(context: unknown) {
 }
 
 /** Sessão do gateway + conferência MFA1 (aal2 / recuperação). */
-export async function sessaoGatewayMfa(
-  context: unknown,
-  gatewayTenantId?: string | null,
-) {
+export async function sessaoGatewayMfa(context: unknown, gatewayTenantId?: string | null) {
   const ctx = context as { userId: string; claims: Record<string, unknown> };
   const sessao = await sessaoGateway(context);
   const { exigirAalDaSessao, MfaErro } = await import("@/lib/acesso/mfa.server");

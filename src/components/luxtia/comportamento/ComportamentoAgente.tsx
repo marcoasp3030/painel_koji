@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { atendimento } from "@/lib/gateway-atendimento.functions";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
 import { listarCanais } from "@/lib/gateway-canais.functions";
@@ -37,17 +36,20 @@ import {
   textoErroCampo,
   SEM_EDICOES,
   agenteTemWhatsapp,
+  campoCasaBusca,
   campoSoLeitura,
   chaveCampo,
   contarEdicoes,
   corpoRascunho,
   diaMes,
   gruposDoEsquema,
+  gruposDoPerfil,
   porCampo,
   rotuloCaminho,
   rotuloCampo,
   rotuloGrupo,
   rotuloSegmento,
+  secaoDoCaminho,
   situacaoCampo,
   textoValor,
   type CampoEsquema,
@@ -62,7 +64,6 @@ import {
 import { CAMPOS_PEDIDOS, pedidosEmUso } from "@/lib/gateway/modulos";
 import type { Json } from "@/lib/gateway/tipos";
 import { dataHora, Etiqueta, type ContextoGateway } from "../Gateway";
-import { Cartao } from "../Superficie";
 import { CampoAtendimento } from "./CampoAtendimento";
 import { HistoricoVersoes, TabelaAlteracoes } from "./HistoricoVersoes";
 import { PreviaAtendimento } from "./PreviaAtendimento";
@@ -86,7 +87,9 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
     buscarModulos = useServerFn(obterModulosEmpresa),
     cache = useQueryClient();
   const [agente, setAgente] = useState("");
-  const [aba, setAba] = useState("personalidade");
+  const [secao, setSecao] = useState("");
+  const [busca, setBusca] = useState("");
+  const [focar, setFocar] = useState<string | null>(null);
   const [edicoes, setEdicoes] = useState<Edicoes>(SEM_EDICOES);
   const [problema, setProblema] = useState<ErroAtendimento | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -100,7 +103,10 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
     staleTime: 30_000,
   });
 
-  useBlocker({ shouldBlockFn: () => sujo && !window.confirm(DESCARTAR) });
+  useBlocker({
+    shouldBlockFn: () => sujo && !window.confirm(DESCARTAR),
+    enableBeforeUnload: () => sujo,
+  });
   useEffect(() => {
     if (!sujo) return;
     const sair = (e: BeforeUnloadEvent) => {
@@ -110,6 +116,14 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
     window.addEventListener("beforeunload", sair);
     return () => window.removeEventListener("beforeunload", sair);
   }, [sujo]);
+
+  // O campo só existe depois que a seção dele abre: leva até ele nesse momento.
+  useEffect(() => {
+    if (!focar) return;
+    document.getElementById(focar)?.scrollIntoView({ block: "center" });
+    document.getElementById(`${focar}-entrada`)?.focus();
+    setFocar(null);
+  }, [focar]);
 
   const chamar: Chamar = useCallback(
     async <T,>(entrada: { acao: string } & Record<string, unknown>) => {
@@ -195,10 +209,20 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
     setAgente(novo);
   }
 
-  if (q.isPending) return <p role="status">Carregando o comportamento do agente…</p>;
+  function abrir(id: string) {
+    setBusca("");
+    setSecao(id);
+  }
+
+  if (q.isPending)
+    return (
+      <p role="status" className="p-4 text-sm text-ink-500">
+        Carregando o comportamento do agente…
+      </p>
+    );
   if (q.isError || !v)
     return (
-      <div role="alert" className="space-y-2">
+      <div role="alert" className="space-y-2 p-4">
         <p className="text-destructive">{q.error?.message}</p>
         <Button variant="outline" onClick={() => void q.refetch()}>
           Tentar novamente
@@ -245,34 +269,63 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
     .map((g) => ({ ...g, campos: g.campos.filter(([, d]) => !campoSoLeitura(d)) }))
     .filter((g) => g.campos.length);
 
+  const secoesPerfil: Secao[] = gruposDoPerfil(v.esquema).map((g) => ({
+    ...g,
+    parte: "perfil",
+  }));
+  const secoesComp: Secao[] = editaveis.map((g) => ({ ...g, parte: "comportamentos" }));
+  const secoes = [...secoesPerfil, ...secoesComp];
+  const verOperacao = ctx.papel === "plataforma" && operacao.length > 0;
+  const validas = [
+    ...secoes.map((x) => x.grupo),
+    ...(verOperacao ? ["operacao"] : []),
+    ...(v.pode_editar ? ["publicar"] : []),
+    "previa",
+    "historico",
+  ];
+  const ativa = validas.includes(secao) ? secao : validas[0]!;
+  const atual = secoes.find((x) => x.grupo === ativa);
+  const procurando = busca.trim().length > 0;
+  const achados = procurando
+    ? secoes
+        .map((x) => ({ ...x, campos: x.campos.filter(([c]) => campoCasaBusca(c, busca)) }))
+        .filter((x) => x.campos.length)
+    : [];
+  const naoSalvas = contarEdicoes(edicoes);
+  const mudancas = r?.alteracoes.length ?? 0;
+
+  function irParaCampo(caminho: string) {
+    abrir(secaoDoCaminho(v!.esquema, caminho));
+    setFocar(`campo-${chaveCampo(caminho).replace(".", "-")}`);
+  }
+  const sinalDe = (x: Secao): Sinal => {
+    const chaves = x.campos.map(([c]) => [c, `${x.parte}.${c}`] as const);
+    if (chaves.some(([, k]) => erros.has(k) || bloqueios.has(k))) return "erro";
+    const estados = chaves.map(([c]) => situacaoCampo(v, x.parte, c, edicoes));
+    if (estados.some((e) => e.editado)) return "nao_salvo";
+    return estados.some((e) => e.noRascunho) ? "rascunho" : null;
+  };
+  const personalizadosDe = (x: Secao) =>
+    x.campos.filter(([c]) => situacaoCampo(v, x.parte, c, edicoes).personalizado).length;
+  const itemSecao = (x: Secao) => (
+    <ItemSecao
+      key={x.grupo}
+      rotulo={rotuloGrupo(x.grupo)}
+      ativo={!procurando && ativa === x.grupo}
+      sinal={sinalDe(x)}
+      contagem={personalizadosDe(x)}
+      abrir={() => abrir(x.grupo)}
+    />
+  );
+
   return (
-    <div className="mt-6 space-y-4 pb-24">
-      {r && r.alteracoes.length > 0 ? (
-        <div
-          role="status"
-          className="flex flex-wrap items-center gap-2 rounded-lg border border-gold-500/40 bg-gold-300/20 px-4 py-3 text-sm text-ink-700"
-        >
-          <p className="min-w-0 flex-1">
-            Há alterações não publicadas desde {diaMes(r.atualizado_em)} — o agente ainda usa a
-            versão em uso
-          </p>
-          <Button type="button" size="sm" variant="outline" onClick={() => setVerDif(true)}>
-            Ver diferenças
-          </Button>
-          {v.pode_editar ? (
-            <Button type="button" size="sm" onClick={() => setAba("publicar")}>
-              Publicar
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {nomeAgente ? <h2 className="font-display text-2xl text-ink-900">{nomeAgente}</h2> : null}
-      {/* Cabeçalho: escopo, segmento, versão e rascunho */}
-      <Cartao className="flex flex-wrap items-end gap-x-6 gap-y-3 p-4">
-        <label className="text-sm">
-          Escopo
+    <div className="flex min-h-0 flex-1 flex-col bg-card">
+      {/* Uma barra só: escopo, situação e ações do rascunho. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-base-200 px-3 py-1.5">
+        <div className="flex min-w-0 flex-1 basis-72 items-center gap-3">
           <select
-            className="mt-1 block min-w-60 rounded-md border bg-card p-2"
+            aria-label="Escopo"
+            className="h-8 min-w-0 max-w-56 flex-1 rounded-md sm:flex-none border bg-card px-2 text-sm font-medium"
             value={agente}
             onChange={(e) => trocarEscopo(e.target.value)}
           >
@@ -283,47 +336,97 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
               </option>
             ))}
           </select>
-        </label>
-        <div className="text-sm">
-          <p className="text-xs text-ink-500">Segmento</p>
-          <p className="font-medium text-ink-700">{rotuloSegmento(v.segmento)}</p>
-        </div>
-        <div className="text-sm">
-          <p className="text-xs text-ink-500">Em uso</p>
-          <p className="font-medium text-ink-700">
-            {v.versao_publicada
-              ? `v${v.versao_publicada} · ${dataHora(v.publicado_em)} · ${v.publicado_por}`
-              : "Padrões (nada publicado)"}{" "}
-            <code className="text-xs text-ink-500">{v.perfil_versao}</code>
+          <p
+            className="hidden min-w-0 truncate text-xs text-ink-500 xl:block"
+            title={`${rotuloSegmento(v.segmento)} · perfil ${v.perfil_versao}`}
+          >
+            Em uso:{" "}
+            <span className="font-medium text-ink-700">
+              {v.versao_publicada
+                ? `v${v.versao_publicada} · ${dataHora(v.publicado_em)} · ${v.publicado_por}`
+                : "padrões (nada publicado)"}
+            </span>
           </p>
-        </div>
-        <div className="text-sm">
-          <p className="text-xs text-ink-500">Rascunho</p>
-          <p className="font-medium text-ink-700">
-            {r
-              ? `De ${r.atualizado_por}, ${dataHora(r.atualizado_em)}, baseado na v${r.baseado_em}`
-              : "Sem rascunho"}
+          <p
+            role="status"
+            className={`shrink-0 whitespace-nowrap text-xs ${naoSalvas ? "font-medium text-purple-700" : mudancas ? "font-medium text-gold-700" : "text-ink-500"}`}
+            title={
+              r
+                ? `Rascunho de ${r.atualizado_por}, desde ${diaMes(r.atualizado_em)}, baseado na v${r.baseado_em}`
+                : undefined
+            }
+          >
+            {naoSalvas
+              ? `${naoSalvas} ${naoSalvas === 1 ? "alteração não salva" : "alterações não salvas"}`
+              : mudancas
+                ? `${mudancas} ${mudancas === 1 ? "mudança no rascunho" : "mudanças no rascunho"}`
+                : r
+                  ? "Rascunho igual ao que está em uso"
+                  : "Sem rascunho"}
           </p>
+          {mudancas ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="link"
+              className="h-7 shrink-0 px-0 text-xs"
+              onClick={() => setVerDif(true)}
+            >
+              Ver diferenças
+            </Button>
+          ) : null}
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {!v.pode_editar ? <Etiqueta>Somente leitura</Etiqueta> : null}
-          {v.pode_editar ? <TestarNoSimular agente={agente} agentes={listaAgentes} /> : null}
+          {v.pode_editar && sujo ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={ocupado}
+              onClick={() => setEdicoes(SEM_EDICOES)}
+            >
+              Desfazer
+            </Button>
+          ) : null}
+          {v.pode_editar && r ? (
+            <Button variant="ghost" size="sm" disabled={ocupado} onClick={() => setDescartar(true)}>
+              Descartar
+            </Button>
+          ) : null}
+          {v.pode_editar ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={ocupado || !sujo}
+              onClick={() => void salvar()}
+            >
+              {ocupado ? "Salvando…" : "Salvar rascunho"}
+            </Button>
+          ) : null}
+          {v.pode_editar && ativa !== "publicar" ? (
+            <Button size="sm" disabled={ocupado || sujo || !r} onClick={() => abrir("publicar")}>
+              Revisar e publicar
+            </Button>
+          ) : null}
         </div>
-        {v.escopo === "agente" ? (
-          <p className="w-full text-xs text-ink-500">
-            Neste agente ({nomeAgente ?? agente}) vale só o que for diferente da empresa; o resto
-            vem da empresa e do segmento.
-          </p>
-        ) : null}
-      </Cartao>
+      </div>
+
+      {v.escopo === "agente" ? (
+        <p className="shrink-0 border-b border-base-200 bg-purple-50/60 px-3 py-1 text-xs text-ink-700">
+          Em {nomeAgente ?? agente} vale só o que for diferente da empresa; o resto vem da empresa e
+          do segmento.
+        </p>
+      ) : null}
 
       {r?.desatualizado ? (
         <div
           role="status"
-          className="flex flex-wrap items-center gap-2 rounded-lg bg-gold-300/20 p-3 text-sm text-gold-700"
+          className="flex shrink-0 flex-wrap items-center gap-2 border-b border-gold-500/40 bg-gold-300/20 px-3 py-1.5 text-sm text-gold-700"
         >
-          Este rascunho foi feito sobre a v{r.baseado_em}, mas a v{v.versao_publicada} já foi
-          publicada. Confira o histórico e atualize a base do rascunho para poder publicar.
+          <p className="min-w-0 flex-1">
+            Este rascunho foi feito sobre a v{r.baseado_em}, mas a v{v.versao_publicada} já foi
+            publicada. Confira o histórico e atualize a base do rascunho para poder publicar.
+          </p>
           {v.pode_editar ? (
             <Button
               size="sm"
@@ -345,21 +448,19 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
       {problema?.campos?.length ? (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm"
+          className="max-h-32 shrink-0 overflow-y-auto border-b border-destructive/40 bg-destructive/5 px-3 py-1.5 text-sm"
         >
           <p className="font-medium text-destructive">{problema.mensagem}</p>
-          <ul className="mt-1 list-inside list-disc text-ink-700">
+          <ul className="mt-0.5 text-ink-700">
             {problema.campos.map((c) => (
               <li key={c.campo + c.motivo}>
-                <a
-                  className="underline"
-                  href={`#campo-${chaveCampo(c.campo).replace(".", "-")}`}
-                  onClick={() =>
-                    setAba(c.campo.startsWith("perfil") ? "personalidade" : "comportamentos")
-                  }
+                <button
+                  type="button"
+                  className="underline underline-offset-2"
+                  onClick={() => irParaCampo(c.campo)}
                 >
                   {rotuloCaminho(c.campo)}
-                </a>
+                </button>
                 : {textoErroCampo(c)}
               </li>
             ))}
@@ -367,51 +468,100 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
         </div>
       ) : null}
 
-      <Tabs value={aba} onValueChange={setAba}>
-        <TabsList className="flex h-auto flex-wrap justify-start">
-          <TabsTrigger value="personalidade">Personalidade</TabsTrigger>
-          <TabsTrigger value="comportamentos">Comportamentos</TabsTrigger>
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <aside className="flex shrink-0 flex-col border-base-200 max-lg:border-b lg:w-60 lg:border-r">
+          <div className="relative p-2">
+            <Search
+              className="absolute left-4 top-1/2 size-3.5 -translate-y-1/2 text-ink-500"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              aria-label="Procurar campo"
+              placeholder="Procurar campo"
+              className="h-8 pl-7 text-sm"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setBusca("");
+              }}
+            />
+          </div>
+          <nav
+            aria-label="Seções"
+            className="flex min-h-0 flex-1 overflow-x-auto max-lg:[scrollbar-width:none] lg:flex-col lg:overflow-y-auto lg:pb-2"
+          >
+            <TituloRail>Personalidade</TituloRail>
+            {secoesPerfil.map(itemSecao)}
+            <TituloRail>Comportamentos</TituloRail>
+            {secoesComp.map(itemSecao)}
+            {verOperacao ? (
+              <ItemSecao
+                rotulo={rotuloGrupo("operacao")}
+                ativo={!procurando && ativa === "operacao"}
+                abrir={() => abrir("operacao")}
+              />
+            ) : null}
+            <TituloRail>Versões</TituloRail>
+            {v.pode_editar ? (
+              <ItemSecao
+                rotulo="Publicar"
+                ativo={!procurando && ativa === "publicar"}
+                contagem={mudancas}
+                abrir={() => abrir("publicar")}
+              />
+            ) : null}
+            <ItemSecao
+              rotulo="Prévia"
+              ativo={!procurando && ativa === "previa"}
+              abrir={() => abrir("previa")}
+            />
+            <ItemSecao
+              rotulo="Histórico"
+              ativo={!procurando && ativa === "historico"}
+              abrir={() => abrir("historico")}
+            />
+          </nav>
           {v.pode_editar ? (
-            <TabsTrigger value="publicar">
-              Publicar{r?.alteracoes.length ? ` (${r.alteracoes.length})` : ""}
-            </TabsTrigger>
+            <div className="hidden border-t border-base-200 p-2 lg:block">
+              <TestarNoSimular agente={agente} agentes={listaAgentes} />
+            </div>
           ) : null}
-          <TabsTrigger value="previa">Prévia</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
-        </TabsList>
+        </aside>
 
-        <TabsContent value="personalidade" className="space-y-3">
-          {gruposDoEsquema(v.esquema, "perfil").map((g) => (
-            <Cartao key={g.grupo} className="grid gap-3 p-4 lg:grid-cols-2">
-              {renderCampos("perfil", g.campos)}
-            </Cartao>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="comportamentos" className="space-y-3">
-          {editaveis.map((g) => (
-            <Cartao key={g.grupo} className="space-y-3 p-4">
-              <h3 className="font-medium text-ink-700">
-                {rotuloGrupo(g.grupo)}
-                {g.campos.every(([, d]) => d.disponivel === false) ? (
+        {/* A chave recomeça a rolagem a cada seção. */}
+        <div key={procurando ? "busca" : ativa} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+          {procurando ? (
+            achados.length ? (
+              achados.map((x) => (
+                <section key={x.grupo} aria-label={rotuloGrupo(x.grupo)}>
+                  <TituloSecao>{rotuloGrupo(x.grupo)}</TituloSecao>
+                  {renderCampos(x.parte, x.campos)}
+                </section>
+              ))
+            ) : (
+              <p className="p-4 text-sm text-ink-500">Nenhum campo com “{busca.trim()}”.</p>
+            )
+          ) : atual ? (
+            <section aria-label={rotuloGrupo(atual.grupo)}>
+              <TituloSecao>
+                {rotuloGrupo(atual.grupo)}
+                {atual.campos.every(([, d]) => d.disponivel === false) ? (
                   <span className="ml-2 rounded-full bg-base-100 px-2 py-0.5 text-[11px] font-medium text-ink-500">
                     em breve
                   </span>
                 ) : null}
-              </h3>
-              <div className="grid gap-3 lg:grid-cols-2">
-                {renderCampos("comportamentos", g.campos)}
-              </div>
-            </Cartao>
-          ))}
-          {ctx.papel === "plataforma" && operacao.length ? (
-            <Cartao className="space-y-2 p-4">
-              <h3 className="font-medium text-ink-700">{rotuloGrupo("operacao")}</h3>
-              <p className="text-xs text-ink-500">
+              </TituloSecao>
+              {renderCampos(atual.parte, atual.campos)}
+            </section>
+          ) : ativa === "operacao" ? (
+            <section aria-label={rotuloGrupo("operacao")}>
+              <TituloSecao>{rotuloGrupo("operacao")}</TituloSecao>
+              <p className="px-4 pt-2 text-xs text-ink-500">
                 Só leitura. Ficam fora do rascunho e das versões; a plataforma altera com efeito
                 imediato, nas telas do agente.
               </p>
-              <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[minmax(0,260px)_1fr]">
+              <dl className="grid gap-x-4 gap-y-1 p-4 text-sm sm:grid-cols-[minmax(0,260px)_1fr]">
                 {operacao.map(([campo]) => (
                   <div key={campo} className="contents">
                     <dt className="text-ink-500">{rotuloCampo(campo)}</dt>
@@ -419,69 +569,45 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
                   </div>
                 ))}
               </dl>
-            </Cartao>
-          ) : null}
-        </TabsContent>
-
-        {v.pode_editar ? (
-          <TabsContent value="publicar">
-            <Publicar visao={v} sujo={sujo} ocupado={ocupado} escrever={escrever} />
-          </TabsContent>
-        ) : null}
-
-        <TabsContent value="previa">
-          <PreviaAtendimento chave={chave} chamar={chamar} visao={v} />
-        </TabsContent>
-
-        <TabsContent value="historico">
-          <HistoricoVersoes
-            chave={chave}
-            chamar={chamar}
-            visao={v}
-            restaurar={async (versao, nota) =>
-              (
-                await escrever(
-                  { acao: "restaurar", versao, ...(nota.trim() ? { nota: nota.trim() } : {}) },
-                  `Restaurada como v${v.versao_publicada + 1}. Vale em até 30 segundos.`,
-                )
-              ).ok
-            }
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Barra do rascunho: só para quem edita */}
-      {v.pode_editar && (aba === "personalidade" || aba === "comportamentos") ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-base-200 bg-card/95 px-4 py-3 shadow-[0_-2px_8px_rgba(26,21,32,0.06)] backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
-            <span className="text-sm text-ink-700">
-              {sujo
-                ? `${contarEdicoes(edicoes)} alteração(ões) não salva(s)`
-                : r
-                  ? `Rascunho salvo · ${r.alteracoes.length} mudança(s) para publicar`
-                  : "Sem alterações"}
-            </span>
-            <div className="ml-auto flex flex-wrap gap-2">
-              {sujo ? (
-                <Button variant="ghost" disabled={ocupado} onClick={() => setEdicoes(SEM_EDICOES)}>
-                  Desfazer
-                </Button>
-              ) : null}
-              {r ? (
-                <Button variant="ghost" disabled={ocupado} onClick={() => setDescartar(true)}>
-                  Descartar rascunho
-                </Button>
-              ) : null}
-              <Button variant="outline" disabled={ocupado || !sujo} onClick={() => void salvar()}>
-                {ocupado ? "Salvando…" : "Salvar rascunho"}
-              </Button>
-              <Button disabled={ocupado || sujo || !r} onClick={() => setAba("publicar")}>
-                Revisar e publicar
-              </Button>
-            </div>
-          </div>
+            </section>
+          ) : ativa === "publicar" ? (
+            <Publicar
+              visao={v}
+              sujo={sujo}
+              ocupado={ocupado}
+              escrever={escrever}
+              irParaCampo={irParaCampo}
+            />
+          ) : ativa === "previa" ? (
+            <PreviaAtendimento
+              chave={chave}
+              chamar={chamar}
+              visao={v}
+              acoes={
+                v.pode_editar ? (
+                  <div className="ml-auto lg:hidden">
+                    <TestarNoSimular agente={agente} agentes={listaAgentes} />
+                  </div>
+                ) : null
+              }
+            />
+          ) : (
+            <HistoricoVersoes
+              chave={chave}
+              chamar={chamar}
+              visao={v}
+              restaurar={async (versao, nota) =>
+                (
+                  await escrever(
+                    { acao: "restaurar", versao, ...(nota.trim() ? { nota: nota.trim() } : {}) },
+                    `Restaurada como v${v.versao_publicada + 1}. Vale em até 30 segundos.`,
+                  )
+                ).ok
+              }
+            />
+          )}
         </div>
-      ) : null}
+      </div>
 
       <AlertDialog open={descartar} onOpenChange={(a) => !ocupado && setDescartar(a)}>
         <AlertDialogContent>
@@ -528,6 +654,66 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+type Secao = { grupo: string; parte: Parte; campos: [string, CampoEsquema][] };
+type Sinal = "erro" | "nao_salvo" | "rascunho" | null;
+
+const SINAL: Record<Exclude<Sinal, null>, { cor: string; texto: string }> = {
+  erro: { cor: "bg-destructive", texto: "tem erro" },
+  nao_salvo: { cor: "bg-purple-700", texto: "tem alteração não salva" },
+  rascunho: { cor: "bg-gold-500", texto: "tem mudança no rascunho" },
+};
+
+function TituloRail({ children }: { children: string }) {
+  return (
+    <p className="hidden px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-ink-500 lg:block">
+      {children}
+    </p>
+  );
+}
+
+function TituloSecao({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="sticky top-0 z-10 border-b border-base-200 bg-card/95 px-4 py-1.5 text-sm font-medium text-ink-900 backdrop-blur">
+      {children}
+    </h2>
+  );
+}
+
+function ItemSecao({
+  rotulo,
+  ativo,
+  sinal = null,
+  contagem = 0,
+  abrir,
+}: {
+  rotulo: string;
+  ativo: boolean;
+  sinal?: Sinal;
+  contagem?: number;
+  abrir: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-current={ativo ? "true" : undefined}
+      onClick={abrir}
+      className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-500 ${
+        ativo
+          ? "bg-purple-100/60 font-medium text-ink-900 lg:shadow-[inset_3px_0_0_0_var(--purple-700)] max-lg:shadow-[inset_0_-2px_0_0_var(--purple-700)]"
+          : "text-ink-700 hover:bg-purple-50/60"
+      }`}
+    >
+      <span className="min-w-0 truncate lg:flex-1">{rotulo}</span>
+      {sinal ? (
+        <span className={`size-2 shrink-0 rounded-full ${SINAL[sinal].cor}`}>
+          <span className="sr-only">{SINAL[sinal].texto}</span>
+        </span>
+      ) : null}
+      {contagem ? <span className="text-xs tabular-nums text-ink-500">{contagem}</span> : null}
+    </button>
   );
 }
 
@@ -579,6 +765,7 @@ function Publicar({
   sujo,
   ocupado,
   escrever,
+  irParaCampo,
 }: {
   visao: Visao;
   sujo: boolean;
@@ -587,6 +774,7 @@ function Publicar({
     entrada: { acao: string } & Record<string, unknown>,
     sucesso: string,
   ) => Promise<{ ok: true; visao: Visao } | { ok: false; erro: ErroAtendimento }>;
+  irParaCampo: (caminho: string) => void;
 }) {
   const [nota, setNota] = useState("");
   const [confirmar, setConfirmar] = useState<Trecho[] | null>(null);
@@ -594,10 +782,10 @@ function Publicar({
   const r = visao.rascunho;
   if (!r)
     return (
-      <Cartao className="p-6 text-sm text-ink-500">
+      <p className="p-4 text-sm text-ink-500">
         Sem rascunho. Altere campos em Personalidade ou Comportamentos e salve o rascunho para
         publicar.
-      </Cartao>
+      </p>
     );
   const bloqueado = r.bloqueios.length > 0;
   async function publicar(confirmarAvisos: boolean) {
@@ -620,38 +808,55 @@ function Publicar({
     } else setConfirmar(null);
   }
   return (
-    <div className="space-y-3">
-      <Cartao className="space-y-2 p-4">
-        <h3 className="font-medium text-ink-700">O que muda</h3>
+    <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <section className="min-w-0 space-y-2" aria-label="O que muda">
+        <h2 className="text-sm font-medium text-ink-900">O que muda</h2>
         <TabelaAlteracoes alteracoes={r.alteracoes} />
-      </Cartao>
-      {bloqueado ? (
-        <Cartao className="space-y-1 border-destructive/40 p-4 text-sm">
-          <p className="font-medium text-destructive">Não dá para publicar: há texto bloqueado.</p>
-          {r.bloqueios.map((b, i) => (
-            <p key={i}>
-              {rotuloCaminho(b.campo)} — {MOTIVO_BLOQUEIO[b.motivo] ?? b.motivo}: “{b.trecho}”
+      </section>
+      <div className="min-w-0 space-y-3 lg:sticky lg:top-0 lg:self-start">
+        {bloqueado ? (
+          <div className="space-y-1 rounded-md bg-destructive/5 p-3 text-sm">
+            <p className="font-medium text-destructive">
+              Não dá para publicar: há texto bloqueado.
             </p>
-          ))}
-          <p className="text-xs text-ink-500">Corrija o trecho, salve o rascunho e volte aqui.</p>
-        </Cartao>
-      ) : null}
-      {r.avisos.length ? (
-        <Cartao className="space-y-1 p-4 text-sm">
-          <p className="font-medium text-gold-700">
-            Trechos para conferir (publicar pede confirmação)
-          </p>
-          {r.avisos.map((a, i) => (
-            <p key={i}>
-              {rotuloCaminho(a.campo)} — {MOTIVO_AVISO[a.motivo] ?? a.motivo}: “{a.trecho}”
+            {r.bloqueios.map((b, i) => (
+              <p key={i}>
+                <button
+                  type="button"
+                  className="underline underline-offset-2"
+                  onClick={() => irParaCampo(b.campo)}
+                >
+                  {rotuloCaminho(b.campo)}
+                </button>{" "}
+                — {MOTIVO_BLOQUEIO[b.motivo] ?? b.motivo}: “{b.trecho}”
+              </p>
+            ))}
+            <p className="text-xs text-ink-500">Corrija o trecho, salve o rascunho e volte aqui.</p>
+          </div>
+        ) : null}
+        {r.avisos.length ? (
+          <div className="space-y-1 rounded-md bg-gold-300/20 p-3 text-sm">
+            <p className="font-medium text-gold-700">
+              Trechos para conferir (publicar pede confirmação)
             </p>
-          ))}
-        </Cartao>
-      ) : null}
-      <Cartao className="space-y-3 p-4">
-        <label className="block text-sm">
+            {r.avisos.map((a, i) => (
+              <p key={i}>
+                <button
+                  type="button"
+                  className="underline underline-offset-2"
+                  onClick={() => irParaCampo(a.campo)}
+                >
+                  {rotuloCaminho(a.campo)}
+                </button>{" "}
+                — {MOTIVO_AVISO[a.motivo] ?? a.motivo}: “{a.trecho}”
+              </p>
+            ))}
+          </div>
+        ) : null}
+        <label className="block text-sm font-medium text-ink-700">
           Nota da versão (opcional)
           <Input
+            className="mt-1 font-normal"
             value={nota}
             maxLength={300}
             placeholder="ex.: tom mais informal"
@@ -669,6 +874,7 @@ function Publicar({
           </p>
         ) : null}
         <Button
+          className="w-full"
           disabled={ocupado || sujo || bloqueado || r.desatualizado || !r.alteracoes.length}
           onClick={() => void publicar(false)}
         >
@@ -682,7 +888,7 @@ function Publicar({
           testar uma mudança: publique, teste no Simular e, se não gostar, restaure a versão
           anterior no Histórico.
         </p>
-      </Cartao>
+      </div>
 
       <AlertDialog
         open={confirmar !== null}
@@ -741,10 +947,10 @@ function TestarNoSimular({
   const [escolhido, setEscolhido] = useState(agente || agentes[0]?.id || "");
   const alvo = agente || escolhido;
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       {!agente && agentes.length > 1 ? (
         <select
-          className="h-9 rounded-md border bg-card px-2 text-sm"
+          className="h-8 w-full rounded-md border bg-card px-2 text-sm"
           aria-label="Agente para testar"
           value={escolhido}
           onChange={(e) => setEscolhido(e.target.value)}

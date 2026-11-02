@@ -3,11 +3,15 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  BellRing,
   Bot,
   Building2,
   ClipboardList,
   Factory,
+  FileKey2,
   FileText,
+  FlaskConical,
+  History,
   KeyRound,
   Layers,
   Webhook,
@@ -17,10 +21,15 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  Palette,
   Settings,
+  SlidersHorizontal,
+  Store,
   Users,
+  UtensilsCrossed,
   X,
   type LucideIcon,
+  Gauge,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoGateway } from "@/lib/gateway.functions";
@@ -47,11 +56,19 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   chaves: KeyRound,
   documentos: FileText,
   webhooks: Webhook,
-  simular: MessagesSquare,
+  simular: FlaskConical,
   conversas: MessagesSquare,
   pedidos: ClipboardList,
+  operacao: Gauge,
   modelos: Layers,
   configuracoes: Settings,
+  unidades: Store,
+  cardapio: UtensilsCrossed,
+  avisos: BellRing,
+  historico: History,
+  comportamento: SlidersHorizontal,
+  formulario: FileKey2,
+  aparencia: Palette,
 };
 
 const CHAVE_EMPRESA = "luxtia:gateway-empresa";
@@ -158,6 +175,14 @@ export function AppShell({
     setMenuAberto(false);
   }, [pathname]);
 
+  // Em tela baixa, mantém visível o item da tela atual, inclusive quando a lista chega depois.
+  const totalItens = itens.length;
+  useEffect(() => {
+    document
+      .querySelector('#menu-lateral [aria-current="page"]')
+      ?.scrollIntoView({ block: "center" });
+  }, [pathname, totalItens]);
+
   async function sair() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -209,15 +234,15 @@ export function AppShell({
           }`}
         >
           <div
-            className={`flex h-20 items-center justify-between gap-3 px-4 ${recolhido ? "lg:justify-center lg:px-0" : ""}`}
+            className={`flex h-14 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 ${recolhido ? "lg:justify-center lg:px-0" : ""}`}
           >
-            <div className="flex items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-900 font-display text-lg text-gold-500">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-purple-900 font-display text-base text-gold-500">
                 L
               </span>
-              <div className={textoMenu}>
+              <div className={`min-w-0 leading-tight ${textoMenu}`}>
                 <LuxtiaWordmark />
-                <p className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-purple-300">
+                <p className="truncate text-[10px] uppercase tracking-[0.14em] text-purple-300">
                   {context}
                 </p>
               </div>
@@ -231,17 +256,25 @@ export function AppShell({
               <X className="size-4" aria-hidden />
             </button>
           </div>
-          <div className="mx-4 h-px bg-gold-500/40" />
 
-          <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Menu principal">
-            {grupos.map((grupo) => (
-              <div key={grupo.nome} className="mb-5">
+          <nav
+            className="rolagem-menu min-h-0 flex-1 overflow-y-auto px-2 pb-5 [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]"
+            aria-label="Menu principal"
+          >
+            {grupos.map((grupo, indice) => (
+              <div key={grupo.nome}>
+                {recolhido ? (
+                  <div
+                    className={`mx-3 my-2 hidden h-px bg-white/10 lg:block ${indice === 0 ? "lg:invisible" : ""}`}
+                    aria-hidden
+                  />
+                ) : null}
                 <p
-                  className={`px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-purple-300 ${textoMenu}`}
+                  className={`px-2.5 pb-1 pt-3.5 text-[10px] font-medium uppercase tracking-[0.14em] text-purple-300 ${textoMenu}`}
                 >
                   {grupo.nome}
                 </p>
-                <ul className="space-y-1">
+                <ul className="space-y-px">
                   {grupo.itens.map((item) => {
                     const ativo = itemAtivo(pathname, item.to);
                     const Icone = ICONES[item.icone];
@@ -253,16 +286,26 @@ export function AppShell({
                               to={item.to}
                               aria-label={item.label}
                               aria-current={ativo ? "page" : undefined}
-                              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 ${recolhido ? "lg:justify-center lg:px-0" : ""} ${
+                              className={`relative flex h-10 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold-300 lg:h-[34px] ${recolhido ? "lg:justify-center lg:px-0" : ""} ${
                                 ativo
-                                  ? "bg-purple-700 text-base-50 shadow-[inset_3px_0_0_0_var(--gold-500)]"
+                                  ? "bg-purple-700 font-medium text-base-50 shadow-[inset_3px_0_0_0_var(--gold-500)]"
                                   : "text-purple-200 hover:bg-purple-700/60 hover:text-base-50"
                               }`}
                             >
                               <Icone className="size-4 shrink-0" aria-hidden />
-                              <span className={textoMenu}>{item.label}</span>
+                              <span className={`min-w-0 flex-1 truncate ${textoMenu}`}>
+                                {item.label}
+                              </span>
                               {item.to === "/ia/pedidos" ? (
-                                <ContadorPedidos papel={acesso.data?.papel} />
+                                <span
+                                  className={
+                                    recolhido
+                                      ? "contents lg:absolute lg:right-1 lg:top-0 lg:block lg:origin-top-right lg:scale-75"
+                                      : "contents"
+                                  }
+                                >
+                                  <ContadorPedidos papel={acesso.data?.papel} />
+                                </span>
                               ) : null}
                             </Link>
                           </TooltipTrigger>
@@ -280,33 +323,25 @@ export function AppShell({
             ))}
           </nav>
 
-          <div className="space-y-1 border-t border-white/10 p-3">
-            <button
-              type="button"
-              onClick={alternarMenu}
-              aria-label={recolhido ? "Expandir menu" : "Recolher menu"}
-              aria-expanded={!recolhido}
-              aria-controls="menu-lateral"
-              title={recolhido ? "Expandir menu" : "Recolher menu"}
-              className={`hidden w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-purple-200 transition-colors hover:bg-purple-700 hover:text-base-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 lg:flex ${recolhido ? "justify-center px-0" : ""}`}
-            >
-              {recolhido ? (
-                <PanelLeftOpen className="size-4 shrink-0" aria-hidden />
-              ) : (
-                <PanelLeftClose className="size-4 shrink-0" aria-hidden />
+          <div className="shrink-0 border-t border-white/10 p-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={sair}
+                  aria-label="Sair"
+                  className={`flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] text-purple-200 transition-colors hover:bg-purple-700/60 hover:text-base-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold-300 lg:h-[34px] ${recolhido ? "lg:justify-center lg:px-0" : ""}`}
+                >
+                  <LogOut className="size-4 shrink-0" aria-hidden />
+                  <span className={textoMenu}>Sair</span>
+                </button>
+              </TooltipTrigger>
+              {recolhido && (
+                <TooltipContent side="right" className="hidden lg:block">
+                  Sair
+                </TooltipContent>
               )}
-              <span className={textoMenu}>Recolher menu</span>
-            </button>
-            <button
-              type="button"
-              onClick={sair}
-              aria-label="Sair"
-              title="Sair"
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-purple-200 transition-colors hover:bg-purple-700 hover:text-base-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 ${recolhido ? "lg:justify-center lg:px-0" : ""}`}
-            >
-              <LogOut className="size-4" aria-hidden />
-              <span className={textoMenu}>Sair</span>
-            </button>
+            </Tooltip>
           </div>
         </aside>
 

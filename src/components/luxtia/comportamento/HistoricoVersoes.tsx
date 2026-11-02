@@ -29,7 +29,6 @@ import {
   type Visao,
 } from "@/lib/gateway/atendimento";
 import { dataHora, Etiqueta } from "../Gateway";
-import { Cartao } from "../Superficie";
 import type { Chamar } from "./ComportamentoAgente";
 
 export function HistoricoVersoes({
@@ -55,10 +54,15 @@ export function HistoricoVersoes({
     getNextPageParam: (p) => p.proximo_cursor ?? undefined,
   });
   const itens = lista.data?.pages.flatMap((p) => p.itens) ?? [];
-  if (lista.isPending) return <p role="status">Carregando versões…</p>;
+  if (lista.isPending)
+    return (
+      <p role="status" className="p-4 text-sm text-ink-500">
+        Carregando versões…
+      </p>
+    );
   if (lista.isError)
     return (
-      <p role="alert" className="text-destructive">
+      <p role="alert" className="p-4 text-sm text-destructive">
         {lista.error.message}{" "}
         <button className="underline" onClick={() => void lista.refetch()}>
           Tentar novamente
@@ -66,18 +70,18 @@ export function HistoricoVersoes({
       </p>
     );
   return (
-    <div className="space-y-3">
+    <div>
       {!itens.length ? (
-        <Cartao className="p-6 text-sm text-ink-500">
+        <p className="p-4 text-sm text-ink-500">
           Nenhuma versão publicada ainda. O agente usa os padrões (versão {visao.perfil_versao}).
-        </Cartao>
+        </p>
       ) : (
-        <Cartao className="divide-y divide-base-200 overflow-hidden">
+        <div className="divide-y divide-base-200/70 border-b border-base-200/70">
           {itens.map((v) => (
             <button
               key={v.versao}
               type="button"
-              className="block w-full p-4 text-left transition hover:bg-purple-50/60"
+              className="block w-full px-4 py-2 text-left transition-colors hover:bg-purple-50/60"
               onClick={() => setAberta(v.versao)}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +112,7 @@ export function HistoricoVersoes({
               ) : null}
             </button>
           ))}
-        </Cartao>
+        </div>
       )}
       {lista.hasNextPage ? (
         <Button

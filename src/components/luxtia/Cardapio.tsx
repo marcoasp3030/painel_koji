@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useBlocker, useNavigate, useSearch } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { cardapio } from "@/lib/gateway-cardapio.functions";
+import { previaCardapio } from "@/lib/gateway-conversas.functions";
 import type { ItemCardapio, PedidoCardapio } from "@/lib/gateway/cardapio";
 import { gerirCat3 } from "@/lib/gateway-cat3.functions";
 import type { ExecutarCat3 } from "@/lib/gateway/cat3";
@@ -25,6 +27,7 @@ export function Cardapio({ ctx }: { ctx: ContextoGateway }) {
     shouldBlockFn: () =>
       protegido &&
       !window.confirm("Há uma edição em andamento. Sair e descartar alterações não salvas?"),
+    enableBeforeUnload: () => protegido,
   });
   const g = useGestao(ctx);
   const cache = useQueryClient();
@@ -70,7 +73,7 @@ export function Cardapio({ ctx }: { ctx: ContextoGateway }) {
       );
     const ler = async <T,>(data: PedidoCardapio): Promise<T> => {
       const res = await fn({ data: { ...data, empresa: ctx.empresa } });
-      if (!res.ok) throw new Error(res.erro.mensagem);
+      if (!res.ok) throw Object.assign(new Error(res.erro.mensagem), { campo: res.erro.campo });
       return res.dados as unknown as T;
     };
     return {
@@ -80,6 +83,8 @@ export function Cardapio({ ctx }: { ctx: ContextoGateway }) {
       previa: (unidade, disponibilidade) =>
         ler({ acao: "previa", unidade, disponibilidade: disponibilidade ?? null }),
       historico: (id, cursor) => ler({ acao: "historico", item_id: id, cursor }),
+      opcoes: (id) => ler({ acao: "opcoes", item_id: id }),
+      salvarOpcoes: (id, corpo) => ler({ acao: "salvar_opcoes", item_id: id, ...corpo }),
       atualizarLocal: trocar,
       editar: async (item, campos) => {
         const res = await fn({
@@ -104,6 +109,20 @@ export function Cardapio({ ctx }: { ctx: ContextoGateway }) {
       },
     };
   }, [fn, ctx.empresa, cache, filtros.filtro]);
+  const pedirPrevia = useServerFn(previaCardapio);
+  function verComoCliente() {
+    // A aba abre antes da chamada: depois dela, o navegador bloquearia como janela automática.
+    const aba = window.open("", "_blank");
+    pedirPrevia({ data: { empresa: ctx.empresa } }).then(
+      (r) => {
+        if (aba) aba.location.href = r.url;
+      },
+      (e: Error) => {
+        aba?.close();
+        toast.error(e.message);
+      },
+    );
+  }
   const lista = (unidades.data?.itens ?? [])
     .map((u) => ({ codigo: u.codigo!, nome: u.nome, fuso: u.fuso_efetivo }))
     .filter((u) => u.codigo);
@@ -115,6 +134,7 @@ export function Cardapio({ ctx }: { ctx: ContextoGateway }) {
       mudarFiltros={(f) => void navigate({ search: f, replace: true })}
       admin={peloMenos(ctx.papel, "gestor")}
       grade={peloMenos(ctx.papel, "supervisor")}
+      verComoCliente={verComoCliente}
       executar={executar}
       servicos={servicos}
       proteger={proteger}

@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { rotuloCampo, textoValor, type Previa, type Visao } from "@/lib/gateway/atendimento";
-import { Cartao } from "../Superficie";
 import type { Chamar } from "./ComportamentoAgente";
 
 /** O bloco `perfil_atendimento` exatamente como o gateway coloca no pacote do agente. */
@@ -12,10 +11,12 @@ export function PreviaAtendimento({
   chave,
   chamar,
   visao,
+  acoes,
 }: {
   chave: unknown[];
   chamar: Chamar;
   visao: Visao;
+  acoes?: ReactNode;
 }) {
   const [fonte, setFonte] = useState<"rascunho" | "publicado">(
     visao.rascunho ? "rascunho" : "publicado",
@@ -33,7 +34,7 @@ export function PreviaAtendimento({
   });
   const json = q.data ? JSON.stringify(q.data.perfil_atendimento, null, 2) : "";
   return (
-    <Cartao className="space-y-3 p-4">
+    <div className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <div
           className="flex rounded-md border border-base-200 p-0.5"
@@ -77,6 +78,7 @@ export function PreviaAtendimento({
             perfil_versao: <code>{q.data.perfil_versao}</code>
           </span>
         ) : null}
+        {acoes}
       </div>
       {!visao.rascunho ? (
         <p className="text-xs text-ink-500">Sem rascunho: a prévia mostra o que está publicado.</p>
@@ -120,6 +122,6 @@ export function PreviaAtendimento({
         É o bloco <code>perfil_atendimento</code> que vai no pacote ao agente. As instruções da
         plataforma seguem à parte e não aparecem aqui.
       </p>
-    </Cartao>
+    </div>
   );
 }

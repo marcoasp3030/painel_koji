@@ -12,6 +12,12 @@
 		uri strip_prefix /rest/v1
 		reverse_proxy api-rest:3000
 	}
+	# Só no desenvolvimento: o Vite trata pedido de <img> como arquivo estático e não chega à rota do servidor.
+	handle /api/public/cardapio-imagem/* {
+		reverse_proxy painel:3000 {
+			header_up -Sec-Fetch-Dest
+		}
+	}
 	handle /_serverFn/* {
 		request_body {
 			max_size 15MB

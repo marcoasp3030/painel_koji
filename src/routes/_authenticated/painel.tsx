@@ -26,7 +26,7 @@ function Painel() {
   useEffect(() => {
     if (!data) return;
     if (data.isSuperAdmin) navigate({ to: "/admin", replace: true });
-    else if (data.tenant) navigate({ to: "/equipe", replace: true });
+    else if (data.tenant) navigate({ to: "/ia/conversas", replace: true });
   }, [data, navigate]);
 
   return (

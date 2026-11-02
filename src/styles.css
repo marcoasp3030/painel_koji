@@ -165,8 +165,78 @@
 }
 
 @layer base {
+  /* A largura não é herdada, por isso vale para todos; a camada base não vence quem esconde a barra. */
   * {
     border-color: var(--color-border);
+    scrollbar-width: thin;
+  }
+
+  /* A cor é herdada: basta definir no topo para valer também nos diálogos. */
+  html {
+    scrollbar-color: color-mix(in srgb, var(--ink-500) 40%, transparent) transparent;
+  }
+
+  /* No menu escuro a barra é discreta, clareia com a pessoa nele e tem 4px para não cortar os nomes. */
+  .rolagem-menu {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  .rolagem-menu::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .rolagem-menu::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .rolagem-menu::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: rgb(255 255 255 / 0.2);
+  }
+
+  .rolagem-menu:hover::-webkit-scrollbar-thumb,
+  .rolagem-menu:focus-within::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.35);
+  }
+
+  /* Firefox não tem as regras acima. */
+  @supports not selector(::-webkit-scrollbar) {
+    .rolagem-menu {
+      scrollbar-width: thin;
+      scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+    }
+
+    .rolagem-menu:hover,
+    .rolagem-menu:focus-within {
+      scrollbar-color: rgb(255 255 255 / 0.35) transparent;
+    }
+  }
+
+  /* Cardápio público: empresa que escolhe títulos modernos troca a serifa pela fonte do texto. */
+  .cd-titulos-modernos .font-display,
+  .cd-titulos-modernos.font-display {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* Navegadores que ainda não aceitam scrollbar-color. */
+  @supports not (scrollbar-color: red blue) {
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      border: 2px solid transparent;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--ink-500) 40%, transparent) padding-box;
+    }
   }
 
   body {

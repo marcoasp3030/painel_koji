@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { peloMenos } from "@/lib/acesso/papeis";
 import { useGestao, EditorFaixas, botoesPausaRapida, textoPrazo } from "./gestao-base";
 import { PagamentosUnidade } from "./PagamentosUnidade";
+import { TaxasUnidade } from "./TaxasUnidade";
 import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
 import { pedidosEmUso } from "@/lib/gateway/modulos";
 import { VisaoHoje, OperacaoVarias } from "./GestaoOperacao";
@@ -12,7 +13,8 @@ import {
   DIAS,
   NOMES_DIA,
   dataRecebida,
-  textoSituacao,
+  linhaSituacao,
+  resumoSituacao,
   instanteLocal,
   gradeCopiada,
   alertasUnidade,
@@ -28,11 +30,12 @@ import {
 } from "@/lib/gateway/gestao";
 import type { ContextoGateway } from "./Gateway";
 import { Etiqueta } from "./Gateway";
-import { Cartao, EstadoVazio, Iniciais, Metrica } from "./Superficie";
+import { EstadoVazio } from "./Superficie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, Plus, Search, TriangleAlert } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +56,10 @@ function Erro({ g, campo }: { g: G; campo?: string }) {
   ) : null;
 }
 function ProtegeRascunho({ sujo }: { sujo: boolean }) {
-  useBlocker({ shouldBlockFn: () => sujo && !window.confirm("Descartar alterações não salvas?") });
+  useBlocker({
+    shouldBlockFn: () => sujo && !window.confirm("Descartar alterações não salvas?"),
+    enableBeforeUnload: () => sujo,
+  });
   useEffect(() => {
     if (!sujo) return;
     const f = (e: BeforeUnloadEvent) => {
@@ -72,6 +78,13 @@ function ProtegeRascunho({ sujo }: { sujo: boolean }) {
   }, [sujo]);
   return null;
 }
+const PONTO_SITUACAO = {
+  sucesso: "bg-success",
+  alerta: "bg-gold-500",
+  roxo: "bg-purple-300",
+  neutro: "bg-ink-300",
+  perigo: "bg-destructive",
+} as const;
 function tomSituacao(u: Unidade) {
   if (u.situacao.aberta_agora === true) return "sucesso" as const;
   if (u.situacao.motivo === "pausa") return "alerta" as const;
@@ -79,28 +92,6 @@ function tomSituacao(u: Unidade) {
     return "roxo" as const;
   if (u.situacao.motivo === "inativa") return "neutro" as const;
   return "perigo" as const;
-}
-function resumoSituacao(u: Unidade) {
-  if (u.situacao.aberta_agora === true) return "Aberta";
-  if (u.situacao.motivo === "pausa") return "Pausada";
-  if (u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario") return "Sem horário";
-  if (u.situacao.motivo === "inativa") return "Inativa";
-  if (u.situacao.motivo === "excecao") return "Exceção";
-  return "Fechada";
-}
-export function SituacaoUnidade({ u }: { u: Unidade }) {
-  return (
-    <div className="space-y-1 text-sm">
-      <Etiqueta tom={tomSituacao(u)}>{resumoSituacao(u)}</Etiqueta>
-      <p>{textoSituacao(u.situacao)}</p>
-      {u.situacao.fecha_as && <p>Fecha: {dataRecebida(u.situacao.fecha_as)}</p>}
-      {u.situacao.proxima_abertura && (
-        <p>Próxima abertura: {dataRecebida(u.situacao.proxima_abertura)}</p>
-      )}
-      {u.pausa_motivo && u.situacao.motivo === "pausa" && <p>Motivo: {u.pausa_motivo}</p>}
-      <p className="text-ink-500">Fuso: {u.fuso_efetivo}</p>
-    </div>
-  );
 }
 function dataCurta(iso: string) {
   return iso.split("-").reverse().join("/");
@@ -126,6 +117,7 @@ export function GestaoUnidades({
 }) {
   const g = useGestao(ctx);
   const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<"todas" | "abertas" | "pausadas" | "sem">("todas");
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const [editar, setEditar] = useState<Unidade | "nova" | null>(null);
   const [pausar, setPausar] = useState<Unidade | null>(null);
@@ -145,17 +137,22 @@ export function GestaoUnidades({
         : secao;
   const itens = q.data?.itens ?? [];
   const termo = busca.trim().toLocaleLowerCase("pt-BR");
-  const visiveis = itens.filter((u) =>
-    [u.nome, u.codigo, u.endereco].some((v) =>
-      (v ?? "").toLocaleLowerCase("pt-BR").includes(termo),
-    ),
+  const semHorario = (u: Unidade) =>
+    u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario";
+  const visiveis = itens.filter(
+    (u) =>
+      [u.nome, u.codigo, u.endereco].some((v) =>
+        (v ?? "").toLocaleLowerCase("pt-BR").includes(termo),
+      ) &&
+      (filtro === "todas" ||
+        (filtro === "abertas" && u.situacao.aberta_agora === true) ||
+        (filtro === "pausadas" && u.situacao.motivo === "pausa") ||
+        (filtro === "sem" && semHorario(u))),
   );
   const contagem = {
     abertas: itens.filter((u) => u.situacao.aberta_agora === true).length,
     pausadas: itens.filter((u) => u.situacao.motivo === "pausa").length,
-    sem: itens.filter(
-      (u) => u.situacao.aberta_agora === null || u.situacao.motivo === "sem_horario",
-    ).length,
+    sem: itens.filter(semHorario).length,
   };
   function seguir(id: string | null, proxima: SecaoUnidade = "agenda") {
     if (id === unidadeId && (id === null || proxima === secaoEfetiva)) return;
@@ -167,206 +164,193 @@ export function GestaoUnidades({
       void g.salvar({ acao: "reabrir", id });
   }
   return (
-    <div className="mt-6 space-y-4">
-      {itens.length > 0 ? (
-        <VisaoHoje ctx={ctx} itens={itens} onAbrir={(id) => seguir(id, "agenda")} />
-      ) : null}
-      {admin && itens.length > 0 ? (
-        <OperacaoVarias
-          ctx={ctx}
-          unidades={itens}
-          selecionadas={selecionadas}
-          onLimpar={() => setSelecionadas([])}
-        />
-      ) : null}
-      <div className={`grid gap-3 sm:grid-cols-3 ${unidadeId ? "hidden lg:grid" : ""}`}>
-        <Metrica rotulo="Abertas agora" valor={q.data ? contagem.abertas : "—"} />
-        <Metrica rotulo="Pedidos pausados" valor={q.data ? contagem.pausadas : "—"} />
-        <Metrica
-          rotulo="Sem horário"
-          valor={q.data ? contagem.sem : "—"}
-          detalhe="Situação recebida do gateway"
-        />
-      </div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className={`min-w-0 flex-1 text-sm ${unidadeId ? "hidden lg:block" : ""}`}>
-          Buscar unidade
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome, código ou endereço"
-            className="mt-1 max-w-md"
+    <div className="flex min-h-0 flex-1 bg-card">
+      <section
+        aria-label="Lista de unidades"
+        className={`min-h-0 w-full flex-col border-base-200 lg:flex lg:w-80 lg:shrink-0 lg:border-r ${unidadeId ? "hidden" : "flex"}`}
+      >
+        <div className="shrink-0 space-y-1 border-b border-base-200 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-500"
+                aria-hidden
+              />
+              <Input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                aria-label="Buscar unidade"
+                placeholder="Buscar unidade"
+                className="h-8 bg-base-50 pl-8 text-sm"
+              />
+            </div>
+            {gestor && (
+              <Button size="sm" className="h-8 shrink-0 px-2.5" onClick={() => setEditar("nova")}>
+                <Plus className="size-3.5" aria-hidden />
+                Nova
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none]">
+            {(
+              [
+                ["todas", "Todas", itens.length],
+                ["abertas", "Abertas", contagem.abertas],
+                ["pausadas", "Pausadas", contagem.pausadas],
+                ["sem", "Sem horário", contagem.sem],
+              ] as const
+            ).map(([id, rotulo, valor]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={filtro === id}
+                onClick={() => setFiltro(id)}
+                className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1 text-xs font-medium transition-colors ${
+                  filtro === id ? "bg-purple-100 text-purple-950" : "text-ink-600 hover:bg-base-100"
+                }`}
+              >
+                {rotulo}
+                <span className="font-semibold tabular-nums">{q.data ? valor : "—"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {q.isPending ? (
+            <div className="space-y-2 p-3">
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+            </div>
+          ) : null}
+          {q.error ? (
+            <p role="alert" className="px-3 py-2 text-sm">
+              {q.error.message} {q.data ? "A informação abaixo pode estar desatualizada." : ""}{" "}
+              <button type="button" className="underline" onClick={() => q.refetch()}>
+                Tentar novamente
+              </button>
+            </p>
+          ) : null}
+          {g.erro ? (
+            <div className="px-3 py-2">
+              <Erro g={g} />
+            </div>
+          ) : null}
+          {q.data && !visiveis.length ? (
+            <p className="px-3 py-6 text-center text-sm text-ink-500">
+              {itens.length ? "Nenhuma unidade encontrada." : "Nenhuma unidade cadastrada."}
+            </p>
+          ) : null}
+          {visiveis.map((u) => {
+            const alertas = textosAlerta(u, admin);
+            const pausada = u.situacao.motivo === "pausa";
+            return (
+              <div
+                key={u.id}
+                className={`flex items-center gap-2 border-b border-base-200/70 px-3 py-1.5 transition-colors hover:bg-purple-50/60 ${
+                  unidadeId === u.id
+                    ? "bg-purple-100/60 shadow-[inset_3px_0_0_0_var(--purple-700)]"
+                    : ""
+                }`}
+              >
+                {admin && (
+                  <input
+                    type="checkbox"
+                    aria-label={`Incluir ${u.nome} ao aplicar em várias`}
+                    className="size-3.5 shrink-0 accent-purple-800"
+                    checked={selecionadas.includes(u.id)}
+                    onChange={(e) =>
+                      setSelecionadas(
+                        e.target.checked
+                          ? [...selecionadas, u.id]
+                          : selecionadas.filter((id) => id !== u.id),
+                      )
+                    }
+                  />
+                )}
+                <button
+                  type="button"
+                  aria-current={unidadeId === u.id ? "true" : undefined}
+                  className="min-w-0 flex-1 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+                  title={[u.nome, u.codigo, u.endereco, cidadeUf(u)].filter(Boolean).join(" · ")}
+                  onClick={() => seguir(u.id, unidadeId ? secaoEfetiva : "agenda")}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className={`size-2 shrink-0 rounded-full ${PONTO_SITUACAO[tomSituacao(u)]}`}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 truncate text-sm font-medium text-ink-900">
+                      {u.nome}
+                    </span>
+                    {alertas.length ? (
+                      <span
+                        className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-gold-700"
+                        title={alertas.join(" · ")}
+                      >
+                        <TriangleAlert className="size-3" aria-hidden />
+                        {alertas.length}
+                        <span className="sr-only">{alertas.join(" · ")}</span>
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="block truncate text-xs leading-4 text-ink-500">
+                    {linhaSituacao(u.situacao)}
+                  </span>
+                </button>
+                {admin && (
+                  <Button
+                    size="sm"
+                    variant={pausada ? "default" : "outline"}
+                    className="h-7 shrink-0 px-2 text-xs"
+                    disabled={g.busy}
+                    aria-label={`${pausada ? "Reabrir pedidos de" : "Pausar pedidos de"} ${u.nome}`}
+                    onClick={() => (pausada ? reabrir(u.id) : setPausar(u))}
+                  >
+                    {pausada ? "Reabrir" : "Pausar"}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {admin && itens.length > 0 ? (
+          <OperacaoVarias
+            ctx={ctx}
+            unidades={itens}
+            selecionadas={selecionadas}
+            onLimpar={() => setSelecionadas([])}
           />
-        </label>
-        {gestor && (
-          <Button className="min-h-11" onClick={() => setEditar("nova")}>
-            Nova unidade
-          </Button>
+        ) : null}
+      </section>
+      <div className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${unidadeId ? "flex" : "hidden"}`}>
+        {unidadeId ? (
+          <Detalhe
+            key={unidadeId}
+            ctx={ctx}
+            id={unidadeId}
+            secao={secaoEfetiva}
+            admin={admin}
+            gestor={gestor}
+            ocupado={g.busy}
+            onSecao={(proxima) => seguir(unidadeId, proxima)}
+            onVoltar={() => seguir(null)}
+            onPausar={setPausar}
+            onEditar={setEditar}
+            onReabrir={reabrir}
+          />
+        ) : itens.length > 0 ? (
+          <div className="min-h-0 flex-1 overflow-y-auto bg-base-100 p-3">
+            <VisaoHoje ctx={ctx} itens={itens} onAbrir={(id) => seguir(id, "agenda")} />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center justify-center bg-base-100 p-6">
+            <EstadoVazio
+              titulo="Nenhuma unidade cadastrada"
+              texto="Crie uma unidade para definir a agenda, a grade semanal e as exceções."
+            />
+          </div>
         )}
       </div>
-      {q.isPending ? (
-        <div className="grid gap-3 lg:grid-cols-[minmax(280px,340px)_1fr]">
-          <Skeleton className="h-40" />
-          <Skeleton className="hidden h-64 lg:block" />
-        </div>
-      ) : null}
-      {q.error ? (
-        <p role="alert" className="text-sm">
-          {q.error.message} {q.data ? "A informação abaixo pode estar desatualizada." : ""}{" "}
-          <Button variant="outline" onClick={() => q.refetch()}>
-            Tentar novamente
-          </Button>
-        </p>
-      ) : null}
-      <Erro g={g} />
-      {!q.isPending && itens.length === 0 ? (
-        <Cartao>
-          <EstadoVazio
-            titulo="Nenhuma unidade cadastrada"
-            texto="Crie uma unidade para definir a agenda, a grade semanal e as exceções."
-          />
-        </Cartao>
-      ) : null}
-      {itens.length > 0 && (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
-          <div className={`space-y-3 ${unidadeId ? "hidden lg:block" : ""}`}>
-            {visiveis.length === 0 ? (
-              <Cartao>
-                <EstadoVazio
-                  titulo="Nenhuma unidade encontrada"
-                  texto="Limpe a busca para ver todas as unidades da empresa."
-                />
-              </Cartao>
-            ) : (
-              visiveis.map((u) => (
-                <Cartao
-                  key={u.id}
-                  className={`space-y-3 p-4 ${unidadeId === u.id ? "ring-1 ring-purple-700" : ""}`}
-                >
-                  <button
-                    className="flex w-full items-start gap-3 text-left"
-                    onClick={() => seguir(u.id, "agenda")}
-                  >
-                    <Iniciais nome={u.nome} />
-                    <span className="min-w-0">
-                      <span className="block font-semibold">{u.nome}</span>
-                      <span className="block truncate text-sm text-ink-500">
-                        {u.codigo ?? "Sem código"} · {u.endereco ?? "Endereço não informado"}
-                      </span>
-                      {cidadeUf(u) && (
-                        <span className="block truncate text-xs text-ink-500">{cidadeUf(u)}</span>
-                      )}
-                    </span>
-                  </button>
-                  <SituacaoUnidade u={u} />
-                  <AlertasDaUnidade u={u} admin={admin} />
-                  {admin && (
-                    <label className="flex min-h-11 items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selecionadas.includes(u.id)}
-                        onChange={(e) =>
-                          setSelecionadas(
-                            e.target.checked
-                              ? [...selecionadas, u.id]
-                              : selecionadas.filter((id) => id !== u.id),
-                          )
-                        }
-                      />
-                      Incluir ao aplicar em várias
-                    </label>
-                  )}
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button
-                      className="min-h-11 px-2"
-                      variant={
-                        unidadeId === u.id && secaoEfetiva === "agenda" ? "default" : "outline"
-                      }
-                      onClick={() => seguir(u.id, "agenda")}
-                    >
-                      Agenda
-                    </Button>
-                    {gestor && (
-                      <Button
-                        className="min-h-11 px-2"
-                        variant={
-                          unidadeId === u.id && secaoEfetiva === "horarios" ? "default" : "outline"
-                        }
-                        onClick={() => seguir(u.id, "horarios")}
-                      >
-                        Horários
-                      </Button>
-                    )}
-                    {admin && (
-                      <Button
-                        className="min-h-11 px-2"
-                        variant={
-                          unidadeId === u.id && secaoEfetiva === "excecoes" ? "default" : "outline"
-                        }
-                        onClick={() => seguir(u.id, "excecoes")}
-                      >
-                        Exceções
-                      </Button>
-                    )}
-                    <Button
-                      className="min-h-11 px-2"
-                      variant={
-                        unidadeId === u.id && secaoEfetiva === "pagamentos" ? "default" : "outline"
-                      }
-                      onClick={() => seguir(u.id, "pagamentos")}
-                    >
-                      Pagamentos
-                    </Button>
-                  </div>
-                  {admin && (
-                    <Button
-                      className="min-h-11 w-full"
-                      disabled={g.busy}
-                      onClick={() => (u.situacao.motivo === "pausa" ? reabrir(u.id) : setPausar(u))}
-                    >
-                      {u.situacao.motivo === "pausa" ? "Reabrir pedidos" : "Pausar pedidos"}
-                    </Button>
-                  )}
-                  {gestor && (
-                    <Button
-                      className="min-h-11 w-full"
-                      variant="outline"
-                      onClick={() => setEditar(u)}
-                    >
-                      Editar dados
-                    </Button>
-                  )}
-                </Cartao>
-              ))
-            )}
-          </div>
-          <div className={unidadeId ? "block" : "hidden lg:block"}>
-            {unidadeId ? (
-              <Detalhe
-                key={unidadeId}
-                ctx={ctx}
-                id={unidadeId}
-                secao={secaoEfetiva}
-                admin={admin}
-                gestor={gestor}
-                ocupado={g.busy}
-                onSecao={(proxima) => seguir(unidadeId, proxima)}
-                onVoltar={() => seguir(null)}
-                onPausar={setPausar}
-                onEditar={setEditar}
-                onReabrir={reabrir}
-              />
-            ) : (
-              <Cartao>
-                <EstadoVazio
-                  titulo="Escolha uma unidade"
-                  texto="Agenda, horários e exceções abrem aqui. No celular, use os botões de cada unidade."
-                />
-              </Cartao>
-            )}
-          </div>
-        </div>
-      )}
       {editar && (
         <DadosUnidade
           ctx={ctx}
@@ -404,7 +388,6 @@ function DadosUnidade({
     fuso: u?.fuso ?? "",
     cidade: u?.cidade ?? "",
     uf: u?.uf ?? "",
-    taxa_entrega: u?.taxa_entrega != null ? String(u.taxa_entrega) : "",
     pedido_minimo: u?.pedido_minimo != null ? String(u.pedido_minimo) : "",
     area_entrega: u?.area_entrega ?? "",
   };
@@ -449,7 +432,7 @@ function DadosUnidade({
             }
             if (!u || ativo !== u.ativo) dados["ativo"] = ativo;
             if (comPedidos) {
-              for (const k of ["taxa_entrega", "pedido_minimo"] as const) {
+              for (const k of ["pedido_minimo"] as const) {
                 if (!u || v[k] !== inicial[k]) {
                   const t = v[k].trim();
                   dados[k] = t === "" ? null : Number(t.replace(",", "."));
@@ -535,21 +518,10 @@ function DadosUnidade({
             <fieldset className="space-y-3 rounded-md border border-base-200 p-3">
               <legend className="px-1 text-sm font-medium text-ink-700">Entrega</legend>
               <p className="text-xs text-ink-500">
-                Visível porque a empresa tem o módulo de pedidos em uso. Vazio = o agente não afirma
-                nada e diz que a unidade confirma. As formas de pagamento ficam na seção Pagamentos.
+                Visível porque a empresa tem o módulo de pedidos em uso. A taxa fica na seção
+                Entrega e as formas de pagamento, na seção Pagamentos.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="un-taxa">Taxa de entrega (R$)</Label>
-                  <Input
-                    id="un-taxa"
-                    inputMode="decimal"
-                    value={v.taxa_entrega}
-                    disabled={g.busy}
-                    onChange={(e) => setV({ ...v, taxa_entrega: e.target.value })}
-                  />
-                  <Erro g={g} campo="taxa_entrega" />
-                </div>
                 <div>
                   <Label htmlFor="un-minimo">Pedido mínimo (R$)</Label>
                   <Input
@@ -606,18 +578,13 @@ function DadosUnidade({
     </Dialog>
   );
 }
-function AlertasDaUnidade({ u, admin }: { u: Unidade; admin: boolean }) {
+function textosAlerta(u: Unidade, admin: boolean) {
   const a = alertasUnidade(u, admin);
-  if (!a.semHorario && !a.semWhatsapp && !a.semCidade) return null;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {a.semHorario ? <Etiqueta tom="alerta">Sem horário cadastrado</Etiqueta> : null}
-      {a.semWhatsapp ? <Etiqueta tom="alerta">Sem WhatsApp de pedidos</Etiqueta> : null}
-      {a.semCidade ? (
-        <Etiqueta tom="alerta">Sem cidade: só feriados nacionais serão considerados</Etiqueta>
-      ) : null}
-    </div>
-  );
+  return [
+    a.semHorario ? "Sem horário cadastrado" : null,
+    a.semWhatsapp ? "Sem WhatsApp de pedidos" : null,
+    a.semCidade ? "Sem cidade: só feriados nacionais serão considerados" : null,
+  ].filter((t): t is string => Boolean(t));
 }
 function Pausa({ ctx, u, fechar }: { ctx: ContextoGateway; u: Unidade; fechar: () => void }) {
   const g = useGestao(ctx);
@@ -759,48 +726,72 @@ function Detalhe({
     refetchIntervalInBackground: false,
   });
   const u = q.data;
+  const lerModulos = useServerFn(obterModulosEmpresa);
+  const modulosEmpresa = useQuery({
+    queryKey: ["gateway", "modulos", ctx.empresa],
+    queryFn: () => lerModulos({ data: { empresa: ctx.empresa } }),
+    enabled: admin,
+  });
+  // Mesma condição do servidor: sem pedidos em uso, os campos de entrega nem chegam ao gateway.
+  const comEntrega = admin && pedidosEmUso(modulosEmpresa.data);
   const secoes: { id: SecaoUnidade; rotulo: string }[] = [
     { id: "agenda", rotulo: "Agenda" },
+    ...(comEntrega ? [{ id: "entrega" as const, rotulo: "Entrega" }] : []),
     { id: "pagamentos", rotulo: "Pagamentos" },
     ...(gestor ? [{ id: "horarios" as const, rotulo: "Horários" }] : []),
     ...(admin ? [{ id: "excecoes" as const, rotulo: "Exceções" }] : []),
   ];
   return (
-    <div className="space-y-4">
-      <Button className="min-h-11 lg:hidden" variant="outline" onClick={onVoltar}>
-        ← Unidades
-      </Button>
+    <div className="flex min-h-0 flex-1 flex-col">
       {q.error && (
-        <p role="alert">
-          {q.error.message} <Button onClick={() => q.refetch()}>Tentar novamente</Button>
+        <p role="alert" className="shrink-0 px-3 py-2 text-sm">
+          {q.error.message}{" "}
+          <button type="button" className="underline" onClick={() => q.refetch()}>
+            Tentar novamente
+          </button>
         </p>
       )}
       {!u ? (
-        <Skeleton className="h-48" />
+        <div className="p-3">
+          <Skeleton className="h-24" />
+        </div>
       ) : (
         <>
-          <Cartao className="space-y-4 p-4 sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-2xl text-purple-800">{u.nome}</h2>
-                <p className="text-sm text-ink-500">
-                  {u.codigo ?? "Sem código"} · {u.endereco ?? "Endereço não informado"}
-                  {cidadeUf(u) ? ` · ${cidadeUf(u)}` : ""}
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-base-200 px-3 py-2">
+            <div className="flex min-w-0 flex-1 basis-64 items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="-ml-1 size-8 shrink-0 lg:hidden"
+                aria-label="Voltar para as unidades"
+                onClick={onVoltar}
+              >
+                <ArrowLeft aria-hidden />
+              </Button>
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h2 className="min-w-0 truncate font-sans text-sm font-semibold leading-5 text-ink-900">
+                    {u.nome}
+                  </h2>
+                  <Etiqueta tom={tomSituacao(u)}>{resumoSituacao(u.situacao)}</Etiqueta>
+                </div>
+                <p className="truncate text-xs leading-4 text-ink-500">
+                  {[
+                    linhaSituacao(u.situacao),
+                    u.situacao.motivo === "pausa" ? u.pausa_motivo : null,
+                    u.endereco,
+                    cidadeUf(u),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
-              <Link
-                to="/ia/gestao/alteracoes"
-                search={{ unidade: u.id }}
-                className="text-sm font-medium text-purple-800 underline-offset-4 hover:underline"
-              >
-                Histórico desta unidade
-              </Link>
             </div>
-            <SituacaoUnidade u={u} />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex shrink-0 items-center gap-1.5">
               {admin && (
                 <Button
-                  className="min-h-11"
+                  size="sm"
+                  className="h-8 px-2.5"
                   disabled={ocupado}
                   onClick={() => (u.situacao.motivo === "pausa" ? onReabrir(u.id) : onPausar(u))}
                 >
@@ -808,17 +799,37 @@ function Detalhe({
                 </Button>
               )}
               {gestor && (
-                <Button className="min-h-11" variant="outline" onClick={() => onEditar(u)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2.5"
+                  onClick={() => onEditar(u)}
+                >
                   Editar dados
                 </Button>
               )}
+              {admin && (
+                <Link
+                  to="/ia/gestao/alteracoes"
+                  search={{ unidade: u.id }}
+                  className="px-1 text-xs font-medium text-purple-800 underline-offset-4 hover:underline"
+                >
+                  Histórico
+                </Link>
+              )}
             </div>
-          </Cartao>
+          </div>
+          {textosAlerta(u, admin).length ? (
+            <p className="flex shrink-0 items-center gap-1.5 border-b border-gold-300/50 bg-gold-300/15 px-3 py-1 text-xs text-gold-700">
+              <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">{textosAlerta(u, admin).join(" · ")}</span>
+            </p>
+          ) : null}
           {secoes.length > 1 && (
             <div
               role="tablist"
               aria-label="Seções da unidade"
-              className="flex gap-1 rounded-xl bg-base-100 p-1"
+              className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-base-200 px-2 [scrollbar-width:none]"
             >
               {secoes.map((s) => (
                 <button
@@ -826,7 +837,11 @@ function Detalhe({
                   type="button"
                   role="tab"
                   aria-selected={secao === s.id}
-                  className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-medium ${secao === s.id ? "bg-card text-purple-800 shadow-sm" : "text-ink-500"}`}
+                  className={`shrink-0 border-b-2 px-2.5 pb-1.5 pt-1.5 text-xs transition-colors ${
+                    secao === s.id
+                      ? "border-purple-700 font-semibold text-purple-800"
+                      : "border-transparent text-ink-500 hover:text-ink-900"
+                  }`}
                   onClick={() => onSecao(s.id)}
                 >
                   {s.rotulo}
@@ -834,15 +849,21 @@ function Detalhe({
               ))}
             </div>
           )}
-          {secao === "agenda" ? (
-            <Previa ctx={ctx} id={id} />
-          ) : secao === "pagamentos" ? (
-            <PagamentosUnidade ctx={ctx} id={id} podeEditar={gestor} />
-          ) : secao === "horarios" && gestor ? (
-            <Horarios ctx={ctx} u={u} />
-          ) : admin ? (
-            <Excecoes ctx={ctx} u={u} />
-          ) : null}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-base-100 p-3">
+            {secao === "agenda" ? (
+              <Previa ctx={ctx} id={id} />
+            ) : secao === "pagamentos" ? (
+              <PagamentosUnidade ctx={ctx} id={id} podeEditar={gestor} />
+            ) : secao === "entrega" ? (
+              comEntrega ? (
+                <TaxasUnidade ctx={ctx} id={id} podeEditar={gestor} />
+              ) : null
+            ) : secao === "horarios" && gestor ? (
+              <Horarios ctx={ctx} u={u} />
+            ) : admin ? (
+              <Excecoes ctx={ctx} u={u} />
+            ) : null}
+          </div>
         </>
       )}
     </div>
@@ -858,47 +879,58 @@ function Previa({ ctx, id }: { ctx: ContextoGateway; id: string }) {
     refetchIntervalInBackground: false,
   });
   return (
-    <Cartao className="p-4 sm:p-5">
-      <h3 className="font-semibold">Próximos 7 dias</h3>
-      <p className="text-sm text-ink-500">
-        Mostra só o que já foi salvo. Um rascunho da grade não entra aqui.
-      </p>
-      {q.isPending && <Skeleton className="mt-3 h-24" />}
+    <div className="space-y-2">
+      {q.isPending && <Skeleton className="h-24" />}
       {q.error && (
-        <p role="alert" className="mt-3">
-          {q.error.message} <Button onClick={() => q.refetch()}>Tentar novamente</Button>
+        <p role="alert" className="text-sm">
+          {q.error.message}{" "}
+          <button type="button" className="underline" onClick={() => q.refetch()}>
+            Tentar novamente
+          </button>
         </p>
       )}
       {q.data && (
         <>
-          <p className="mt-3 text-sm">
-            Fuso: {q.data.fuso} · {textoSituacao(q.data.situacao)}
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {q.data.dias.map((d) => (
-              <div key={d.data} className="rounded-lg border border-base-200 p-3">
-                <strong>
-                  {dataCurta(d.data)} · {d.dia}
-                </strong>
-                <p className="text-sm text-ink-500">
-                  {d.origem === "excecao" ? "Exceção" : "Grade semanal"}
-                </p>
-                <p className="text-sm">
-                  {q.data.situacao.aberta_agora === null && d.origem !== "excecao"
-                    ? "Horário não informado"
-                    : d.fechado
-                      ? "Fechado"
-                      : d.faixas
-                          .map(([a, b]) => `${a}–${b}${b < a ? " (dia seguinte)" : ""}`)
-                          .join(", ")}
-                </p>
-                {d.motivo && <p className="text-sm">{d.motivo}</p>}
-              </div>
-            ))}
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {q.data.dias.map((d, i) => {
+              const excecao = d.origem === "excecao";
+              const semInfo = q.data.situacao.aberta_agora === null && !excecao;
+              return (
+                <div
+                  key={d.data}
+                  className={`rounded-lg border bg-card px-3 py-2 ${
+                    excecao ? "border-gold-500" : i === 0 ? "border-purple-400" : "border-base-200"
+                  }`}
+                >
+                  <p className="flex items-center justify-between gap-2 text-xs">
+                    <strong className="font-semibold text-ink-900">
+                      {i === 0 ? "Hoje" : d.dia} · {dataCurta(d.data).slice(0, 5)}
+                    </strong>
+                    {excecao ? <span className="font-medium text-gold-700">Exceção</span> : null}
+                  </p>
+                  {semInfo ? (
+                    <p className="mt-0.5 text-sm text-ink-500">Horário não informado</p>
+                  ) : d.fechado ? (
+                    <p className="mt-0.5 text-sm text-ink-500">Fechado</p>
+                  ) : (
+                    d.faixas.map(([a, b]) => (
+                      <p key={a} className="mt-0.5 text-sm tabular-nums text-ink-900">
+                        {a}–{b}
+                        {b < a ? " (dia seguinte)" : ""}
+                      </p>
+                    ))
+                  )}
+                  {d.motivo && <p className="truncate text-xs text-ink-500">{d.motivo}</p>}
+                </div>
+              );
+            })}
           </div>
+          <p className="text-xs text-ink-500">
+            Fuso {q.data.fuso}. Mostra só o que já foi salvo: um rascunho da grade não entra aqui.
+          </p>
         </>
       )}
-    </Cartao>
+    </div>
   );
 }
 function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
@@ -926,17 +958,16 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
     });
   }
   return (
-    <Cartao className="p-4 sm:p-5">
+    <div className="space-y-2">
       <ProtegeRascunho sujo={sujo} />
-      <h3 className="font-semibold">Grade semanal · {u.fuso_efetivo}</h3>
-      <p className="text-sm text-ink-500">
-        Abra o dia para editar. Até 12 turnos. Um salvamento grava a semana inteira. Sem nenhum
-        turno, o horário fica não informado.
-      </p>
-      <label className="mt-3 block text-sm">
-        Copiar grade de outra unidade
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="min-w-0 flex-1 basis-64 text-xs text-ink-500">
+          Fuso {u.fuso_efetivo}. Até 12 turnos por semana. Sem nenhum turno, o horário fica não
+          informado.
+        </p>
         <select
-          className="mt-1 block min-h-11 w-full max-w-md rounded-md border bg-card px-3"
+          aria-label="Copiar grade de outra unidade"
+          className="h-8 max-w-56 rounded-md border bg-card px-2 text-xs"
           value=""
           onChange={(e) => {
             const origem = outras.data?.itens.find((item) => item.id === e.target.value);
@@ -951,7 +982,7 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
             setAberto(null);
           }}
         >
-          <option value="">Escolha uma unidade</option>
+          <option value="">Copiar de outra unidade…</option>
           {outras.data?.itens
             .filter((item) => item.id !== u.id)
             .map((item) => (
@@ -960,35 +991,23 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
               </option>
             ))}
         </select>
-      </label>
-      {sujo && (
-        <p role="status" className="mt-3 rounded-lg bg-gold-300/20 p-3 text-sm">
-          Alterações ainda não salvas. A agenda continua mostrando a configuração salva.
-        </p>
-      )}
-      <div className="my-4 space-y-2">
+      </div>
+      <div className="divide-y divide-base-200 overflow-hidden rounded-lg border border-base-200 bg-card">
         {DIAS.map((d) => (
-          <div key={d} className="rounded-lg border border-base-200">
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3">
-              <div>
-                <p className="font-medium">{NOMES_DIA[d]}</p>
-                <p className="text-sm text-ink-500">{resumoTurnos(grade[d], gradeVazia)}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-11"
-                  aria-expanded={aberto === d}
-                  onClick={() => setAberto(aberto === d ? null : d)}
-                >
-                  {aberto === d ? "Fechar" : "Editar"}
-                </Button>
+          <div key={d}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5">
+              <p className="w-32 shrink-0 text-sm font-medium text-ink-900">{NOMES_DIA[d]}</p>
+              <p className="min-w-0 flex-1 basis-40 truncate text-sm tabular-nums text-ink-500">
+                {resumoTurnos(grade[d], gradeVazia)}
+              </p>
+              <div className="flex shrink-0 items-center gap-1">
                 {(UTEIS as readonly string[]).includes(d) && !!grade[d]?.length && (
                   <Button
                     type="button"
-                    variant="outline"
-                    className="min-h-11"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    title={`Copiar para os outros dias úteis`}
                     onClick={() => {
                       const alvos = UTEIS.filter((x) => x !== d);
                       if (
@@ -1005,7 +1024,8 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="min-h-11"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
                   onClick={() => {
                     setCopiar(d);
                     setDestinos([]);
@@ -1013,10 +1033,20 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
                 >
                   Copiar
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  aria-expanded={aberto === d}
+                  onClick={() => setAberto(aberto === d ? null : d)}
+                >
+                  {aberto === d ? "Fechar" : "Editar"}
+                </Button>
               </div>
             </div>
             {aberto === d && (
-              <div className="border-t border-base-200 p-3">
+              <div className="border-t border-base-200 bg-base-50 px-3 py-2">
                 <EditorFaixas
                   disabled={g.busy}
                   faixas={grade[d] ?? []}
@@ -1035,17 +1065,20 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
         ))}
       </div>
       {problema && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className="text-sm text-red-700">
           {problema}
         </p>
       )}
       <Erro g={g} />
-      <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-200 bg-card p-3 shadow">
-        <p className="text-sm text-ink-500">
-          {sujo ? "Há dias alterados nesta semana." : "A semana está como foi salva."}
+      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-base-200 bg-card px-3 py-1.5 shadow">
+        <p className="text-xs text-ink-500">
+          {sujo
+            ? "Alterações ainda não salvas. A agenda segue com a configuração salva."
+            : "A semana está como foi salva."}
         </p>
         <Button
-          className="min-h-11"
+          size="sm"
+          className="h-8"
           disabled={!!problema || !sujo || g.busy}
           onClick={async () => {
             if (await g.salvar({ acao: "horarios", id: u.id, grade }))
@@ -1124,7 +1157,7 @@ function Horarios({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
           </DialogContent>
         </Dialog>
       )}
-    </Cartao>
+    </div>
   );
 }
 function Excecoes({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
@@ -1143,104 +1176,103 @@ function Excecoes({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
       } as PedidoGestao),
   });
   return (
-    <Cartao className="space-y-4 p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold">Exceções · {u.fuso_efetivo}</h3>
-          <p className="text-sm text-ink-500">
-            {desde || ate
-              ? `Período ${desde ? dataCurta(desde) : "…"} até ${ate ? dataCurta(ate) : "…"}.`
-              : "Sem período: de ontem em diante."}{" "}
-            Uma exceção não corta um turno que começou na véspera.
-          </p>
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs text-ink-500">
+            Desde
+            <Input
+              className="mt-0.5 h-8 w-36 bg-card text-sm"
+              type="date"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+            />
+          </label>
+          <label className="text-xs text-ink-500">
+            Até
+            <Input
+              className="mt-0.5 h-8 w-36 bg-card text-sm"
+              type="date"
+              value={ate}
+              onChange={(e) => setAte(e.target.value)}
+            />
+          </label>
+          {(desde || ate) && (
+            <Button
+              size="sm"
+              className="h-8"
+              variant="ghost"
+              onClick={() => {
+                setDesde("");
+                setAte("");
+              }}
+            >
+              Limpar período
+            </Button>
+          )}
         </div>
-        <Button className="min-h-11" onClick={() => setForm("nova")}>
+        <Button size="sm" className="h-8" onClick={() => setForm("nova")}>
+          <Plus className="size-3.5" aria-hidden />
           Nova exceção
         </Button>
       </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="text-sm">
-          Desde
-          <Input
-            className="mt-1 min-h-11"
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-          />
-        </label>
-        <label className="text-sm">
-          Até
-          <Input
-            className="mt-1 min-h-11"
-            type="date"
-            value={ate}
-            onChange={(e) => setAte(e.target.value)}
-          />
-        </label>
-        {(desde || ate) && (
-          <Button
-            className="min-h-11"
-            variant="outline"
-            onClick={() => {
-              setDesde("");
-              setAte("");
-            }}
-          >
-            Limpar período
-          </Button>
-        )}
-      </div>
       {q.isPending && <Skeleton className="h-16" />}
       {q.error && (
-        <p role="alert">
-          {q.error.message}
-          <Button onClick={() => q.refetch()}>Tentar novamente</Button>
+        <p role="alert" className="text-sm">
+          {q.error.message}{" "}
+          <button type="button" className="underline" onClick={() => q.refetch()}>
+            Tentar novamente
+          </button>
         </p>
       )}
       {q.data?.itens.length === 0 && (
-        <EstadoVazio
-          titulo="Nenhuma exceção neste período"
-          texto="Use Nova exceção para um feriado ou um horário especial."
-        />
+        <p className="rounded-lg border border-base-200 bg-card px-3 py-6 text-center text-sm text-ink-500">
+          Nenhuma exceção neste período. Use Nova exceção para um feriado ou um horário especial.
+        </p>
       )}
-      <div className="space-y-2">
-        {q.data?.itens.map((e) => (
-          <div
-            key={e.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-200 p-3"
-          >
-            <div>
-              <strong>{dataCurta(e.data)}</strong>
-              <p className="text-sm text-ink-500">
+      {q.data?.itens.length ? (
+        <ul className="divide-y divide-base-200 overflow-hidden rounded-lg border border-base-200 bg-card">
+          {q.data.itens.map((e) => (
+            <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5">
+              <strong className="w-24 shrink-0 text-sm font-medium tabular-nums text-ink-900">
+                {dataCurta(e.data)}
+              </strong>
+              <p className="min-w-0 flex-1 basis-40 truncate text-sm text-ink-500">
                 {e.fechado ? "Fechado o dia inteiro" : e.faixas.map((f) => f.join("–")).join(", ")}
                 {e.motivo ? ` · ${e.motivo}` : ""}
               </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                className="min-h-11"
-                variant="outline"
-                disabled={g.busy}
-                onClick={() => setForm(e)}
-              >
-                Editar
-              </Button>
-              <Button
-                className="min-h-11"
-                variant="outline"
-                disabled={g.busy}
-                onClick={() =>
-                  window.confirm(
-                    `Excluir exceção de ${dataCurta(e.data)}? A grade volta a valer.`,
-                  ) && g.salvar({ acao: "excluir_excecao", id: u.id, eid: e.id })
-                }
-              >
-                Excluir
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+              <span className="flex shrink-0 gap-1">
+                <Button
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  variant="outline"
+                  disabled={g.busy}
+                  onClick={() => setForm(e)}
+                >
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  variant="ghost"
+                  disabled={g.busy}
+                  onClick={() =>
+                    window.confirm(
+                      `Excluir exceção de ${dataCurta(e.data)}? A grade volta a valer.`,
+                    ) && g.salvar({ acao: "excluir_excecao", id: u.id, eid: e.id })
+                  }
+                >
+                  Excluir
+                </Button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="text-xs text-ink-500">
+        Fuso {u.fuso_efetivo}. Sem período, mostra de ontem em diante. Uma exceção não corta um
+        turno que começou na véspera.
+      </p>
       {form && (
         <FormExcecao
           ctx={ctx}
@@ -1249,7 +1281,7 @@ function Excecoes({ ctx, u }: { ctx: ContextoGateway; u: Unidade }) {
           fechar={() => setForm(null)}
         />
       )}
-    </Cartao>
+    </div>
   );
 }
 function FormExcecao({

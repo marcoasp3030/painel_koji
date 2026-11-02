@@ -260,6 +260,8 @@ export type PedidoLista = {
   aviso: AvisoPedido;
   /** Ausente em pedido anterior ao pagamento estruturado. */
   pagamento?: PagamentoPedido | null;
+  /** Passos que o gateway libera. Opcional na lista para tolerar um gateway anterior. */
+  proximos_status?: string[];
 };
 export type EventoPedido = {
   de: string | null;
@@ -275,6 +277,9 @@ export type PedidoDetalhe = PedidoLista & {
   itens: ItemPedido[];
   subtotal: number | null;
   taxa_entrega: number | null;
+  taxa_origem?: "fixa" | "bairro" | "cep" | "frete_gratis" | "a_confirmar" | null;
+  frete_gratis?: boolean;
+  bairro?: string | null;
   observacao: string | null;
   endereco: string | null;
   motivo: string | null;
@@ -297,3 +302,14 @@ export type ContagemPedidos = {
   em_andamento: Record<string, number>;
   avisos_com_falha: number;
 };
+
+/**
+ * O passo do cartão no quadro: o primeiro avanço que o gateway libera. Recusar e cancelar pedem
+ * confirmação e motivo, então ficam só no detalhe.
+ */
+export function proximoPasso(proximos: readonly string[] | null | undefined) {
+  return (
+    acoesPedido(proximos ?? []).find((a) => a.status !== "cancelado" && a.status !== "recusado") ??
+    null
+  );
+}

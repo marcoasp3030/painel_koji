@@ -15,6 +15,7 @@ import {
   registrarFalhaEntrada,
 } from "@/lib/acesso/entrada";
 import { convitePorEmail } from "@/lib/acesso/convite";
+import { ipDoCliente } from "@/lib/ip-cliente";
 import { validarSenhaNova, SENHA_MAX, SENHA_MIN } from "@/lib/acesso/senha";
 
 const EMAIL = z.string().trim().email().max(200);
@@ -35,11 +36,7 @@ async function ipDaRequisicao() {
   try {
     const { getRequest } = await import("@tanstack/react-start/server");
     const req = getRequest();
-    const h = req?.headers;
-    if (!h) return null;
-    const xf = h.get("x-forwarded-for");
-    if (xf) return xf.split(",")[0]?.trim() || null;
-    return h.get("x-real-ip");
+    return req?.headers ? ipDoCliente(req.headers) : null;
   } catch {
     return null;
   }

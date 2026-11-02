@@ -17,10 +17,12 @@ import { lerConfigPlataforma } from "@/lib/plataforma-config.functions";
 import { usarCodigoRecuperacao } from "@/lib/seguranca.functions";
 import { aceitarConvite, verConvite } from "@/lib/usuarios.functions";
 import { bootstrapSuperAdmin } from "@/lib/platform.functions";
-import { LuxtiaWordmark, GoldRule } from "@/components/luxtia/Brand";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { LuxtiaWordmark } from "@/components/luxtia/Brand";
 import { CampoSenha } from "@/components/luxtia/entrada/CampoSenha";
 import { CodigoOtp } from "@/components/luxtia/entrada/CodigoOtp";
 import { MedidorSenha } from "@/components/luxtia/entrada/MedidorSenha";
+import { PainelMarca } from "@/components/luxtia/entrada/PainelMarca";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,17 +30,16 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Luxtia · Acesso à plataforma de integrações" },
+      { title: "Entrar | Luxtia" },
       {
         name: "description",
         content:
-          "Entre na plataforma Luxtia para configurar integrações de delivery e mensagens: iFood, 99Food, WhatsApp Oficial e Uazapi.",
+          "Entre na Luxtia para acompanhar conversas, pedidos e cardápio da sua empresa em um só lugar.",
       },
-      { property: "og:title", content: "Luxtia · Plataforma de integrações" },
+      { property: "og:title", content: "Luxtia" },
       {
         property: "og:description",
-        content:
-          "Acesso multi-tenant para configurar integrações de delivery e mensagens com governança.",
+        content: "Atendimento pelo WhatsApp, pedidos e cardápio em um só lugar.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -52,8 +53,7 @@ type Etapa = "login" | "mfa" | "esqueci" | "redefinir" | "convite";
 function tokenDaHash(chave: "convite" | "redefinir") {
   const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
   return (
-    new URLSearchParams(hash).get(chave) ??
-    new URLSearchParams(window.location.search).get(chave)
+    new URLSearchParams(hash).get(chave) ?? new URLSearchParams(window.location.search).get(chave)
   );
 }
 
@@ -67,6 +67,50 @@ function emailNormalizado(identifier: string) {
   return identifier.includes("@")
     ? identifier.trim().toLowerCase()
     : `${identifier.trim().toLowerCase()}@luxtia.local`;
+}
+
+const CAMPO =
+  "h-11 bg-base-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700";
+
+function Aviso({ texto }: { texto: string }) {
+  return (
+    <p
+      role="status"
+      className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm text-purple-900"
+    >
+      {texto}
+    </p>
+  );
+}
+
+function Erro({ texto }: { texto: string }) {
+  return (
+    <p
+      role="alert"
+      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+    >
+      {texto}
+    </p>
+  );
+}
+
+function BotaoEnviar({
+  carregando,
+  texto,
+  textoCarregando,
+  disabled,
+}: {
+  carregando: boolean;
+  texto: string;
+  textoCarregando: string;
+  disabled?: boolean;
+}) {
+  return (
+    <Button type="submit" className="h-11 w-full text-base" disabled={carregando || disabled}>
+      {carregando ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+      {carregando ? textoCarregando : texto}
+    </Button>
+  );
 }
 
 function Login() {
@@ -222,6 +266,16 @@ function Login() {
     }
   }
 
+  /** A senha já passou nesta etapa: voltar precisa encerrar a sessão incompleta. */
+  async function voltarDoCodigo() {
+    await supabase.auth.signOut().catch(() => undefined);
+    setPassword("");
+    setCodigo("");
+    setCodigoRecuperacao("");
+    setError(null);
+    setEtapa("login");
+  }
+
   const titulo =
     etapa === "convite"
       ? "Criar senha"
@@ -231,7 +285,7 @@ function Login() {
           ? "Esqueci a senha"
           : etapa === "mfa"
             ? "Confirmar acesso"
-            : "Acessar a plataforma";
+            : "Entrar na sua conta";
 
   const subtitulo =
     etapa === "convite"
@@ -244,54 +298,45 @@ function Login() {
             ? modoRecuperacao
               ? "Digite um dos códigos de recuperação."
               : "Digite o código de 6 dígitos do aplicativo autenticador."
-            : "Use o acesso fornecido pela administração.";
+            : "Use o acesso enviado pela sua empresa.";
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <section className="relative hidden flex-col justify-between bg-purple-800 px-14 py-14 lg:flex">
-        <LuxtiaWordmark />
-        <div className="max-w-md">
-          <GoldRule className="mb-8" />
-          <h1 className="font-display text-5xl leading-[1.05] text-base-50">
-            Menos hype.
-            <br />
-            Mais direção.
-          </h1>
-          <p className="mt-6 text-purple-300">
-            Integrações de delivery e mensagens curadas, organizadas e governadas em um único lugar.
-          </p>
-        </div>
-        <p className="text-xs uppercase tracking-[0.18em] text-purple-400">
-          Curadoria estratégica de tecnologia
-        </p>
-      </section>
+      <PainelMarca />
 
-      <section className="flex items-center justify-center bg-base-100 px-6 py-16">
-        <div className="w-full max-w-sm rounded-2xl border border-base-200 bg-card px-6 py-8 shadow-[0_1px_2px_rgba(26,21,32,0.04),0_16px_40px_rgba(46,35,64,0.08)] sm:px-8">
-          <div className="lg:hidden">
-            <LuxtiaWordmark tone="dark" />
-          </div>
-          <h2 className="mt-8 font-display text-3xl text-purple-800 lg:mt-0">{titulo}</h2>
+      <main className="flex flex-col bg-base-50 px-6 py-8 sm:px-10">
+        <div className="lg:hidden">
+          <LuxtiaWordmark tone="dark" />
+        </div>
+        <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center py-10">
+          <h2 className="font-display text-4xl leading-tight text-purple-800">{titulo}</h2>
           <p className="mt-2 text-ink-500">{subtitulo}</p>
-          <GoldRule className="mt-6" />
 
           {etapa === "convite" && tokenConvite ? (
             <AceitarConvite
               token={tokenConvite}
               onPronto={(email) => {
-                window.history.replaceState(null, "", window.location.pathname + window.location.search);
+                window.history.replaceState(
+                  null,
+                  "",
+                  window.location.pathname + window.location.search,
+                );
                 setTokenConvite(null);
                 setIdentifier(email);
                 setPassword("");
                 setEtapa("login");
-                if (email) setError("Senha definida. Entre com ela.");
+                if (email) setAviso("Senha definida. Entre com ela.");
               }}
             />
           ) : etapa === "redefinir" && tokenRedefinir ? (
             <RedefinirSenha
               token={tokenRedefinir}
               onPronto={(email) => {
-                window.history.replaceState(null, "", window.location.pathname + window.location.search);
+                window.history.replaceState(
+                  null,
+                  "",
+                  window.location.pathname + window.location.search,
+                );
                 setTokenRedefinir(null);
                 setIdentifier(email);
                 setPassword("");
@@ -299,7 +344,11 @@ function Login() {
                 setAviso("Senha alterada. Entre com a nova senha.");
               }}
               onCancelar={() => {
-                window.history.replaceState(null, "", window.location.pathname + window.location.search);
+                window.history.replaceState(
+                  null,
+                  "",
+                  window.location.pathname + window.location.search,
+                );
                 setTokenRedefinir(null);
                 setEtapa("login");
               }}
@@ -314,23 +363,13 @@ function Login() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   autoComplete="email"
-                  className="bg-base-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700"
+                  className={CAMPO}
                   required
                 />
               </div>
-              {aviso ? (
-                <p role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                  {aviso}
-                </p>
-              ) : null}
-              {error ? (
-                <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              ) : null}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Enviando…" : "Continuar"}
-              </Button>
+              {aviso ? <Aviso texto={aviso} /> : null}
+              {error ? <Erro texto={error} /> : null}
+              <BotaoEnviar carregando={loading} texto="Continuar" textoCarregando="Enviando…" />
               <Button
                 type="button"
                 variant="ghost"
@@ -354,28 +393,22 @@ function Login() {
                     value={codigoRecuperacao}
                     onChange={(e) => setCodigoRecuperacao(e.target.value)}
                     autoComplete="one-time-code"
-                    className="bg-base-50 font-mono focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700"
+                    className={`${CAMPO} font-mono`}
                     required
                   />
                 </div>
               ) : (
                 <CodigoOtp valor={codigo} onChange={setCodigo} disabled={loading} />
               )}
-              {error ? (
-                <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              ) : null}
-              <Button
-                type="submit"
-                className="w-full"
+              {error ? <Erro texto={error} /> : null}
+              <BotaoEnviar
+                carregando={loading}
+                texto="Continuar"
+                textoCarregando="Conferindo…"
                 disabled={
-                  loading ||
-                  (modoRecuperacao ? codigoRecuperacao.trim().length < 8 : codigo.length !== 6)
+                  modoRecuperacao ? codigoRecuperacao.trim().length < 8 : codigo.length !== 6
                 }
-              >
-                {loading ? "Conferindo…" : "Continuar"}
-              </Button>
+              />
               <Button
                 type="button"
                 variant="ghost"
@@ -389,6 +422,15 @@ function Login() {
               >
                 {modoRecuperacao ? "Usar código do aplicativo" : "Usar código de recuperação"}
               </Button>
+              <button
+                type="button"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-1.5 text-sm text-ink-500 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-purple-700"
+                onClick={() => void voltarDoCodigo()}
+              >
+                <ArrowLeft className="size-3.5" aria-hidden />
+                Voltar ao acesso
+              </button>
             </form>
           ) : (
             <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5">
@@ -399,7 +441,9 @@ function Login() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   autoComplete="username"
-                  className="bg-base-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700"
+                  autoFocus
+                  placeholder="voce@empresa.com.br"
+                  className={CAMPO}
                   required
                 />
               </div>
@@ -412,19 +456,9 @@ function Login() {
                 disabled={loading}
                 required
               />
-              {aviso ? (
-                <p role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                  {aviso}
-                </p>
-              ) : null}
-              {error ? (
-                <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              ) : null}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Entrando…" : "Entrar"}
-              </Button>
+              {aviso ? <Aviso texto={aviso} /> : null}
+              {error ? <Erro texto={error} /> : null}
+              <BotaoEnviar carregando={loading} texto="Entrar" textoCarregando="Entrando…" />
               <button
                 type="button"
                 className="w-full text-center text-sm text-purple-800 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-purple-700"
@@ -439,7 +473,10 @@ function Login() {
             </form>
           )}
         </div>
-      </section>
+        <p className="mx-auto max-w-[400px] text-center text-sm text-ink-500">
+          Não consegue entrar? Fale com o responsável pelos acessos da sua empresa.
+        </p>
+      </main>
     </div>
   );
 }
@@ -531,14 +568,12 @@ function AceitarConvite({ token, onPronto }: { token: string; onPronto: (email: 
         required
         minLength={SENHA_MIN}
       />
-      {erro ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {erro}
-        </p>
-      ) : null}
-      <Button type="submit" className="w-full" disabled={ocupado}>
-        {ocupado ? "Salvando…" : "Definir senha e entrar"}
-      </Button>
+      {erro ? <Erro texto={erro} /> : null}
+      <BotaoEnviar
+        carregando={ocupado}
+        texto="Definir senha e entrar"
+        textoCarregando="Salvando…"
+      />
     </form>
   );
 }
@@ -631,14 +666,8 @@ function RedefinirSenha({
         required
         minLength={SENHA_MIN}
       />
-      {erro ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {erro}
-        </p>
-      ) : null}
-      <Button type="submit" className="w-full" disabled={ocupado}>
-        {ocupado ? "Salvando…" : "Salvar nova senha"}
-      </Button>
+      {erro ? <Erro texto={erro} /> : null}
+      <BotaoEnviar carregando={ocupado} texto="Salvar nova senha" textoCarregando="Salvando…" />
     </form>
   );
 }

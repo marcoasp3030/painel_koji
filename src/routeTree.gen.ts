@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as CardapioRouteImport } from './routes/cardapio'
 import { Route as Authenticated99foodDebugRouteImport } from './routes/_authenticated/99food-debug'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authenticated/auditoria'
@@ -28,17 +29,20 @@ import { Route as AuthenticatedIaChavesFormularioRouteImport } from './routes/_a
 import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenticated/ia/conversas'
 import { Route as AuthenticatedIaDocumentosRouteImport } from './routes/_authenticated/ia/documentos'
 import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authenticated/ia/modelos'
+import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
 import { Route as AuthenticatedIaWebhooksSaidaRouteImport } from './routes/_authenticated/ia/webhooks-saida'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
+import { Route as AuthenticatedIaConfiguracoesAparenciaRouteImport } from './routes/_authenticated/ia/configuracoes.aparencia'
 import { Route as AuthenticatedIaConfiguracoesAvisosRouteImport } from './routes/_authenticated/ia/configuracoes.avisos'
 import { Route as AuthenticatedIaConfiguracoesComportamentoRouteImport } from './routes/_authenticated/ia/configuracoes.comportamento'
 import { Route as AuthenticatedIaEmpresasIndexRouteImport } from './routes/_authenticated/ia/empresas.index'
 import { Route as AuthenticatedIaEmpresasNovaRouteImport } from './routes/_authenticated/ia/empresas.nova'
 import { Route as AuthenticatedIaGestaoAlteracoesRouteImport } from './routes/_authenticated/ia/gestao.alteracoes'
+import { Route as ApiPublicCardapioImagemIdRouteImport } from './routes/api/public/cardapio-imagem.$id'
 import { Route as ApiPublicFood99WebhookRouteImport } from './routes/api/public/food99/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -48,6 +52,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CardapioRoute = CardapioRouteImport.update({
+  id: '/cardapio',
+  path: '/cardapio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Authenticated99foodDebugRoute =
@@ -142,6 +151,11 @@ const AuthenticatedIaModelosRoute = AuthenticatedIaModelosRouteImport.update({
   path: '/ia/modelos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaOperacaoRoute = AuthenticatedIaOperacaoRouteImport.update({
+  id: '/ia/operacao',
+  path: '/ia/operacao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIaPedidosRoute = AuthenticatedIaPedidosRouteImport.update({
   id: '/ia/pedidos',
   path: '/ia/pedidos',
@@ -175,6 +189,12 @@ const AuthenticatedIaAgentesAgenteIdRoute =
     path: '/ia/agentes/$agenteId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaConfiguracoesAparenciaRoute =
+  AuthenticatedIaConfiguracoesAparenciaRouteImport.update({
+    id: '/ia/configuracoes/aparencia',
+    path: '/ia/configuracoes/aparencia',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaConfiguracoesAvisosRoute =
   AuthenticatedIaConfiguracoesAvisosRouteImport.update({
     id: '/ia/configuracoes/avisos',
@@ -205,6 +225,12 @@ const AuthenticatedIaGestaoAlteracoesRoute =
     path: '/ia/gestao/alteracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicCardapioImagemIdRoute =
+  ApiPublicCardapioImagemIdRouteImport.update({
+    id: '/api/public/cardapio-imagem/$id',
+    path: '/api/public/cardapio-imagem/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
   id: '/api/public/food99/webhook',
   path: '/api/public/food99/webhook',
@@ -213,6 +239,7 @@ const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cardapio': typeof CardapioRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/99food-debug': typeof Authenticated99foodDebugRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
@@ -229,22 +256,26 @@ export interface FileRoutesByFullPath {
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/ia/documentos': typeof AuthenticatedIaDocumentosRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
+  '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
   '/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
+  '/api/public/cardapio-imagem/$id': typeof ApiPublicCardapioImagemIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
   '/ia/agentes/': typeof AuthenticatedIaAgentesIndexRoute
   '/ia/empresas/': typeof AuthenticatedIaEmpresasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cardapio': typeof CardapioRoute
   '/99food-debug': typeof Authenticated99foodDebugRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/equipe': typeof AuthenticatedEquipeRoute
@@ -260,16 +291,19 @@ export interface FileRoutesByTo {
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/ia/documentos': typeof AuthenticatedIaDocumentosRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
+  '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
   '/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
+  '/api/public/cardapio-imagem/$id': typeof ApiPublicCardapioImagemIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
   '/ia/agentes': typeof AuthenticatedIaAgentesIndexRoute
   '/ia/empresas': typeof AuthenticatedIaEmpresasIndexRoute
@@ -278,6 +312,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/cardapio': typeof CardapioRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/99food-debug': typeof Authenticated99foodDebugRoute
   '/_authenticated/auditoria': typeof AuthenticatedAuditoriaRoute
@@ -294,16 +329,19 @@ export interface FileRoutesById {
   '/_authenticated/ia/conversas': typeof AuthenticatedIaConversasRoute
   '/_authenticated/ia/documentos': typeof AuthenticatedIaDocumentosRoute
   '/_authenticated/ia/modelos': typeof AuthenticatedIaModelosRoute
+  '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/_authenticated/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/_authenticated/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/_authenticated/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/_authenticated/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
   '/_authenticated/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/_authenticated/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
+  '/api/public/cardapio-imagem/$id': typeof ApiPublicCardapioImagemIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
   '/_authenticated/ia/agentes/': typeof AuthenticatedIaAgentesIndexRoute
   '/_authenticated/ia/empresas/': typeof AuthenticatedIaEmpresasIndexRoute
@@ -312,6 +350,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cardapio'
     | '/admin'
     | '/99food-debug'
     | '/auditoria'
@@ -328,22 +367,26 @@ export interface FileRouteTypes {
     | '/ia/conversas'
     | '/ia/documentos'
     | '/ia/modelos'
+    | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/webhooks-saida'
     | '/admin/'
     | '/ia/agentes/$agenteId'
+    | '/ia/configuracoes/aparencia'
     | '/ia/configuracoes/avisos'
     | '/ia/configuracoes/comportamento'
     | '/ia/empresas/nova'
     | '/ia/gestao/alteracoes'
+    | '/api/public/cardapio-imagem/$id'
     | '/api/public/food99/webhook'
     | '/ia/agentes/'
     | '/ia/empresas/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cardapio'
     | '/99food-debug'
     | '/auditoria'
     | '/equipe'
@@ -359,16 +402,19 @@ export interface FileRouteTypes {
     | '/ia/conversas'
     | '/ia/documentos'
     | '/ia/modelos'
+    | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/webhooks-saida'
     | '/admin'
     | '/ia/agentes/$agenteId'
+    | '/ia/configuracoes/aparencia'
     | '/ia/configuracoes/avisos'
     | '/ia/configuracoes/comportamento'
     | '/ia/empresas/nova'
     | '/ia/gestao/alteracoes'
+    | '/api/public/cardapio-imagem/$id'
     | '/api/public/food99/webhook'
     | '/ia/agentes'
     | '/ia/empresas'
@@ -376,6 +422,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/cardapio'
     | '/_authenticated/admin'
     | '/_authenticated/99food-debug'
     | '/_authenticated/auditoria'
@@ -392,16 +439,19 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/conversas'
     | '/_authenticated/ia/documentos'
     | '/_authenticated/ia/modelos'
+    | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
     | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
     | '/_authenticated/ia/webhooks-saida'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
+    | '/_authenticated/ia/configuracoes/aparencia'
     | '/_authenticated/ia/configuracoes/avisos'
     | '/_authenticated/ia/configuracoes/comportamento'
     | '/_authenticated/ia/empresas/nova'
     | '/_authenticated/ia/gestao/alteracoes'
+    | '/api/public/cardapio-imagem/$id'
     | '/api/public/food99/webhook'
     | '/_authenticated/ia/agentes/'
     | '/_authenticated/ia/empresas/'
@@ -410,6 +460,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  CardapioRoute: typeof CardapioRoute
+  ApiPublicCardapioImagemIdRoute: typeof ApiPublicCardapioImagemIdRoute
   ApiPublicFood99WebhookRoute: typeof ApiPublicFood99WebhookRoute
 }
 
@@ -427,6 +479,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cardapio': {
+      id: '/cardapio'
+      path: '/cardapio'
+      fullPath: '/cardapio'
+      preLoaderRoute: typeof CardapioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/99food-debug': {
@@ -548,6 +607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaModelosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/operacao': {
+      id: '/_authenticated/ia/operacao'
+      path: '/ia/operacao'
+      fullPath: '/ia/operacao'
+      preLoaderRoute: typeof AuthenticatedIaOperacaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/pedidos': {
       id: '/_authenticated/ia/pedidos'
       path: '/ia/pedidos'
@@ -590,6 +656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaAgentesAgenteIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/configuracoes/aparencia': {
+      id: '/_authenticated/ia/configuracoes/aparencia'
+      path: '/ia/configuracoes/aparencia'
+      fullPath: '/ia/configuracoes/aparencia'
+      preLoaderRoute: typeof AuthenticatedIaConfiguracoesAparenciaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/configuracoes/avisos': {
       id: '/_authenticated/ia/configuracoes/avisos'
       path: '/ia/configuracoes/avisos'
@@ -624,6 +697,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ia/gestao/alteracoes'
       preLoaderRoute: typeof AuthenticatedIaGestaoAlteracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/cardapio-imagem/$id': {
+      id: '/api/public/cardapio-imagem/$id'
+      path: '/api/public/cardapio-imagem/$id'
+      fullPath: '/api/public/cardapio-imagem/$id'
+      preLoaderRoute: typeof ApiPublicCardapioImagemIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/food99/webhook': {
       id: '/api/public/food99/webhook'
@@ -668,11 +748,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaConversasRoute: typeof AuthenticatedIaConversasRoute
   AuthenticatedIaDocumentosRoute: typeof AuthenticatedIaDocumentosRoute
   AuthenticatedIaModelosRoute: typeof AuthenticatedIaModelosRoute
+  AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
   AuthenticatedIaWebhooksSaidaRoute: typeof AuthenticatedIaWebhooksSaidaRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
+  AuthenticatedIaConfiguracoesAparenciaRoute: typeof AuthenticatedIaConfiguracoesAparenciaRoute
   AuthenticatedIaConfiguracoesAvisosRoute: typeof AuthenticatedIaConfiguracoesAvisosRoute
   AuthenticatedIaConfiguracoesComportamentoRoute: typeof AuthenticatedIaConfiguracoesComportamentoRoute
   AuthenticatedIaEmpresasNovaRoute: typeof AuthenticatedIaEmpresasNovaRoute
@@ -696,11 +778,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaConversasRoute: AuthenticatedIaConversasRoute,
   AuthenticatedIaDocumentosRoute: AuthenticatedIaDocumentosRoute,
   AuthenticatedIaModelosRoute: AuthenticatedIaModelosRoute,
+  AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
   AuthenticatedIaWebhooksSaidaRoute: AuthenticatedIaWebhooksSaidaRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
+  AuthenticatedIaConfiguracoesAparenciaRoute:
+    AuthenticatedIaConfiguracoesAparenciaRoute,
   AuthenticatedIaConfiguracoesAvisosRoute:
     AuthenticatedIaConfiguracoesAvisosRoute,
   AuthenticatedIaConfiguracoesComportamentoRoute:
@@ -717,6 +802,8 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  CardapioRoute: CardapioRoute,
+  ApiPublicCardapioImagemIdRoute: ApiPublicCardapioImagemIdRoute,
   ApiPublicFood99WebhookRoute: ApiPublicFood99WebhookRoute,
 }
 export const routeTree = rootRouteImport

@@ -33,7 +33,7 @@ export function ModulosDoAgente({ ctx, agenteId }: { ctx: ContextoGateway; agent
   if (dados.isLoading) return <p className="mt-4 text-ink-500">Carregando módulos…</p>;
   if (dados.error) {
     return (
-      <Cartao className="p-5">
+      <Cartao className="p-4">
         <p className="text-sm text-destructive">
           Não foi possível carregar os módulos: {(dados.error as Error).message}
         </p>
@@ -46,7 +46,7 @@ export function ModulosDoAgente({ ctx, agenteId }: { ctx: ContextoGateway; agent
 
   return (
     <div className="space-y-4">
-      <Cartao className="p-5">
+      <Cartao className="p-4">
         <h3 className="font-medium text-ink-900">Módulos do agente</h3>
         <p className="mt-1 text-sm text-ink-500">
           Modelo: <strong>{mod.modelo.nome}</strong> v{mod.modelo.versao} · segmento:{" "}
@@ -67,7 +67,7 @@ export function ModulosDoAgente({ ctx, agenteId }: { ctx: ContextoGateway; agent
       {admin ? (
         <ModulosLigados ctx={ctx} agenteId={agenteId} mod={mod} />
       ) : (
-        <Cartao className="p-5">
+        <Cartao className="p-4">
           <h3 className="font-medium text-ink-900">Módulos ligados no agente</h3>
           <p className="mt-2 text-sm text-ink-500">
             {mod.ligados_no_agente === null
@@ -132,7 +132,7 @@ function ModulosLigados({
   }
 
   return (
-    <Cartao className="p-5">
+    <Cartao className="p-4">
       <h3 className="font-medium text-ink-900">Módulos ligados no agente</h3>
 
       <div className="mt-3 flex items-center gap-3">
@@ -214,7 +214,7 @@ function ModulosEmpresa({ ctx, mod }: { ctx: ContextoGateway; mod: ModulosAgente
   if (mod.permitidos.length === 0) return null;
 
   return (
-    <Cartao className="p-5">
+    <Cartao className="p-4">
       <h3 className="font-medium text-ink-900">Módulos na empresa</h3>
       <p className="mt-1 text-sm text-ink-500">
         Ligar ou desligar um módulo vale para <strong>toda a empresa</strong>, não só para este

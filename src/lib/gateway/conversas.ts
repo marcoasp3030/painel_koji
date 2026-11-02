@@ -57,6 +57,7 @@ export type Conversa = {
   pedido_aberto?: { numero: string; status: string } | null;
   /** FUP1-a: presente quando há follow-up agendado. */
   follow_up?: { estado: string; previsto_em: string | null } | null;
+  etiquetas?: Etiqueta[];
   /** Responsável humano, só enquanto vale. Opcionais para tolerar um gateway anterior. */
   atribuida_a?: string | null;
   atribuida_em?: string | null;
@@ -387,4 +388,49 @@ export function linhaDoTempo<M extends { id: number; enviada_em: string | null }
     .map((x, ordem) => ({ ...x, ordem }))
     .sort((a, b) => a.quando - b.quando || a.ordem - b.ordem)
     .map((x) => x.item);
+}
+
+export const CORES_ETIQUETA = ["roxo", "dourado", "verde", "vermelho", "cinza"] as const;
+export type CorEtiqueta = (typeof CORES_ETIQUETA)[number];
+export type Etiqueta = { id: number; nome: string; cor: CorEtiqueta };
+
+export type AchadoConversa = {
+  tipo: "mensagem" | "nota";
+  id: number;
+  trecho: string;
+  em: string;
+  origem: string;
+};
+
+/** Tempo em segundos para os números da operação: "45 s", "12 min", "2 h 5 min". */
+export function duracaoCurta(segundos: number | null | undefined) {
+  if (segundos === null || segundos === undefined) return "—";
+  const s = Math.max(0, Math.round(segundos));
+  if (s < 60) return `${s} s`;
+  const minutos = Math.floor(s / 60);
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  return minutos % 60 ? `${horas} h ${minutos % 60} min` : `${horas} h`;
+}
+
+export const LIMITE_ARQUIVO_BYTES = 10 * 1024 * 1024;
+export const ACEITA_ARQUIVO = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+
+/** Conferência antes de ler o arquivo. O gateway confere de novo pelos bytes. */
+export function problemaNoArquivo(arquivo: { name: string; size: number }) {
+  if (!/\.(pdf|jpe?g|png)$/i.test(arquivo.name)) return "Envie um arquivo PDF, JPG ou PNG.";
+  if (arquivo.size > LIMITE_ARQUIVO_BYTES) return "O arquivo é grande demais. O limite é 10 MB.";
+  if (arquivo.size === 0) return "O arquivo está vazio.";
+  return null;
+}
+
+export function tamanhoLegivel(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
+/** Tira a marca "[arquivo enviado: nome]" e devolve só a legenda digitada. */
+export function legendaDoArquivo(conteudo: string | null) {
+  if (!conteudo?.startsWith("[arquivo enviado:")) return conteudo;
+  return conteudo.split("\n").slice(1).join("\n").trim() || null;
 }

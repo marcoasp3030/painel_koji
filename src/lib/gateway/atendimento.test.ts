@@ -19,6 +19,10 @@ import {
   situacaoCampo,
   textoValor,
   type Visao,
+  campoCasaBusca,
+  gruposDoPerfil,
+  rotuloOpcao,
+  secaoDoCaminho,
 } from "./atendimento";
 import { filtrarMenu, TENANT_NAV } from "../nav";
 
@@ -398,4 +402,28 @@ test("campos sem efeito somem do esquema; WhatsApp só com canal uazapi", () => 
   expect(agenteTemWhatsapp(canais, "ag_1")).toBe(false);
   expect(agenteTemWhatsapp(canais, "ag_2")).toBe(true);
   expect(diaMes("2026-10-20T15:26:00.000Z")).toBe("20/10");
+});
+
+test("seções da tela: perfil dividido por assunto, sem perder campo novo do gateway", () => {
+  const def = { tipo: "texto", editavel: true };
+  const esquema = {
+    perfil: { mensagem_despedida: def, tom: def, nome_empresa: def, campo_novo: def },
+    comportamentos: { fallback: { ...def, grupo: "mensagens" } },
+  } as never;
+  expect(gruposDoPerfil(esquema).map((g) => [g.grupo, g.campos.map(([c]) => c)])).toEqual([
+    ["perfil_identidade", ["nome_empresa", "campo_novo"]],
+    ["perfil_jeito", ["tom"]],
+    ["perfil_mensagens", ["mensagem_despedida"]],
+  ]);
+  expect(secaoDoCaminho(esquema, "perfil.assuntos_proibidos[2]")).toBe("perfil_regras");
+  expect(secaoDoCaminho(esquema, "comportamentos.fallback")).toBe("mensagens");
+  expect(secaoDoCaminho(esquema, "comportamentos.desconhecido")).toBe("outros");
+});
+
+test("busca de campo ignora acento e maiúsculas e olha também a ajuda", () => {
+  expect(campoCasaBusca("reacoes_emojis", "REAÇÃO")).toBe(true);
+  expect(campoCasaBusca("follow_up_janela", "horario cancela")).toBe(true);
+  expect(campoCasaBusca("reacoes", "reação")).toBe(true);
+  expect(campoCasaBusca("tom", "follow")).toBe(false);
+  expect(rotuloOpcao("presenca")).toBe("Presença");
 });

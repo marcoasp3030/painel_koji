@@ -25,12 +25,14 @@ async function resolveMe(context: Ctx) {
 
   const { data: membership } = await supabaseAdmin
     .from("tenant_users")
-    .select("tenant_id, is_tenant_admin, full_name, email, tenants(id, name, slug, status)")
+    .select(
+      "tenant_id, is_tenant_admin, full_name, email, tenants(id, name, slug, status, gateway_tenant_id)",
+    )
     .eq("user_id", context.userId)
     .maybeSingle();
 
   const tenantRow = membership?.tenants as
-    | { id: string; name: string; slug: string; status: string }
+    | { id: string; name: string; slug: string; status: string; gateway_tenant_id: string | null }
     | null
     | undefined;
 
@@ -45,14 +47,36 @@ async function resolveMe(context: Ctx) {
           name: tenantRow.name,
           slug: tenantRow.slug,
           status: tenantRow.status,
+          gatewayTenantId: tenantRow.gateway_tenant_id,
         }
       : null,
   };
 }
 
+/**
+ * O escopo é conferido aqui, não pelo RLS: toda consulta filtra a empresa já resolvida. O navegador
+ * não tem acesso direto a estas tabelas.
+ */
+async function bancoServidor() {
+  return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+}
+
+/** A exigência de MFA que antes ficava no RLS. A mesma das chamadas ao gateway. */
+async function exigirSessaoConfirmada(context: Ctx, me: Awaited<ReturnType<typeof resolveMe>>) {
+  const { exigirAalDaSessao } = await import("@/lib/acesso/mfa.server");
+  await exigirAalDaSessao({
+    userId: context.userId,
+    email: me.email ?? null,
+    claims: context.claims,
+    superAdmin: me.isSuperAdmin,
+    gatewayTenantId: me.tenant?.gatewayTenantId ?? null,
+  });
+}
+
 async function requireSuperAdmin(context: Ctx) {
   const me = await resolveMe(context);
   if (!me.isSuperAdmin) throw new Error("Acesso restrito ao Super Admin.");
+  await exigirSessaoConfirmada(context, me);
   return me;
 }
 
@@ -66,10 +90,7 @@ type AuditEntry = {
 };
 
 /** Grava a trilha de auditoria; nunca interrompe a ação principal. */
-async function writeAudit(
-  me: { userId: string; email: string | null },
-  entry: AuditEntry,
-) {
+async function writeAudit(me: { userId: string; email: string | null }, entry: AuditEntry) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let tenantName = entry.tenantName ?? null;
@@ -119,8 +140,6 @@ async function resolveTenantScope(me: Me, requested?: string | null) {
   }
   return me.tenant?.id ?? null;
 }
-
-
 
 function maskCredentials(provider: ProviderKey, credentials: Record<string, string> | null) {
   const def = PROVIDER_BY_KEY[provider];
@@ -196,9 +215,7 @@ export const bootstrapSuperAdmin = createServerFn({ method: "POST" }).handler(as
     return { created: false };
   }
 
-  await supabaseAdmin
-    .from("user_roles")
-    .insert({ user_id: created.user.id, role: "super_admin" });
+  await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "super_admin" });
   return { created: true };
 });
 
@@ -212,23 +229,27 @@ export const listTenants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireSuperAdmin(context as Ctx);
-    const ctx = context as Ctx;
-    const { data: tenants, error } = await ctx.supabase
+    // A RLS de tenant_users e integrations exige aal2: com a sessão do usuário, viriam vazias
+    // sem erro quando o MFA está desligado. A permissão já foi conferida acima.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tenants, error } = await supabaseAdmin
       .from("tenants")
-      .select("id, name, slug, contact_name, contact_email, status, created_at")
+      .select("id, name, slug, contact_name, contact_email, status, created_at, gateway_tenant_id")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const { data: integrations } = await ctx.supabase
+    const { data: integrations, error: erroIntegracoes } = await supabaseAdmin
       .from("integrations")
       .select("tenant_id, enabled");
-    const { data: users } = await ctx.supabase.from("tenant_users").select("tenant_id");
+    const { data: users, error: erroAcessos } = await supabaseAdmin
+      .from("tenant_users")
+      .select("tenant_id");
+    if (erroIntegracoes || erroAcessos) throw new Error("Não foi possível contar os acessos.");
 
     return (tenants ?? []).map((t: any) => ({
       ...t,
-      activeIntegrations: (integrations ?? []).filter(
-        (i: any) => i.tenant_id === t.id && i.enabled,
-      ).length,
+      activeIntegrations: (integrations ?? []).filter((i: any) => i.tenant_id === t.id && i.enabled)
+        .length,
       userCount: (users ?? []).filter((u: any) => u.tenant_id === t.id).length,
     }));
   });
@@ -250,7 +271,9 @@ export const createTenant = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const me = await requireSuperAdmin(context as Ctx);
-    const { data: tenant, error } = await (context as Ctx).supabase
+    const { data: tenant, error } = await (
+      await bancoServidor()
+    )
       .from("tenants")
       .insert({
         name: data.name,
@@ -286,12 +309,16 @@ export const setTenantStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const me = await requireSuperAdmin(context as Ctx);
     const ctx = context as Ctx;
-    const { data: before } = await ctx.supabase
+    const { data: before } = await (
+      await bancoServidor()
+    )
       .from("tenants")
       .select("name")
       .eq("id", data.id)
       .maybeSingle();
-    const { error } = await ctx.supabase
+    const { error } = await (
+      await bancoServidor()
+    )
       .from("tenants")
       .update({ status: data.status })
       .eq("id", data.id);
@@ -311,12 +338,14 @@ export const deleteTenant = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const me = await requireSuperAdmin(context as Ctx);
     const ctx = context as Ctx;
-    const { data: before } = await ctx.supabase
+    const { data: before } = await (
+      await bancoServidor()
+    )
       .from("tenants")
       .select("name")
       .eq("id", data.id)
       .maybeSingle();
-    const { error } = await ctx.supabase.from("tenants").delete().eq("id", data.id);
+    const { error } = await (await bancoServidor()).from("tenants").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     await writeAudit(me, {
       tenantName: (before?.name as string) ?? null,
@@ -331,26 +360,40 @@ export const getTenantDetail = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context as Ctx);
-    const ctx = context as Ctx;
-    const { data: tenant, error } = await ctx.supabase
+    // Service role pelo mesmo motivo de listTenants: sem aal2 a RLS esconderia os acessos.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tenant, error } = await supabaseAdmin
       .from("tenants")
-      .select("id, name, slug, contact_name, contact_email, status, created_at")
+      .select("id, name, slug, contact_name, contact_email, status, created_at, gateway_tenant_id")
       .eq("id", data.id)
       .single();
     if (error) throw new Error(error.message);
 
-    const { data: members } = await ctx.supabase
+    const { data: members, error: erroAcessos } = await supabaseAdmin
       .from("tenant_users")
-      .select("id, email, full_name, is_tenant_admin, created_at")
+      .select("id, email, full_name, is_tenant_admin, ativo, papel_id, created_at")
       .eq("tenant_id", data.id)
       .order("created_at", { ascending: true });
-
-    const { data: integrations } = await ctx.supabase
+    const { data: integrations, error: erroIntegracoes } = await supabaseAdmin
       .from("integrations")
       .select("provider, enabled, updated_at")
       .eq("tenant_id", data.id);
+    if (erroAcessos || erroIntegracoes) throw new Error("Não foi possível ler este cliente.");
 
-    return { tenant, members: members ?? [], integrations: integrations ?? [] };
+    const idsPapel = [...new Set((members ?? []).flatMap((m) => (m.papel_id ? [m.papel_id] : [])))];
+    const { data: papeis } = idsPapel.length
+      ? await supabaseAdmin.from("papeis").select("id, papel_gateway").in("id", idsPapel)
+      : { data: [] };
+    const porPapel = new Map((papeis ?? []).map((p) => [p.id, p.papel_gateway]));
+
+    return {
+      tenant,
+      members: (members ?? []).map(({ papel_id, ...m }) => ({
+        ...m,
+        papel: papel_id ? (porPapel.get(papel_id) ?? null) : null,
+      })),
+      integrations: integrations ?? [],
+    };
   });
 
 /* ------------------------- Usuários do tenant ------------------------- */
@@ -391,14 +434,25 @@ export const createTenantUser = createServerFn({ method: "POST" })
       email_confirm: true,
       user_metadata: { full_name: data.fullName ?? null },
     });
-    if (error || !created?.user) throw new Error(error?.message ?? "Não foi possível criar o acesso.");
+    if (error || !created?.user)
+      throw new Error(error?.message ?? "Não foi possível criar o acesso.");
 
+    // Sem papel, o vínculo fica de fora das regras de papel e unidades.
+    const { data: papelGestor } = data.isTenantAdmin
+      ? await supabaseAdmin
+          .from("papeis")
+          .select("id")
+          .eq("codigo", "gestor")
+          .is("empresa_id", null)
+          .maybeSingle()
+      : { data: null };
     const { error: linkError } = await supabaseAdmin.from("tenant_users").insert({
       tenant_id: data.tenantId,
       user_id: created.user.id,
       email: data.email,
       full_name: data.fullName ?? null,
       is_tenant_admin: data.isTenantAdmin,
+      papel_id: papelGestor?.id ?? null,
     });
     if (linkError) {
       await supabaseAdmin.auth.admin.deleteUser(created.user.id);
@@ -465,7 +519,10 @@ export const listMyTeam = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     if (!me.tenant) return { members: [], isTenantAdmin: false, tenant: null };
-    const { data: members } = await ctx.supabase
+    await exigirSessaoConfirmada(ctx, me);
+    const { data: members } = await (
+      await bancoServidor()
+    )
       .from("tenant_users")
       .select("id, email, full_name, is_tenant_admin, created_at")
       .eq("tenant_id", me.tenant.id)
@@ -484,12 +541,17 @@ export const listIntegrations = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     // Super Admin sem cliente escolhido: devolve vazio em vez de derrubar a tela.
     if (!tenantId) return { tenantId: null, canEdit: false, items: [] };
 
-    const { data: rows, error } = await ctx.supabase
+    const { data: rows, error } = await (
+      await bancoServidor()
+    )
       .from("integrations")
-      .select("provider, enabled, credentials, updated_at, last_test_ok, last_test_at, last_test_message")
+      .select(
+        "provider, enabled, credentials, updated_at, last_test_ok, last_test_at, last_test_message",
+      )
       .eq("tenant_id", tenantId);
     if (error) throw new Error(error.message);
 
@@ -498,7 +560,12 @@ export const listIntegrations = createServerFn({ method: "POST" })
       canEdit: me.isSuperAdmin || me.isTenantAdmin,
       items: PROVIDERS.map((p) => {
         const row = (rows ?? []).find((r: any) => r.provider === p.key);
+        const credenciais = (row?.credentials as Record<string, string>) ?? null;
         return {
+          webhookToken:
+            p.key === "food99" && (me.isSuperAdmin || me.isTenantAdmin)
+              ? (credenciais?.["webhook_token"] ?? null)
+              : null,
           provider: p.key,
           enabled: Boolean(row?.enabled),
           updatedAt: (row?.updated_at as string) ?? null,
@@ -527,11 +594,14 @@ export const saveIntegration = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     if (!tenantId) throw new Error("Nenhum cliente associado a este acesso.");
     if (!me.isSuperAdmin && !me.isTenantAdmin)
       throw new Error("Somente administradores podem alterar integrações.");
 
-    const { data: current } = await ctx.supabase
+    const { data: current } = await (
+      await bancoServidor()
+    )
       .from("integrations")
       .select("credentials")
       .eq("tenant_id", tenantId)
@@ -549,7 +619,13 @@ export const saveIntegration = createServerFn({ method: "POST" })
       merged[field.key] = incoming.trim();
     }
 
-    const { error } = await ctx.supabase.from("integrations").upsert(
+    // Chave do endereço do webhook: é ela, e não o corpo do evento, que diz de quem é a loja.
+    if (data.provider === "food99" && !merged["webhook_token"]) {
+      merged["webhook_token"] =
+        crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
+    }
+
+    const { error } = await (await bancoServidor()).from("integrations").upsert(
       {
         tenant_id: tenantId,
         provider: data.provider,
@@ -559,6 +635,9 @@ export const saveIntegration = createServerFn({ method: "POST" })
       },
       { onConflict: "tenant_id,provider" },
     );
+    if (error?.code === "23505") {
+      throw new Error("Esta loja já está vinculada a outra empresa. Confira os IDs da loja.");
+    }
     if (error) throw new Error(error.message);
     await writeAudit(me, {
       tenantId,
@@ -584,9 +663,12 @@ export const testIntegration = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     if (!tenantId) throw new Error("Nenhum cliente associado a este acesso.");
 
-    const { data: row } = await ctx.supabase
+    const { data: row } = await (
+      await bancoServidor()
+    )
       .from("integrations")
       .select("credentials")
       .eq("tenant_id", tenantId)
@@ -685,15 +767,16 @@ export const testIntegration = createServerFn({ method: "POST" })
       }
     };
 
-
     /** Traduz a resposta do parceiro em uma frase compreensível. */
     const explain = (status: number, service: string) => {
       if (status === 401 || status === 403) {
         return `${service}: as credenciais foram recusadas. Confira os dados e salve novamente.`;
       }
       if (status === 404) return `${service}: os dados informados não foram encontrados.`;
-      if (status === 429) return `${service}: muitas tentativas em pouco tempo. Aguarde um instante.`;
-      if (status >= 500) return `${service} está indisponível no momento. Tente novamente em alguns minutos.`;
+      if (status === 429)
+        return `${service}: muitas tentativas em pouco tempo. Aguarde um instante.`;
+      if (status >= 500)
+        return `${service} está indisponível no momento. Tente novamente em alguns minutos.`;
       return `${service} não aceitou a verificação (código ${status}).`;
     };
 
@@ -707,7 +790,10 @@ export const testIntegration = createServerFn({ method: "POST" })
       const required = def.fields.filter((f) => !f.optional);
       const missing = required.filter((f) => !(creds[f.key] ?? "").trim()).map((f) => f.label);
       if (missing.length === required.length) {
-        return { ok: false, message: "Nenhuma credencial salva ainda. Preencha e salve para testar." };
+        return {
+          ok: false,
+          message: "Nenhuma credencial salva ainda. Preencha e salve para testar.",
+        };
       }
       if (missing.length > 0) {
         return {
@@ -715,7 +801,6 @@ export const testIntegration = createServerFn({ method: "POST" })
           message: `Cadastro incompleto. Falta preencher: ${missing.join(", ")}.`,
         };
       }
-
 
       try {
         if (data.provider === "ifood") {
@@ -744,8 +829,9 @@ export const testIntegration = createServerFn({ method: "POST" })
 
           let token = "";
           try {
-            token = ((await res.json()) as { accessToken?: string; access_token?: string })
-              .accessToken ?? "";
+            token =
+              ((await res.json()) as { accessToken?: string; access_token?: string }).accessToken ??
+              "";
           } catch {
             token = "";
           }
@@ -771,15 +857,20 @@ export const testIntegration = createServerFn({ method: "POST" })
           }
           if (!merchantRes.ok) return { ok: false, message: explain(merchantRes.status, "iFood") };
 
-          return { ok: true, message: "Conexão com o iFood confirmada: token válido e loja localizada." };
+          return {
+            ok: true,
+            message: "Conexão com o iFood confirmada: token válido e loja localizada.",
+          };
         }
-
 
         if (data.provider === "whatsapp_official") {
           const res = await withTimeout(
             `https://graph.facebook.com/v20.0/${encodeURIComponent(creds["phone_number_id"] ?? "")}`,
             { headers: { Authorization: `Bearer ${creds["access_token"] ?? ""}` } },
-            { label: "Consulta do número (Graph API)", payload: { phoneNumberId: creds["phone_number_id"] ?? "" } },
+            {
+              label: "Consulta do número (Graph API)",
+              payload: { phoneNumberId: creds["phone_number_id"] ?? "" },
+            },
           );
           return res.ok
             ? { ok: true, message: "Conexão com o WhatsApp Oficial confirmada." }
@@ -826,16 +917,21 @@ export const testIntegration = createServerFn({ method: "POST" })
               safeUrl: safeAuthUrl(FOOD99_PATHS.auth()),
             },
           );
-          const b = (await r.clone().json().catch(() => null)) as any;
+          const b = (await r
+            .clone()
+            .json()
+            .catch(() => null)) as any;
           return { res: r, body: b, token: String(b?.data?.auth_token ?? "") };
         };
 
         // Reaproveita o token guardado: a 99Food aceita só 1 pedido de token por minuto.
         let authToken = (await readFood99Token(tenantId)) ?? "";
         if (!authToken) {
-          let { res: tokenRes, body: tokenBody, token } = await askToken(
-            "Obtenção do Auth Token (99Food)",
-          );
+          let {
+            res: tokenRes,
+            body: tokenBody,
+            token,
+          } = await askToken("Obtenção do Auth Token (99Food)");
           // Token expirado ou ausente: tenta renovar automaticamente e buscar de novo.
           if (
             !food99RateLimited(tokenBody) &&
@@ -850,14 +946,19 @@ export const testIntegration = createServerFn({ method: "POST" })
                 safeUrl: safeAuthUrl(FOOD99_PATHS.refresh()),
               },
             ).catch(() => null);
-            ({ res: tokenRes, body: tokenBody, token } = await askToken(
-              "Obtenção do Auth Token após renovação (99Food)",
-            ));
+            ({
+              res: tokenRes,
+              body: tokenBody,
+              token,
+            } = await askToken("Obtenção do Auth Token após renovação (99Food)"));
           }
           if (!tokenRes.ok || tokenBody?.errno !== 0 || !token) {
             return {
               ok: false,
-              message: food99ApiMessage(tokenBody, "Não foi possível obter o Auth Token do 99Food."),
+              message: food99ApiMessage(
+                tokenBody,
+                "Não foi possível obter o Auth Token do 99Food.",
+              ),
             };
           }
           authToken = token;
@@ -867,9 +968,15 @@ export const testIntegration = createServerFn({ method: "POST" })
         const res = await withTimeout(
           food99Url(FOOD99_PATHS.store(), { auth_token: authToken }),
           { headers: { Accept: "application/json" } },
-          { label: "Consulta da loja (99Food)", payload: { shopId, appShopId, authToken: "••••••" } },
+          {
+            label: "Consulta da loja (99Food)",
+            payload: { shopId, appShopId, authToken: "••••••" },
+          },
         );
-        const storeBody = await res.clone().json().catch(() => null) as any;
+        const storeBody = (await res
+          .clone()
+          .json()
+          .catch(() => null)) as any;
         if (!res.ok || storeBody?.errno !== 0) {
           // HTTP 200 com erro no corpo também é falha: corrige o passo registrado.
           const last = steps[steps.length - 1];
@@ -883,11 +990,18 @@ export const testIntegration = createServerFn({ method: "POST" })
           }
           return {
             ok: false,
-            message: food99ApiMessage(storeBody, "O 99Food não retornou os dados da loja vinculada."),
+            message: food99ApiMessage(
+              storeBody,
+              "O 99Food não retornou os dados da loja vinculada.",
+            ),
           };
         }
         if (String(storeBody?.data?.shop_id ?? "") !== shopId) {
-          return { ok: false, message: "O Auth Token pertence a outra loja. Confira o Shop ID e o APP Shop ID vinculados à aplicação." };
+          return {
+            ok: false,
+            message:
+              "O Auth Token pertence a outra loja. Confira o Shop ID e o APP Shop ID vinculados à aplicação.",
+          };
         }
         return res.ok
           ? {
@@ -991,9 +1105,10 @@ export const listIntegrationRequestLogs = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     if (!tenantId) return { tenantId: null, items: [] };
 
-    let query = ctx.supabase
+    let query = (await bancoServidor())
       .from("integration_request_logs")
       .select(
         "id, action, method, url, request_payload, response_body, http_status, duration_ms, ok, error_detail, actor_email, created_at",
@@ -1025,9 +1140,10 @@ export const listWebhookEvents = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     if (!tenantId) return { tenantId: null, items: [] };
 
-    let query = ctx.supabase
+    let query = (await bancoServidor())
       .from("webhook_events")
       .select(
         "id, platform, shop_id, order_id, event_type, status_original, event_time, received_at, payload_original",
@@ -1042,7 +1158,6 @@ export const listWebhookEvents = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { tenantId, items: rows ?? [] };
   });
-
 
 /* --------------------- Central de testes do iFood --------------------- */
 
@@ -1164,9 +1279,12 @@ export const runIfoodTest = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     if (!tenantId) throw new Error("Escolha um cliente para executar os testes.");
 
-    const { data: row } = await ctx.supabase
+    const { data: row } = await (
+      await bancoServidor()
+    )
       .from("integrations")
       .select("credentials")
       .eq("tenant_id", tenantId)
@@ -1361,11 +1479,12 @@ export const runIfoodTest = createServerFn({ method: "POST" })
     const items = Array.isArray(body) ? body : (body?.reviews ?? []);
     return finish(
       true,
-      items.length === 0 ? "Nenhuma avaliação encontrada." : `${items.length} avaliação(ões) recebida(s).`,
+      items.length === 0
+        ? "Nenhuma avaliação encontrada."
+        : `${items.length} avaliação(ões) recebida(s).`,
       { reviews: items },
     );
   });
-
 
 /* ---------------------------- Auditoria ---------------------------- */
 
@@ -1381,8 +1500,6 @@ const AUDIT_ACTIONS = [
   "Teste de conexão",
   "Bloqueio de segurança",
 ] as const;
-
-
 
 export const listAuditLogs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -1400,8 +1517,9 @@ export const listAuditLogs = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
+    await exigirSessaoConfirmada(ctx, me);
 
-    let query = ctx.supabase
+    let query = (await bancoServidor())
       .from("audit_logs")
       .select("id, tenant_id, tenant_name, actor_email, action, target, status, detail, created_at")
       .order("created_at", { ascending: false })
@@ -1414,6 +1532,7 @@ export const listAuditLogs = createServerFn({ method: "POST" })
       // Reforça o isolamento além da política de acesso do banco: um usuário
       // comum só enxerga o próprio cliente, mesmo pedindo outro.
       const scoped = await resolveTenantScope(me, data.tenantId);
+      if (!scoped) return { scope: "none" as const, items: [], actions: [] };
       query = query.eq("tenant_id", scoped);
     }
 
@@ -1435,7 +1554,6 @@ export const listAuditLogs = createServerFn({ method: "POST" })
     };
   });
 
-
 /* --------------------- Central de testes do 99Food --------------------- */
 
 const FOOD99_BASE = "https://openapi.99food.com";
@@ -1447,8 +1565,7 @@ const FOOD99_PATHS = {
 
   store: () => "/v1/shop/shop/detail",
   status: () => "/v1/shop/shop/detail",
-  polling: (storeId: string) =>
-    `/v1/orders/events:polling?storeId=${encodeURIComponent(storeId)}`,
+  polling: (storeId: string) => `/v1/orders/events:polling?storeId=${encodeURIComponent(storeId)}`,
   order: () => "/v1/order/order/detail",
   reviews: (storeId: string) =>
     `/v1/merchants/${encodeURIComponent(storeId)}/reviews?page=1&pageSize=20`,
@@ -1516,12 +1633,17 @@ function food99ApiMessage(body: any, fallback: string) {
     return "A 99Food permite apenas 1 consulta deste tipo a cada 60 segundos. Aguarde cerca de um minuto e teste novamente.";
   }
   const code = Number(body?.errno);
-  if (code === 10101) return "A loja ainda não possui Auth Token. Confirme o vínculo do APP Shop ID no portal da 99Food.";
-  if (code === 10102) return "O Auth Token da loja expirou. Gere um novo vínculo/token no portal da 99Food e teste novamente.";
-  if (code === 11033) return "A loja vinculada não existe na 99Food. Confira o Shop ID e o APP Shop ID.";
+  if (code === 10101)
+    return "A loja ainda não possui Auth Token. Confirme o vínculo do APP Shop ID no portal da 99Food.";
+  if (code === 10102)
+    return "O Auth Token da loja expirou. Gere um novo vínculo/token no portal da 99Food e teste novamente.";
+  if (code === 11033)
+    return "A loja vinculada não existe na 99Food. Confira o Shop ID e o APP Shop ID.";
   if (code === 14105) return "O App ID não existe na 99Food. Confira o valor salvo.";
   if (code === 14106) return "O App Secret está incorreto. Salve novamente a chave da aplicação.";
-  return typeof body?.errmsg === "string" && body.errmsg !== "ok" ? `${fallback} ${body.errmsg}` : fallback;
+  return typeof body?.errmsg === "string" && body.errmsg !== "ok"
+    ? `${fallback} ${body.errmsg}`
+    : fallback;
 }
 
 /**
@@ -1664,9 +1786,12 @@ export const runFood99Test = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const me = await resolveMe(ctx);
     const tenantId = await resolveTenantScope(me, data.tenantId);
+    await exigirSessaoConfirmada(ctx, me);
     if (!tenantId) throw new Error("Escolha um cliente para executar os testes.");
 
-    const { data: row } = await ctx.supabase
+    const { data: row } = await (
+      await bancoServidor()
+    )
       .from("integrations")
       .select("credentials")
       .eq("tenant_id", tenantId)
@@ -1692,7 +1817,8 @@ export const runFood99Test = createServerFn({ method: "POST" })
     if (!appSecret) return finish(false, "Falta salvar o App Secret do 99Food.");
     if (!appShopId) return finish(false, "Falta salvar o APP Shop ID do 99Food.");
     const needsStore = ["store", "status", "polling", "reviews"].includes(data.action);
-    if (needsStore && !storeId) return finish(false, "Falta salvar o Shop ID (ID da loja) do 99Food.");
+    if (needsStore && !storeId)
+      return finish(false, "Falta salvar o Shop ID (ID da loja) do 99Food.");
     if (needsStore && !/^\d{4,}$/.test(storeId)) {
       return finish(
         false,
@@ -1763,12 +1889,13 @@ export const runFood99Test = createServerFn({ method: "POST" })
       return result;
     };
 
-
     if (data.action === "auth") {
       const { call: auth, token } = await getAuthToken();
-      return auth.ok
-        && token
-        ? finish(true, `App ID, App Secret e APP Shop ID válidos (${(auth.durationMs / 1000).toFixed(1)}s).`)
+      return auth.ok && token
+        ? finish(
+            true,
+            `App ID, App Secret e APP Shop ID válidos (${(auth.durationMs / 1000).toFixed(1)}s).`,
+          )
         : finish(false, auth.detail || explain99(auth, "Obtenção do Auth Token"));
     }
 
@@ -1786,7 +1913,10 @@ export const runFood99Test = createServerFn({ method: "POST" })
       calls.push(store);
       if (!store.ok) return finish(false, explain99(store, "O ID da loja"));
       if (String(store.body?.data?.shop_id ?? "") !== storeId) {
-        return finish(false, "O Auth Token retornado pertence a outra loja. Confira o Shop ID e o APP Shop ID.");
+        return finish(
+          false,
+          "O Auth Token retornado pertence a outra loja. Confira o Shop ID e o APP Shop ID.",
+        );
       }
       return finish(true, "Loja localizada no 99Food.", {
         merchant: store.body?.data ?? store.body,
@@ -1795,7 +1925,11 @@ export const runFood99Test = createServerFn({ method: "POST" })
     }
 
     if (data.action === "polling") {
-      return finish(true, "A API oficial recomendada da 99Food envia novos pedidos pelo webhook; não há polling neste protocolo.", { events: [], orders: [] });
+      return finish(
+        true,
+        "A API oficial recomendada da 99Food envia novos pedidos pelo webhook; não há polling neste protocolo.",
+        { events: [], orders: [] },
+      );
     }
 
     if (data.action === "order") {
@@ -1817,5 +1951,9 @@ export const runFood99Test = createServerFn({ method: "POST" })
     }
 
     // reviews
-    return finish(true, "A documentação oficial da 99Food não publica uma API de avaliações para esta integração.", { reviews: [] });
+    return finish(
+      true,
+      "A documentação oficial da 99Food não publica uma API de avaliações para esta integração.",
+      { reviews: [] },
+    );
   });

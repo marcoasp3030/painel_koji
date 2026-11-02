@@ -1,3 +1,180 @@
+## [2026-11-02] — Taxa de entrega por bairro e CEP
+
+- Nova seção Entrega em Unidades, só com pedidos em uso: valor fixo, por bairro ou por CEP, bairros não atendidos e frete grátis. Até aqui o cadastro existia só na API.
+- O campo de taxa saiu de Editar dados.
+- Cardápio público: taxa calculada pelo endereço, aviso de área não atendida com opção de retirada e confirmação de bairro desconhecido. Com taxa por área, o endereço da conversa não é usado, para o cliente ver o valor antes de pedir.
+- Detalhe do pedido mostra Grátis e A confirmar com o cliente.
+
+## [2026-11-02] — Capacidade para 55 empresas
+
+- Sem mudança no painel. O teste, os novos padrões do gateway e os limites estão em `docs/CAPACIDADE.md` do gateway. O painel ficou fora da medição.
+
+## [2026-11-02] — Correções de isolamento entre empresas
+
+- Migração `20261102120000_isolamento_empresas.sql`: fim da recursão em `tenant_users`; navegador sem escrita em `tenant_users` e sem acesso a `integrations`; papel Plataforma recusado em vínculo de empresa por gatilho; `has_role`, `is_tenant_member` e `is_tenant_admin` só respondem por quem pergunta; `tenants`, `webhook_events` e `integration_request_logs` passam a exigir aal2; loja da 99Food única por empresa.
+- `platform.functions.ts` passou a usar o banco pelo servidor, com a empresa já resolvida e `exigirAalDaSessao` no lugar do aal2 do RLS.
+- Webhook da 99Food com chave própria no endereço (`?t=`), que define a empresa, e limite de 256 KiB. O endereço aparece na tela de integrações.
+- `ipDoCliente` usa o último valor de `X-Forwarded-For`; o início da lista era forjável e escapava do bloqueio de login. O cardápio público repassa o IP ao gateway.
+- `resolverTenant` e `carregarPerfil` recusam o papel Plataforma em vínculo.
+- **Na publicação:** cadastrar no portal da 99Food o novo endereço de cada loja; o antigo passa a responder 401. A migração para se duas empresas tiverem a mesma loja.
+
+## [2026-11-02] — Tela de acesso redesenhada
+
+- O lado da marca agora diz o que o produto faz e mostra, com exemplo fictício, a conversa virando pedido. Em telas baixas a cena some.
+- Formulário sem caixa solta, campos maiores, foco inicial no usuário, botão com indicador de carregamento e orientação para quem não consegue entrar.
+- Título, descrição e metadados deixaram de falar só em integrações.
+- Correções: a etapa do código ganhou "Voltar ao acesso", que encerra a sessão incompleta; "Senha definida" após o convite deixou de aparecer como erro.
+- A autenticação, a mensagem de erro e o limite de tentativas não mudaram. `tests/visual/entrada/main.tsx` segue com o visual anterior.
+
+## [2026-11-01 22:45] — Isolamento entre empresas
+- **Autor:** Grok 4.7
+- **Objetivo:** Ver se uma empresa lê ou altera o ambiente de outra.
+- **Arquivos alterados:**
+ - `instrucoes.md` — modificado — nota do isolamento
+ - canvas `isolamento-empresas.canvas.tsx` — criado fora do repositório
+- **Resumo das mudanças:** Nenhuma correção. Pedidos, conversas e cardápio ficam na empresa da sessão. A conta de login é global.
+- **Decisões e justificativas:** `resetarFatorMfa` não confere se o alvo pertence à empresa. `removeTenantUser` apaga a conta inteira, não só o vínculo.
+- **Comandos executados:** leitura estática → sem build
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** filtrar o alvo de `resetarFatorMfa` por `tenant_users` e parar de apagar `auth.users` quando ainda houver outro vínculo
+- **Próximos passos:** aplicar essas duas correções antes de colocar a mesma pessoa em mais de uma empresa
+
+## [2026-11-01] — Cadastro de produtos mais simples
+
+- Edição do produto em abas (Produto, Opções, Disponibilidade, Histórico), com o essencial primeiro e o restante em "Mais detalhes".
+- Um único Salvar grava produto e opções. Dá para incluir opções já na criação. A escolha de unidades só aparece quando o produto está ligado a outras unidades.
+- "Salvar e adicionar outro" mantém a categoria; "Novo produto" começa na categoria aberta; "Duplicar" abre a cópia para ajuste. Selo "Com opções" na lista.
+- Gateway: `para_o_painel` devolve `qtd_opcoes` e `copiar_item` leva as opções, inclusive em "Copiar para outra unidade".
+- Correção: `useBlocker` pedia confirmação ao recarregar mesmo sem alteração, depois de qualquer clique. Agora usa `enableBeforeUnload` só com rascunho, nas seis telas que o usam.
+
+## [2026-11-01] — Opções do produto no cardápio
+
+- O gateway e a página do cliente já tratavam grupos de opções, mas o painel não tinha onde cadastrá-los.
+- Nova seção "Opções do produto" na edição do item, com atalhos Tamanho, Adicionais, Molhos e Serve quantas pessoas, grupo em branco e cópia de outro item. Tudo opcional: sem grupos, o produto é vendido direto.
+- Salva à parte do produto, com aviso de alteração não salva, conflito quando outra pessoa grava antes e aplicação nas outras unidades do mesmo prato.
+- Só gestor grava; a regra entrou em `modulo.server.ts`. Testado em empresa temporária, já removida: painel, conflito, cópia, outras unidades e soma do preço no cardápio do cliente.
+
+## [2026-11-01] — Descrição dos produtos no cardápio
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/cardapio/CardapioCliente.tsx`, `src/components/luxtia/cardapio/CardapioCat3.tsx`, `src/lib/gateway/cardapio-ux.ts`, `cardapio-ux.test.ts`
+- **Resumo das mudanças:** O detalhe do produto mostra a descrição completa, o preço e o aviso de bebida alcoólica. Item indisponível abre só para leitura. O painel ganhou o filtro "Sem descrição", com contagem.
+- **Correções:** o limite de duas linhas da descrição no cartão nunca valeu, porque `block` anulava `line-clamp`.
+
+## [2026-11-01] — Cardápio bloqueado com a loja fechada
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/cardapio/CardapioCliente.tsx`, `src/lib/cardapio.ts`, `src/lib/cardapio.test.ts`. Gateway: `tests/test_cardapio_interativo.py`.
+- **Resumo das mudanças:** Unidade fechada não pode ser escolhida. Sem nenhuma aberta, a página mostra só o aviso com a próxima abertura. A situação é conferida a cada minuto e ao voltar para a aba.
+- **Decisões e justificativas:** Muda o que valia antes, quando o cliente via o cardápio com a loja fechada. Pedido agendado na conversa continua liberado, e unidade sem horário não conta como fechada, porque o servidor faz o mesmo. A prévia do painel mostra o aviso real e oferece "Ver o cardápio mesmo assim", para a empresa conferir fora do horário.
+
+## [2026-11-01] — Aparência do cardápio por empresa
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/AparenciaCardapio.tsx`, `src/components/cardapio/TopoCardapio.tsx`, `CardapioCliente.tsx`, `src/lib/cardapio-tema.ts`, `imagem-cliente.ts`, `gateway-aparencia.functions.ts`, `nav.ts`, `modulos.ts`, `modulo.server.ts`, rota `configuracoes.aparencia.tsx`, `api/public/cardapio-imagem.$id.ts`, `styles.css`, `docker/Caddyfile-local`. Gateway: `app/modulos/pedidos/aparencia.py`, migração 060, `limites.py`, `permissoes.py`, `erros_api.py`.
+- **Resumo das mudanças:** O gestor define nome, frase, logo, banner, cores, cantos e títulos em Aparência do cardápio, com prévia ao vivo e paletas prontas. A página do cliente segue a empresa em todas as telas.
+- **Decisões e justificativas:** Das três cores saem as demais, com contraste calculado, e fundo escuro vira modo escuro. O tema sobrescreve as variáveis só dentro da página, o que funciona porque o projeto usa `@theme inline`. Só PNG, JPG e WebP: SVG pode levar script. O navegador de quem envia reduz, converte e tira metadados; o gateway confere os bytes e não decodifica imagem, para não trazer esse risco ao processo. Salvar vale na hora para os clientes, sem rascunho.
+- **Erros e resoluções:** O Vite de desenvolvimento devolve 404 a pedidos com `Sec-Fetch-Dest: image`; o proxy local tira o cabeçalho nessa rota. O build de produção respondeu 200 sem ajuste. Um teste com "Restaurar padrão" apagou um logo enviado ao mesmo tempo na Demo Local: testes não devem restaurar dados compartilhados. Salvar com imagem apagada agora avisa qual imagem enviar de novo.
+
+## [2026-11-01] — Cardápio do cliente: visual novo e endereço por CEP
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/cardapio/` (`CardapioCliente`, `PedidoCliente` e `EnderecoEntrega`, os dois últimos novos), `src/lib/cardapio.ts`, `cardapio-publico.functions.ts`. Gateway: `app/modulos/pedidos/cardapio.py`, `tests/test_cardapio_interativo.py`.
+- **Resumo das mudanças:** Página refeita com topo da marca, resumo de entrega, retirada e mínimo, itens em cartões, barra flutuante do pedido e fechamento em blocos. Na entrega, o CEP preenche rua, bairro e cidade; o cliente edita o que estiver errado e informa número, complemento e referência.
+- **Correções:** o que estava preenchido se perdia ao voltar ao cardápio. As rotas públicas passavam o motivo por HTTPException, que o envelope padrão descarta, então link vencido, limite e prévia chegavam como erro genérico.
+- **Decisões e justificativas:** A busca de CEP fica no gateway, atrás do link e do limite dele, para não virar consulta aberta. Usa ViaCEP e, se falhar, BrasilAPI; sem nenhuma, o cliente preenche à mão. O endereço vai em uma linha só, no campo que o pedido já tem, sem migração.
+- **Ficou de fora:** a taxa por bairro ou CEP está cadastrada, mas o carrinho só usa a taxa fixa. O bairro atendido também não é conferido.
+
+## [2026-11-01] — Cardápio interativo para o cliente
+- **Autor:** Claude Code
+- **Arquivos alterados:** painel: `src/routes/cardapio.tsx`, `src/components/cardapio/CardapioCliente.tsx`, `src/lib/cardapio.ts`, `cardapio-publico.functions.ts`, `Conversas.tsx`, `Cardapio.tsx`, `CardapioCat3.tsx`, `gateway-conversas.functions.ts`, `modulo.server.ts`. Gateway: `app/modulos/pedidos/cardapio.py`, migração 059, `servico.py`, `ganchos.py`, `permissoes.py`, `pipeline.py`, `plataforma.py`, `docs/SKILLS.md`.
+- **Resumo das mudanças:** O cliente recebe um link na conversa, escolhe unidade, itens e opções e envia o pedido sem login. O atendente insere o link pela conversa, o agente recebe `link_cardapio` no pacote e o Cardápio tem "Ver como cliente".
+- **Decisões e justificativas:** O pedido fecha direto na página, pelas mesmas funções do agente, numa transação só; o agente vê o resultado no pacote seguinte. O token fica depois do #, como no convite, para não entrar em log nem em Referer, e o banco guarda só o hash e um nonce. A página não recebe telefone, nome nem endereço: mostra apenas que há endereço na conversa. O link é consumido no pedido, o que também impede pedido duplicado, e o total visto é conferido com o do catálogo. A anonimização apaga o link.
+- **Ficou de fora:** fotos dos itens (o catálogo não tem foto), agendar pela página e pagamento online. Pedido com a unidade fechada não é enviado; só vale se o horário já tiver sido agendado na conversa.
+- **Dependências para publicar:** `PAINEL_PUBLIC_URL` no gateway, migração 059 antes do painel e instrução no prompt do agente no Skyone para enviar `link_cardapio`.
+
+## [2026-11-01 13:40] — Auditoria de vulnerabilidades e carga
+- **Autor:** Grok 4.7
+- **Objetivo:** Varrer o painel em busca de falhas de segurança e de pontos que quebram com muitos acessos simultâneos.
+- **Arquivos alterados:**
+ - `instrucoes.md` — modificado — nota da auditoria
+ - canvas `auditoria-alta-demanda.canvas.tsx` — criado fora do repositório — painel dos achados
+- **Resumo das mudanças:** Nenhuma correção de código. Leitura de autenticação, MFA, gateway, Caddy, RLS e do polling de Conversas.
+- **Decisões e justificativas:** Achados ordenados pelo que impede alta demanda e mantidos fora do repositório, que é público. Conversas gera cerca de 1 chamada/s por operador, com até 20 páginas no gateway.
+- **Comandos executados:** leitura estática do código → sem build
+- **Erros e resoluções:** nenhum
+- **Pendências / TODO:** tratar os achados antes de abrir acesso amplo
+- **Próximos passos:** cache de perfil e um polling por empresa
+
+## [2026-11-01] — Agentes, Clientes da plataforma e Configurações em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** rotas `ia/agentes.index.tsx`, `ia/agentes.$agenteId.tsx`, `admin/index.tsx`, `admin/$tenantId.tsx`, `admin/configuracoes.tsx`, `src/components/luxtia/agente/`, `src/lib/platform.functions.ts`, `src/lib/clientes.ts`, `src/lib/gateway/agentes.ts` e testes
+- **Resumo das mudanças:** Agentes e Clientes em tabela com busca e filtros. Detalhes do agente e do cliente em tela cheia. Configurações em linha única, com alerta quando a segunda etapa está desligada.
+- **Correções:** a lista e o detalhe de clientes liam `tenant_users` e `integrations` com a sessão do usuário; a RLS exige aal2, então com MFA desligado apareciam 0 acessos, sem erro, acima de um Excluir de um clique. Agora leem com service role depois de `requireSuperAdmin`. A prontidão da lista de agentes passou a usar a mesma conta da Visão geral.
+- **Decisões e justificativas:** Excluir cliente exige digitar o nome. Suspender, remover acesso, mudar a situação do agente e ligar ou desligar a segunda etapa pedem confirmação, porque afetam quem está em operação. "Novo acesso" do cliente virou "Novo gestor", com papel gravado; as demais pessoas entram pelo convite em Usuários, que define papel e unidades. Suspender cliente só bloqueia o painel: os agentes param em Empresas do gateway.
+
+## [2026-11-01] — Simular conversa, Empresas do gateway e Modelos de agente em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/Simulador.tsx`, `BarraEnvioSimulador.tsx`, `ModelosAgente.tsx` (novo), `Superficie.tsx`, `Usuarios.tsx`, rotas `simular.tsx`, `empresas.index.tsx`, `empresas.nova.tsx`, `modelos.tsx`, `src/lib/gateway/modelos.ts`, `empresas.ts`, `agentes.ts` e testes
+- **Resumo das mudanças:** Simular em chat de tela cheia, com sugestões para começar, tempo médio e link para Conversas. Empresas em tabela com busca e filtros, edição em painel lateral. Modelos em lista e detalhe lado a lado, com módulos em interruptores, motivos em linhas e consulta de versões antigas.
+- **Correções:** o Simular mostrava "digitando" para sempre em agente no modo piloto, porque o gateway grava a mensagem de quem está fora da lista e não responde; agora avisa e para de esperar. O filtro de Modelos olhava cada versão, então um modelo inativado aparecia como ativo pela versão antiga. Motivo com ":" no rótulo era cortado ao salvar. Trocar o vínculo de empresa com cliente acontecia sem confirmação.
+- **Decisões e justificativas:** O id de motivo e de tipo não é mais editável, porque outros cadastros apontam para ele; item novo gera o id pelo rótulo. Salvar modelo envia só o que mudou, e o gateway copia o resto da versão anterior. Modelo antigo é só consulta: esta tela não restaura versão.
+
+## [2026-11-01] — Usuários em tela cheia e permissões no servidor
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/Usuarios.tsx`, `src/routes/_authenticated/equipe.tsx`, `src/lib/usuarios.functions.ts`, `src/lib/acesso/usuarios.ts`, `src/lib/acesso/usuarios.test.ts`
+- **Resumo das mudanças:** Lista compacta com busca e filtros por situação, papel e unidade. Convite e edição em painel lateral. Unidades agora podem ser editadas depois do convite. Desativar e revogar pedem confirmação.
+- **Correções de segurança:** `alterarUsuario`, `reenviarConvite` e `revogarConvite` só conferiam a empresa do alvo. Um supervisor podia desativar ou rebaixar um gestor, gerar link de primeiro acesso para um gestor que ainda não entrou e assumir a conta, ou agir sobre gente de outras unidades. Agora `podeGerirUsuario` vale nas três.
+- **Outras correções:** quem tem acesso restrito edita só as próprias unidades e as demais ficam intactas; papel de empresa não fica sem unidade; a auditoria registra a mudança de unidades; o convite começa no menor papel; a tela não oferece o link de nova senha a quem não pode gerar.
+- **Decisões e justificativas:** A regra fica em um arquivo só, usado pelo servidor e pela lista, para a tela e a proteção não divergirem. A recusa foi provada com requisição forjada, não só com o botão escondido.
+
+## [2026-11-01] — Menu lateral e barra de rolagem
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/lib/nav.ts`, `src/components/luxtia/AppShell.tsx`, `src/styles.css`, `src/routes/_authenticated/painel.tsx`
+- **Resumo das mudanças:** Menu reagrupado em Gestão, Atendimento, Loja, Agente e Integrações, com itens menores e ícone próprio por tela. Barra de rolagem fina em todo o sistema; no menu escuro ela tem 4 px, é discreta e clareia ao passar o mouse. O item da tela atual fica visível ao abrir.
+- **Correções:** o botão "Recolher menu" repetido saiu. Quem entra por uma empresa agora abre Conversas: antes todos iam para Usuários, e o funcionário via "Tela indisponível".
+- **Decisões e justificativas:** Gestão vem primeiro para o super admin e por último para a empresa, porque o dia a dia de cada um começa em lugares diferentes. Os papéis de cada item não mudaram.
+
+## [2026-11-01] — Comportamento do agente em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/comportamento/` (`ComportamentoAgente`, `CampoAtendimento`, `PreviaAtendimento`, `HistoricoVersoes`), `src/lib/gateway/atendimento.ts`, `atendimento.test.ts`, rota `configuracoes.comportamento.tsx`, `README.md`
+- **Resumo das mudanças:** Abas e cartões viraram seções à esquerda com campos em linhas. A barra fixa de baixo, que ficava sob o menu, subiu para uma barra única no topo. Busca por campo, sinal por seção e erro que leva ao campo.
+- **Correções:** "0/0 quebras de linha" em Nome da empresa, rótulos crus ("Presenca", "cadastro", "Aviso espera modo").
+- **Decisões e justificativas:** Rascunho, publicação, bloqueios e permissões não mudaram. "Padrão da plataforma" só deixa de ser escrito em cada campo; as demais origens continuam visíveis. As seções do perfil ficam no painel porque o gateway não as define.
+
+## [2026-11-01] — Histórico de gestão e Avisos de pedido em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/HistoricoGestao.tsx`, `AvisosPedido.tsx`, `src/lib/gateway/gestao.ts`, rotas `gestao.alteracoes.tsx` e `configuracoes.avisos.tsx`, `README.md`
+- **Resumo das mudanças:** Histórico em linha do tempo compacta, com hora no fuso da empresa e antes/depois na linha. Avisos com interruptor na lista, prévia automática e variáveis no cursor.
+- **Correções:** o menu oferecia o Histórico a funcionário, mas o gateway exige supervisor e a tela só mostrava erro. O item, a rota, o link em Unidades e a regra do painel passam a seguir o gateway. O "todos" da decisão 1 vale para o histórico de conversas, segundo a decisão 8 do PAPEL1 do gateway; a nota antiga deste registro tratava os dois como um só.
+- **Decisões e justificativas:** O histórico deixa de mostrar a hora crua do gateway, porque o filtro de período já usava o fuso da empresa. Salvar aviso fica oculto para supervisor, que antes recebia erro ao tentar.
+- **Pendências / TODO:** nenhuma específica destas telas.
+
+## [2026-11-01] — Unidades e horários em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/GestaoUnidades.tsx`, `GestaoOperacao.tsx`, `PagamentosUnidade.tsx`, `gestao-base.tsx`, `src/lib/gateway/gestao.ts`, `src/routes/_authenticated/ia/unidades.tsx`, `README.md`
+- **Resumo das mudanças:** Lista e detalhe em duas colunas, filtros clicáveis, Pausar/Reabrir na linha, visão Hoje na área principal, agenda em grade e horários em uma linha por dia.
+- **Decisões e justificativas:** As ações em várias unidades ficam no rodapé da lista. O selo da visão Hoje passa a separar "Sem horário" de "Fechada".
+- **Pendências / TODO:** nenhuma específica desta tela.
+
+## [2026-11-01] — Cardápio em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/cardapio/CardapioCat3.tsx`, `src/routes/_authenticated/ia/cardapio.tsx`, `README.md`
+- **Resumo das mudanças:** Barra única, categorias e itens com rolagem própria, linhas densas, selo só para exceção, Esgotar/Repor com Desfazer e sem travar os outros itens, barra de seleção no rodapé. Corrige o cabeçalho de categoria que cobria os itens ao rolar.
+- **Decisões e justificativas:** Lápis e setas de ordem foram para o menu da linha; arrastar continua. Regras de edição, preço e lote não mudaram.
+- **Pendências / TODO:** nenhuma específica do Cardápio.
+
+## [2026-11-01] — Pedidos e Operação em tela cheia
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/Pedidos.tsx`, `Operacao.tsx`, `src/routes/_authenticated/ia/pedidos.tsx`, `operacao.tsx`, `src/lib/gateway/pedidos.ts`, `README.md`
+- **Resumo das mudanças:** Barra única, cartões menores, avanço do pedido no cartão, Operação com fila agora e tabela por atendente.
+- **Correções:** supervisor e funcionário não viam Pedidos e Cardápio no menu (a leitura das telas era só de gestor); funcionário esperava 8 s no quadro por repetir a leitura do fuso.
+- **Decisões e justificativas:** Os passos saem de `proximos_status`, que agora também vem na lista do gateway. Recusar e cancelar ficam no detalhe, porque pedem motivo.
+- **Pendências / TODO:** publicar o gateway antes do painel: sem o campo novo, o cartão só não mostra o botão.
+
+## [2026-11-01] — Encerrar e próxima, busca na conversa, etiquetas, Operação e envio de arquivo
+- **Autor:** Claude Code
+- **Arquivos alterados:** `src/components/luxtia/Conversas.tsx`, `EtiquetasConversa.tsx`, `Operacao.tsx`, `src/routes/_authenticated/ia/operacao.tsx`, `src/lib/gateway-conversas.functions.ts`, `src/lib/gateway-operacao.functions.ts`, `src/lib/gateway/*`, `src/lib/nav.ts`, `README.md`
+- **Resumo das mudanças:** Botão Encerrar e próxima; busca em mensagens e notas com salto ao trecho; etiquetas por empresa com filtro; tela Operação; envio de PDF, JPG e PNG pelo clipe.
+- **Decisões e justificativas:** O arquivo enviado não é guardado, só o registro. Etiquetas por empresa, decisão do Marco. Tempo limite de 75 s no envio, acima dos 60 s do gateway ao provedor.
+- **Pendências / TODO:** validar o envio real com uma instância uazapi de testes; publicar o gateway (migração 058) antes do painel.
+
 ## [2026-11-01] — Conversas para operação, respostas rápidas, responsável e notas internas
 - **Autor:** Claude Code
 - **Arquivos alterados:** `src/components/luxtia/Conversas.tsx`, `RespostasRapidas.tsx`, `AppShell.tsx`, `Gateway.tsx`, `src/lib/gateway/*`, `README.md`, `docker-compose.local.yml`

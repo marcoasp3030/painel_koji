@@ -13,6 +13,7 @@ export type ItemCardapio = {
   categoria_id?: number;
   posicao?: number | null;
   prato?: { id: number; codigo: string; nome: string } | null;
+  qtd_opcoes?: number;
   esgotado_agora?: boolean;
   esgotado_ate?: string | null;
   esgotado_motivo?: string | null;
@@ -151,6 +152,44 @@ export const cardapioSchema = z.discriminatedUnion("acao", [
       acao: z.literal("previa"),
       unidade: z.string().min(1).max(40),
       disponibilidade: disponibilidadeSchema.nullable(),
+    })
+    .strict(),
+  z.object({ empresa, acao: z.literal("opcoes"), item_id: z.number().int().positive() }).strict(),
+  z
+    .object({
+      empresa,
+      acao: z.literal("salvar_opcoes"),
+      item_id: z.number().int().positive(),
+      atualizado_em: z.string().nullable(),
+      aplicar_em: z.literal("todas").optional(),
+      grupos: z
+        .array(
+          z
+            .object({
+              id: z.number().int().positive().optional(),
+              nome: z.string().trim().min(1).max(60),
+              minimo: z.number().int().min(0).max(20),
+              maximo: z.number().int().min(1).max(20),
+              repetir: z.boolean(),
+              ativo: z.boolean(),
+              opcoes: z
+                .array(
+                  z
+                    .object({
+                      id: z.number().int().positive().optional(),
+                      nome: z.string().trim().min(1).max(60),
+                      preco_extra: z.number().min(0).max(9999.99),
+                      codigo: z.string().max(40).optional(),
+                      ativo: z.boolean(),
+                    })
+                    .strict(),
+                )
+                .min(1)
+                .max(30),
+            })
+            .strict(),
+        )
+        .max(10),
     })
     .strict(),
   z

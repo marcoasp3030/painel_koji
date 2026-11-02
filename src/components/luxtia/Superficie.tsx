@@ -53,6 +53,33 @@ export function Cartao({
   );
 }
 
+/** Filtro compacto com contagem, usado nas barras das listas. */
+export function ChipFiltro({
+  ativo,
+  rotulo,
+  total,
+  onClick,
+}: {
+  ativo: boolean;
+  rotulo: string;
+  total: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={ativo}
+      onClick={onClick}
+      className={`flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        ativo ? "bg-purple-100/70 font-medium text-ink-900" : "text-ink-700 hover:bg-purple-50/60"
+      }`}
+    >
+      {rotulo}
+      <span className="tabular-nums text-ink-500">{total}</span>
+    </button>
+  );
+}
+
 export function EstadoVazio({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div className="px-6 py-14 text-center">

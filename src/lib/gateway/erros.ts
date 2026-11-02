@@ -161,6 +161,11 @@ export function mensagemParaUsuario(erro: GatewayErro): string {
     return "Esta conversa está com outra pessoa. Transfira para você antes de responder.";
   if (erro.status === 409 && erro.detalhes["campo"] === "encerrada")
     return "Esta conversa está encerrada.";
+  if (erro.status === 409 && erro.detalhes["campo"] === "nome")
+    return "Já existe uma etiqueta com este nome.";
+  if (erro.status === 409 && erro.detalhes["campo"] === "limite")
+    return "O limite de etiquetas foi atingido.";
+  if (erro.detalhes["motivo"] === "formato") return "Envie um arquivo PDF, JPG ou PNG.";
   if (erro.codigo === "RATE_LIMITED" && erro.tentarApos) {
     return `${erro.message} Tente em ${erro.tentarApos} s.`;
   }

@@ -1,3 +1,11 @@
+## Isolamento entre empresas (01/11/2026)
+
+Pedidos, conversas, cardápio e integrações de um cliente não são devolvidos a outro: o servidor só aceita vínculo ativo e o teste MULTI1-a recusa empresa alheia antes da chamada. Não há ambiente separado (um banco, um login, uma chave do gateway).
+
+## Auditoria de segurança e carga (01/11/2026)
+
+Leitura do código, sem correção e sem teste de invasão. Os achados ficam fora do repositório, porque ele é público. Conversas, com a aba em primeiro plano, gera cerca de 1 chamada por segundo por operador e a fila aguardando pode percorrer até 20 páginas no gateway.
+
 ## Menu completo no clone local (31/10/2026 → 01/11)
 
 - Na máquina local o menu vinha “sem opções” (só Clientes): clone desatualizado e/ou `obterAcessoGateway` sem papel.

@@ -1,5 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+const MAX_CORPO = 256 * 1024;
+
+function recusa(status: number, errmsg: string) {
+  return new Response(JSON.stringify({ errno: 1, errmsg }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 /**
  * Recebe os eventos da 99Food. Guarda o evento inteiro, sem interpretar nomes
  * de status: o mapeamento interno é feito depois, com os payloads reais.
@@ -8,7 +17,10 @@ export const Route = createFileRoute("/api/public/food99/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const token = new URL(request.url).searchParams.get("t") ?? "";
+        if (!/^[0-9a-f]{32,64}$/.test(token)) return recusa(401, "unauthorized");
         const raw = await request.text();
+        if (raw.length > MAX_CORPO) return recusa(413, "payload too large");
         let payload: any = null;
         try {
           payload = raw ? JSON.parse(raw) : null;
@@ -44,22 +56,15 @@ export const Route = createFileRoute("/api/public/food99/webhook")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Descobre o cliente dono da loja pelo Shop ID ou pelo APP Shop ID salvos.
-        let tenantId: string | null = null;
-        const { data: rows } = await supabaseAdmin
+        // A empresa sai da chave do endereço. O corpo não prova nada: quem envia o escreve.
+        const { data: integracao } = await supabaseAdmin
           .from("integrations")
-          .select("tenant_id, credentials")
-          .eq("provider", "food99");
-        for (const row of rows ?? []) {
-          const creds = (row.credentials ?? {}) as Record<string, string>;
-          const matches =
-            (shopId && (creds["shop_id"] === shopId || creds["store_id"] === shopId)) ||
-            (appShopId && creds["app_shop_id"] === appShopId);
-          if (matches) {
-            tenantId = row.tenant_id;
-            break;
-          }
-        }
+          .select("tenant_id")
+          .eq("provider", "food99")
+          .eq("credentials->>webhook_token", token)
+          .maybeSingle();
+        if (!integracao) return recusa(401, "unauthorized");
+        const tenantId = integracao.tenant_id;
 
         const { error } = await supabaseAdmin.from("webhook_events").insert({
           tenant_id: tenantId,

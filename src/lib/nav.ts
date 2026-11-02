@@ -14,13 +14,21 @@ export type IconeMenu =
   | "simular"
   | "conversas"
   | "pedidos"
+  | "operacao"
   | "modelos"
-  | "configuracoes";
+  | "configuracoes"
+  | "unidades"
+  | "cardapio"
+  | "avisos"
+  | "historico"
+  | "comportamento"
+  | "formulario"
+  | "aparencia";
 
 export type ItemMenu = {
   to: string;
   label: string;
-  grupo: "Operação" | "Agentes" | "Configurações";
+  grupo: "Atendimento" | "Loja" | "Agente" | "Integrações" | "Gestão";
   icone: IconeMenu;
   /** Papéis no gateway que veem o item; sem a lista, todos veem. */
   papeis?: PapelGateway[];
@@ -30,240 +38,282 @@ export type ItemMenu = {
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
   {
-    to: "/ia/configuracoes/comportamento",
-    label: "Comportamento do agente",
-    grupo: "Configurações",
-    icone: "agentes",
-    papeis: ["plataforma"],
-  },
-  {
-    to: "/ia/configuracoes/avisos",
-    label: "Avisos de pedido",
-    grupo: "Configurações",
-    icone: "pedidos",
-    papeis: ["plataforma"],
-    tela: "avisos_de_pedido",
-  },
-  {
-    to: "/ia/unidades",
-    label: "Unidades e horários",
-    grupo: "Agentes",
-    icone: "empresas",
-    papeis: ["plataforma"],
-  },
-  {
-    to: "/ia/cardapio",
-    label: "Cardápio",
-    grupo: "Agentes",
-    icone: "pedidos",
-    papeis: ["plataforma"],
-    tela: "cardapio",
-  },
-  {
-    to: "/ia/gestao/alteracoes",
-    label: "Histórico de gestão",
-    grupo: "Agentes",
-    icone: "conversas",
-    papeis: ["plataforma"],
-  },
-  {
     to: "/ia/conversas",
     label: "Conversas",
-    grupo: "Agentes",
+    grupo: "Atendimento",
     icone: "conversas",
     papeis: ["plataforma"],
   },
   {
     to: "/ia/pedidos",
     label: "Pedidos",
-    grupo: "Agentes",
+    grupo: "Atendimento",
     icone: "pedidos",
     papeis: ["plataforma"],
     tela: "pedidos",
   },
   {
-    to: "/ia/empresas",
-    label: "Empresas",
-    grupo: "Agentes",
-    icone: "empresas",
+    to: "/ia/operacao",
+    label: "Operação",
+    grupo: "Atendimento",
+    icone: "operacao",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/cardapio",
+    label: "Cardápio",
+    grupo: "Loja",
+    icone: "cardapio",
+    papeis: ["plataforma"],
+    tela: "cardapio",
+  },
+  {
+    to: "/ia/unidades",
+    label: "Unidades e horários",
+    grupo: "Loja",
+    icone: "unidades",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/configuracoes/avisos",
+    label: "Avisos de pedido",
+    grupo: "Loja",
+    icone: "avisos",
+    papeis: ["plataforma"],
+    tela: "avisos_de_pedido",
+  },
+  {
+    to: "/ia/configuracoes/aparencia",
+    label: "Aparência do cardápio",
+    grupo: "Loja",
+    icone: "aparencia",
+    papeis: ["plataforma"],
+    tela: "cardapio",
+  },
+  {
+    to: "/ia/agentes",
+    label: "Agentes",
+    grupo: "Agente",
+    icone: "agentes",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/configuracoes/comportamento",
+    label: "Comportamento do agente",
+    grupo: "Agente",
+    icone: "comportamento",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/documentos",
+    label: "Documentos",
+    grupo: "Agente",
+    icone: "documentos",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/simular",
+    label: "Simular conversa",
+    grupo: "Agente",
+    icone: "simular",
     papeis: ["plataforma"],
   },
   {
     to: "/ia/modelos",
     label: "Modelos de agente",
-    grupo: "Agentes",
+    grupo: "Agente",
     icone: "modelos",
-    papeis: ["plataforma"],
-  },
-  {
-    to: "/ia/agentes",
-    label: "Agentes",
-    grupo: "Agentes",
-    icone: "agentes",
     papeis: ["plataforma"],
   },
   {
     to: "/ia/canais",
     label: "Canais",
-    grupo: "Agentes",
+    grupo: "Integrações",
     icone: "canais",
     papeis: ["plataforma"],
   },
   {
     to: "/ia/chaves",
     label: "Chaves de API",
-    grupo: "Agentes",
+    grupo: "Integrações",
     icone: "chaves",
     papeis: ["plataforma"],
   },
   {
     to: "/ia/chaves-formulario",
     label: "Chaves de formulário",
-    grupo: "Agentes",
-    icone: "chaves",
-    papeis: ["plataforma"],
-  },
-  {
-    to: "/ia/documentos",
-    label: "Documentos",
-    grupo: "Agentes",
-    icone: "documentos",
+    grupo: "Integrações",
+    icone: "formulario",
     papeis: ["plataforma"],
   },
   {
     to: "/ia/webhooks-saida",
     label: "Webhooks de saída",
-    grupo: "Configurações",
+    grupo: "Integrações",
     icone: "webhooks",
     papeis: ["plataforma"],
   },
   {
-    to: "/ia/simular",
-    label: "Simular conversa",
-    grupo: "Agentes",
-    icone: "simular",
+    to: "/ia/empresas",
+    label: "Empresas",
+    grupo: "Gestão",
+    icone: "empresas",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/gestao/alteracoes",
+    label: "Histórico de gestão",
+    grupo: "Gestão",
+    icone: "historico",
     papeis: ["plataforma"],
   },
 ];
 
 const AGENTES_EMPRESA: ItemMenu[] = [
   {
-    to: "/ia/configuracoes/comportamento",
-    label: "Comportamento do agente",
-    grupo: "Configurações",
-    icone: "agentes",
-    papeis: ["gestor", "supervisor"],
-  },
-  {
-    to: "/ia/configuracoes/avisos",
-    label: "Avisos de pedido",
-    grupo: "Configurações",
-    icone: "pedidos",
-    papeis: ["gestor", "supervisor"],
-    tela: "avisos_de_pedido",
-  },
-  {
-    to: "/ia/unidades",
-    label: "Unidades e horários",
-    grupo: "Agentes",
-    icone: "empresas",
-    papeis: ["gestor", "supervisor"],
-  },
-  {
-    to: "/ia/cardapio",
-    label: "Cardápio",
-    grupo: "Agentes",
-    icone: "pedidos",
-    papeis: ["gestor", "supervisor", "funcionario"],
-    tela: "cardapio",
-  },
-  {
-    to: "/ia/gestao/alteracoes",
-    label: "Histórico de gestão",
-    grupo: "Agentes",
-    icone: "conversas",
-    papeis: ["gestor", "supervisor", "funcionario"],
-  },
-  {
     to: "/ia/conversas",
     label: "Conversas",
-    grupo: "Agentes",
+    grupo: "Atendimento",
     icone: "conversas",
     papeis: ["gestor", "supervisor", "funcionario"],
   },
   {
     to: "/ia/pedidos",
     label: "Pedidos",
-    grupo: "Agentes",
+    grupo: "Atendimento",
     icone: "pedidos",
     papeis: ["gestor", "supervisor", "funcionario"],
     tela: "pedidos",
   },
   {
+    to: "/ia/operacao",
+    label: "Operação",
+    grupo: "Atendimento",
+    icone: "operacao",
+    papeis: ["gestor", "supervisor"],
+  },
+  {
+    to: "/ia/cardapio",
+    label: "Cardápio",
+    grupo: "Loja",
+    icone: "cardapio",
+    papeis: ["gestor", "supervisor", "funcionario"],
+    tela: "cardapio",
+  },
+  {
+    to: "/ia/unidades",
+    label: "Unidades e horários",
+    grupo: "Loja",
+    icone: "unidades",
+    papeis: ["gestor", "supervisor"],
+  },
+  {
+    to: "/ia/configuracoes/avisos",
+    label: "Avisos de pedido",
+    grupo: "Loja",
+    icone: "avisos",
+    papeis: ["gestor", "supervisor"],
+    tela: "avisos_de_pedido",
+  },
+  {
+    to: "/ia/configuracoes/aparencia",
+    label: "Aparência do cardápio",
+    grupo: "Loja",
+    icone: "aparencia",
+    papeis: ["gestor"],
+    tela: "cardapio",
+  },
+  {
     to: "/ia/agentes",
     label: "Agentes",
-    grupo: "Agentes",
+    grupo: "Agente",
     icone: "agentes",
+    papeis: ["gestor", "supervisor"],
+  },
+  {
+    to: "/ia/configuracoes/comportamento",
+    label: "Comportamento do agente",
+    grupo: "Agente",
+    icone: "comportamento",
+    papeis: ["gestor", "supervisor"],
+  },
+  {
+    to: "/ia/documentos",
+    label: "Documentos",
+    grupo: "Agente",
+    icone: "documentos",
+    papeis: ["gestor"],
+  },
+  {
+    to: "/ia/simular",
+    label: "Simular conversa",
+    grupo: "Agente",
+    icone: "simular",
     papeis: ["gestor", "supervisor"],
   },
   {
     to: "/ia/canais",
     label: "Canais",
-    grupo: "Agentes",
+    grupo: "Integrações",
     icone: "canais",
     papeis: ["gestor"],
   },
   {
     to: "/ia/chaves-formulario",
     label: "Chaves de formulário",
-    grupo: "Agentes",
-    icone: "chaves",
-    papeis: ["gestor"],
-  },
-  {
-    to: "/ia/documentos",
-    label: "Documentos",
-    grupo: "Agentes",
-    icone: "documentos",
+    grupo: "Integrações",
+    icone: "formulario",
     papeis: ["gestor"],
   },
   {
     to: "/ia/webhooks-saida",
     label: "Webhooks de saída",
-    grupo: "Configurações",
+    grupo: "Integrações",
     icone: "webhooks",
     papeis: ["gestor"],
   },
   {
-    to: "/ia/simular",
-    label: "Simular conversa",
-    grupo: "Agentes",
-    icone: "simular",
+    to: "/ia/gestao/alteracoes",
+    label: "Histórico de gestão",
+    grupo: "Gestão",
+    icone: "historico",
     papeis: ["gestor", "supervisor"],
   },
 ];
 
-export const ADMIN_NAV: ItemMenu[] = [
-  { to: "/admin", label: "Clientes", grupo: "Operação", icone: "clientes" },
+/** O super admin começa pelos clientes; a empresa, pelo atendimento do dia. */
+const primeiroGestao = (itens: ItemMenu[]) => [
+  ...itens.filter((item) => item.grupo === "Gestão"),
+  ...itens.filter((item) => item.grupo !== "Gestão"),
+];
+
+export const ADMIN_NAV: ItemMenu[] = primeiroGestao([
+  { to: "/admin", label: "Clientes", grupo: "Gestão", icone: "clientes" },
   {
     to: "/equipe",
     label: "Usuários",
-    grupo: "Operação",
+    grupo: "Gestão",
     icone: "equipe",
     papeis: ["plataforma"],
   },
   {
     to: "/admin/configuracoes",
     label: "Configurações",
-    grupo: "Operação",
+    grupo: "Gestão",
     icone: "configuracoes",
   },
   ...AGENTES_PLATAFORMA,
-];
+]);
 
 export const TENANT_NAV: ItemMenu[] = [
-  { to: "/equipe", label: "Usuários", grupo: "Operação", icone: "equipe", papeis: ["gestor", "supervisor"] },
   ...AGENTES_EMPRESA,
+  {
+    to: "/equipe",
+    label: "Usuários",
+    grupo: "Gestão",
+    icone: "equipe",
+    papeis: ["gestor", "supervisor"],
+  },
 ];
 
 /** Menu conforme o papel no gateway (a proteção real é a do servidor). */

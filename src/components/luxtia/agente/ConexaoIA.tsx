@@ -126,7 +126,7 @@ export function ConexaoIA({ ctx, agente }: { ctx: ContextoGateway; agente: Agent
   const ocupado = salvar.isPending || modo.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <Passo
         numero={1}
         titulo="Dados do fluxo no Skyone"
@@ -134,7 +134,7 @@ export function ConexaoIA({ ctx, agente }: { ctx: ContextoGateway; agente: Agent
         descricao="Crie o fluxo do zero no Skyone. Depois copie aqui a URL do webhook, o usuário e a senha."
       >
         <form
-          className="space-y-5"
+          className="space-y-3"
           autoComplete="off"
           onSubmit={(e) => {
             e.preventDefault();
@@ -349,7 +349,7 @@ function Passo({
   children: React.ReactNode;
 }) {
   return (
-    <Cartao className="p-6">
+    <Cartao className="p-4">
       <div className="flex items-start gap-4">
         <span
           className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
@@ -360,7 +360,7 @@ function Passo({
           {feito ? <CheckCircle2 className="size-4" /> : numero}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl text-purple-800">
+          <h2 className="text-sm font-medium text-ink-900">
             <span className="sr-only">Passo {numero}: </span>
             {titulo}
           </h2>

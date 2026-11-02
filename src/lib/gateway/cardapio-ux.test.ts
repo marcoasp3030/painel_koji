@@ -127,3 +127,13 @@ test("Categorias mantêm a ordem do cardápio quando a busca oculta o primeiro i
   const c = { ...item, item_id: 3, categoria: "A" };
   expect(agruparCardapio([b, c], [a, b, c]).map((g) => g.nome)).toEqual(["A", "B"]);
 });
+
+test("filtro sem descrição acha item vazio ou só com espaços", () => {
+  const lista = [
+    { ...item, item_id: 901, descricao: "Com legumes" },
+    { ...item, item_id: 902, descricao: null },
+    { ...item, item_id: 903, descricao: "   " },
+  ];
+  const f = buscaCardapio({ unidade: "jardins", filtro: "sem_descricao" });
+  expect(filtrarCardapio(lista, f).map((i) => i.item_id)).toEqual([902, 903]);
+});

@@ -10,6 +10,7 @@ export const FILTROS_CARDAPIO = [
   "disponiveis",
   "restricao",
   "sem_preco",
+  "sem_descricao",
   "inativos",
   "indisponiveis",
   "esgotados",
@@ -76,6 +77,7 @@ export function filtrarCardapio(itens: ItemCardapio[], f: BuscaCardapio) {
         (f.filtro === "arquivados" && i.arquivado) ||
         (f.filtro === "esgotados" && (i.esgotado_agora ?? i.indisponivel_motivo === "esgotado")) ||
         (f.filtro === "sem_preco" && i.preco === null) ||
+        (f.filtro === "sem_descricao" && !i.descricao?.trim()) ||
         (f.filtro === "restricao" && temRestricao(i)) ||
         (f.filtro === "inativos" && !i.ativo) ||
         (f.filtro === "disponiveis" && disponivelAgora(i) === true) ||

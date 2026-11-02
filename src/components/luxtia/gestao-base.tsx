@@ -68,7 +68,7 @@ export function EditorFaixas({
       {faixas.map(([a, b], i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
           <Input
-            className="min-h-11 w-32"
+            className="h-10 sm:h-8 w-32"
             aria-label={`Início do ${nome} ${i + 1}`}
             type="time"
             value={a}
@@ -77,7 +77,7 @@ export function EditorFaixas({
           />
           <span>até</span>
           <Input
-            className="min-h-11 w-32"
+            className="h-10 sm:h-8 w-32"
             aria-label={`Fim do ${nome} ${i + 1}`}
             type="time"
             value={b}
@@ -87,7 +87,7 @@ export function EditorFaixas({
           <Button
             type="button"
             variant="outline"
-            className="min-h-11"
+            className="h-10 sm:h-8"
             disabled={disabled}
             onClick={() => onChange(faixas.filter((_, j) => j !== i))}
           >
@@ -99,7 +99,7 @@ export function EditorFaixas({
       <Button
         type="button"
         variant="outline"
-        className="min-h-11"
+        className="h-10 sm:h-8"
         disabled={disabled || faixas.length >= 12}
         onClick={() => onChange([...faixas, ["12:00", "15:00"]])}
       >

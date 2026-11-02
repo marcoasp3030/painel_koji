@@ -6,6 +6,8 @@ import {
   conferirPiloto,
   problemaPiloto,
   type EstadoAgente,
+  filtrarAgentes,
+  foraDoPiloto,
 } from "./agentes";
 import { GatewayErro, erroDeTelefone, interpretarErro, mensagemParaUsuario } from "./erros";
 
@@ -217,4 +219,27 @@ describe("campos do gateway novo", () => {
       expect(mensagemParaUsuario(erro)).toContain(trecho);
     }
   });
+});
+
+test("simulação: em modo piloto, só quem está na lista recebe resposta", () => {
+  expect(foraDoPiloto({ modo_piloto: false }, "teste")).toBe(false);
+  expect(foraDoPiloto({ modo_piloto: true, contatos_permitidos: [] }, "teste")).toBe(true);
+  expect(foraDoPiloto({ modo_piloto: true }, "teste")).toBe(true);
+  expect(foraDoPiloto({ modo_piloto: true, contatos_permitidos: ["teste"] }, " teste ")).toBe(
+    false,
+  );
+  expect(foraDoPiloto({}, "teste")).toBe(false);
+});
+
+test("lista de agentes: busca sem acento e filtro por situação", () => {
+  const lista = [
+    { id: "sac", nome: "Atendimento", status: "ativo" },
+    { id: "vendas", nome: "Comércio", status: "rascunho" },
+  ];
+  expect(filtrarAgentes(lista, { busca: "comercio", status: "" }).map((a) => a.id)).toEqual([
+    "vendas",
+  ]);
+  expect(filtrarAgentes(lista, { busca: "SAC", status: "" }).map((a) => a.id)).toEqual(["sac"]);
+  expect(filtrarAgentes(lista, { busca: "", status: "ativo" }).map((a) => a.id)).toEqual(["sac"]);
+  expect(filtrarAgentes(lista, { busca: "sac", status: "rascunho" })).toEqual([]);
 });

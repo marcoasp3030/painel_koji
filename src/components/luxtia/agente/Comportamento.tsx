@@ -166,8 +166,8 @@ export function Comportamento({ ctx, agente }: { ctx: ContextoGateway; agente: A
       }}
     >
       {!plataforma ? (
-        <Cartao className="p-6">
-          <h2 className="font-display text-xl text-purple-800">Comportamento</h2>
+        <Cartao className="p-4">
+          <h2 className="text-sm font-medium text-ink-900">Comportamento</h2>
           <p className="mt-2 text-sm text-ink-700">
             Espera, pausa, mensagem de falha e aviso de demora ficam em Configurações →
             Comportamento do agente. A mudança entra em rascunho e só vale depois de publicar.
@@ -252,8 +252,8 @@ function Secao({
   children: React.ReactNode;
 }) {
   return (
-    <Cartao className="p-6">
-      <h2 className="font-display text-xl text-purple-800">{titulo}</h2>
+    <Cartao className="p-4">
+      <h2 className="text-sm font-medium text-ink-900">{titulo}</h2>
       {descricao ? <Ajuda>{descricao}</Ajuda> : null}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">{children}</div>
     </Cartao>

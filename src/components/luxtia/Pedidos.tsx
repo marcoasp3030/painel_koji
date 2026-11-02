@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  ArrowRight,
   Bell,
   BellOff,
   Bike,
@@ -28,6 +29,7 @@ import {
   ROTULO_STATUS,
   acoesPedido,
   nomeClientePedido,
+  proximoPasso,
   reais,
   textoPagamento,
   rotuloCanalPedido,
@@ -44,10 +46,11 @@ import {
 import { FUSO_PAINEL, periodoNoFuso, type Unidade } from "@/lib/gateway/gestao";
 import { dataHora, type ContextoGateway } from "./Gateway";
 import { useGestao } from "./gestao-base";
-import { textoCanal } from "@/lib/gateway/conversas";
+import { textoCanal, urgenciaEspera, type UrgenciaEspera } from "@/lib/gateway/conversas";
 import { IconeCanal, SeloOrigemNome } from "./Conversas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,6 +89,27 @@ const VAZIO: Filtros = {
 
 type IdColuna = (typeof COLUNAS_PEDIDO)[number]["id"];
 
+/** Rótulo curto para caber no cabeçalho da coluna. */
+const ROTULO_COLUNA: Record<IdColuna, string> = {
+  aguardando: "Aguardando loja",
+  confirmado: "Confirmados",
+  preparo: "Em preparo",
+  saida: "Prontos / saíram",
+  concluido: "Concluídos",
+};
+
+/** Mesma escala de espera da fila de Conversas. */
+const BARRA_ESPERA: Record<UrgenciaEspera, string> = {
+  normal: "shadow-[inset_3px_0_0_0_var(--gold-300)]",
+  atencao: "shadow-[inset_3px_0_0_0_var(--gold-500)]",
+  critica: "shadow-[inset_3px_0_0_0_var(--destructive)]",
+};
+const TOM_ESPERA: Record<UrgenciaEspera, string> = {
+  normal: "text-gold-700",
+  atencao: "text-gold-700",
+  critica: "text-destructive",
+};
+
 /** Cor de cada status; só aparência, a regra continua no gateway. */
 const TOM_STATUS: Record<StatusPedido, { ponto: string; selo: string }> = {
   aguardando_loja: { ponto: "bg-gold-500", selo: "bg-gold-300/30 text-gold-700" },
@@ -107,7 +131,18 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
   const [busca, setBusca] = useState("");
   const [visao, setVisao] = useState<"quadro" | "lista">("quadro");
   const [coluna, setColuna] = useState<IdColuna>("aguardando");
-  const [verFiltros, setVerFiltros] = useState(false);
+  const campoBusca = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    function tecla(e: KeyboardEvent) {
+      if (e.key !== "/" || e.altKey || e.ctrlKey || e.metaKey) return;
+      if ((e.target as HTMLElement | null)?.closest?.("input, textarea, select")) return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      e.preventDefault();
+      campoBusca.current?.focus();
+    }
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, []);
   // Atalho vindo da conversa (?pedido=…): abre o detalhe direto.
   const [numero, setNumero] = useState<string | null>(abrir ?? null);
   const [agora, setAgora] = useState(Date.now());
@@ -133,6 +168,8 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
     queryFn: () =>
       g.ler<{ timezone: string; origem: "empresa" | "padrao" }>({ acao: "fuso_empresa" }),
     staleTime: 60_000,
+    // Funcionário não lê o fuso: o quadro não espera repetições e as datas usam Brasília.
+    retry: false,
   });
   const unidades = useQuery({
     queryKey: ["gestao", ctx.empresa, "unidades"],
@@ -169,34 +206,40 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
   const nomeUnidade = unidades.data?.itens.find((u) => u.codigo === filtros.unidade)?.nome;
 
   return (
-    <div className="mt-4 space-y-3">
-      <Indicadores
-        ctx={ctx}
-        onEscolher={(id) => {
-          setVisao("quadro");
-          setColuna(id);
-        }}
-      />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-200 bg-card px-3 py-2">
+        <div className="relative w-full sm:w-64">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500"
+            className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-500"
             aria-hidden
           />
           <Input
+            ref={campoBusca}
             value={busca}
             maxLength={100}
             aria-label="Buscar pedido"
-            placeholder="Buscar por número, nome ou telefone"
-            className="h-10 rounded-lg pl-9"
+            placeholder="Número, nome ou telefone"
+            className="h-8 bg-base-50 pl-8 text-sm"
             onChange={(e) => setBusca(e.target.value)}
           />
         </div>
+        <Indicadores
+          ctx={ctx}
+          coluna={coluna}
+          onEscolher={(id) => {
+            setVisao("quadro");
+            setColuna(id);
+            window.setTimeout(() =>
+              document
+                .getElementById(`coluna-${id}`)
+                ?.scrollIntoView({ inline: "nearest", block: "nearest" }),
+            );
+          }}
+        />
         <div
           role="group"
           aria-label="Modo de exibição"
-          className="flex h-10 rounded-lg border border-base-200 bg-card p-0.5"
+          className="flex h-8 rounded-lg border border-base-200 bg-base-50 p-0.5"
         >
           {(
             [
@@ -208,33 +251,177 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
               key={id}
               type="button"
               aria-pressed={visao === id}
+              aria-label={rotulo}
+              title={rotulo}
               onClick={() => setVisao(id)}
-              className={`flex items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors ${
                 visao === id ? "bg-purple-800 text-white" : "text-ink-700 hover:bg-base-100"
               }`}
             >
-              <Icone className="size-4" aria-hidden />
-              <span className="hidden sm:inline">{rotulo}</span>
+              <Icone className="size-3.5" aria-hidden />
             </button>
           ))}
         </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5">
+              <SlidersHorizontal className="size-3.5" aria-hidden />
+              Filtros
+              {ativos > 0 ? (
+                <span className="rounded-full bg-purple-800 px-1.5 text-[10px] font-semibold tabular-nums text-white">
+                  {ativos}
+                </span>
+              ) : null}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[min(32rem,calc(100vw-2rem))] p-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="space-y-1 text-xs font-medium text-ink-500">
+                Unidade
+                <select
+                  className={campo}
+                  value={filtros.unidade}
+                  onChange={(e) => setFiltros({ ...filtros, unidade: e.target.value })}
+                >
+                  <option value="">Todas as unidades</option>
+                  {unidades.data?.itens.flatMap((u) =>
+                    u.codigo ? (
+                      <option key={u.id} value={u.codigo}>
+                        {u.nome}
+                      </option>
+                    ) : (
+                      []
+                    ),
+                  )}
+                </select>
+              </label>
+              <fieldset className="space-y-1 text-xs font-medium text-ink-500 sm:col-span-2">
+                <legend>Origem</legend>
+                <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label="Origem">
+                  <button
+                    type="button"
+                    aria-pressed={filtros.origem.length === 0}
+                    onClick={() => setFiltros({ ...filtros, origem: [] })}
+                    className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                      filtros.origem.length === 0
+                        ? "border-purple-800 bg-purple-800 text-white"
+                        : "border-base-200 text-ink-700 hover:bg-base-100"
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  {ORIGENS_PEDIDO.map((o) => {
+                    const marcado = filtros.origem.includes(o);
+                    return (
+                      <button
+                        key={o}
+                        type="button"
+                        aria-pressed={marcado}
+                        onClick={() =>
+                          setFiltros({
+                            ...filtros,
+                            origem: marcado
+                              ? filtros.origem.filter((x) => x !== o)
+                              : [...filtros.origem, o],
+                          })
+                        }
+                        className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                          marcado
+                            ? "border-purple-800 bg-purple-800 text-white"
+                            : "border-base-200 text-ink-700 hover:bg-base-100"
+                        }`}
+                      >
+                        {ROTULO_FILTRO_ORIGEM[o]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <label className="space-y-1 text-xs font-medium text-ink-500">
+                Entrega ou retirada
+                <select
+                  className={campo}
+                  value={filtros.modalidade}
+                  onChange={(e) =>
+                    setFiltros({ ...filtros, modalidade: e.target.value as Filtros["modalidade"] })
+                  }
+                >
+                  <option value="">Entrega e retirada</option>
+                  <option value="delivery">Entrega</option>
+                  <option value="retirada">Retirada</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-medium text-ink-500">
+                De
+                <input
+                  type="date"
+                  className={campo}
+                  value={filtros.desde}
+                  onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })}
+                />
+              </label>
+              <label className="space-y-1 text-xs font-medium text-ink-500">
+                Até
+                <input
+                  type="date"
+                  className={campo}
+                  value={filtros.ate}
+                  onChange={(e) => setFiltros({ ...filtros, ate: e.target.value })}
+                />
+              </label>
+            </div>
+            {visao === "lista" ? (
+              <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Status">
+                {(Object.keys(ROTULO_STATUS) as StatusPedido[]).map((s) => {
+                  const marcado = filtros.status.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      aria-pressed={marcado}
+                      onClick={() =>
+                        setFiltros({
+                          ...filtros,
+                          status: marcado
+                            ? filtros.status.filter((x) => x !== s)
+                            : [...filtros.status, s],
+                        })
+                      }
+                      className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                        marcado
+                          ? "border-purple-800 bg-purple-800 text-white"
+                          : "border-base-200 text-ink-700 hover:bg-base-100"
+                      }`}
+                    >
+                      <span className={`size-1.5 rounded-full ${TOM_STATUS[s].ponto}`} />
+                      {ROTULO_STATUS[s]}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
+              <span>
+                {fuso.data?.origem === "empresa"
+                  ? `Datas no fuso da empresa (${zona}); o dia final entra.`
+                  : "Fuso da empresa indisponível; as datas usam Brasília e o dia final entra."}
+              </span>
+              {ativos > 0 ? (
+                <button
+                  type="button"
+                  className="font-medium text-purple-800 hover:underline"
+                  onClick={() => setFiltros({ ...VAZIO, busca: filtros.busca })}
+                >
+                  Limpar filtros
+                </button>
+              ) : null}
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button
           variant="outline"
-          className="h-10 gap-1.5 rounded-lg"
-          aria-expanded={verFiltros}
-          onClick={() => setVerFiltros((v) => !v)}
-        >
-          <SlidersHorizontal className="size-4" aria-hidden />
-          <span className="hidden sm:inline">Filtros</span>
-          {ativos > 0 ? (
-            <span className="rounded-full bg-purple-800 px-1.5 text-[11px] font-semibold text-white">
-              {ativos}
-            </span>
-          ) : null}
-        </Button>
-        <Button
-          variant="outline"
-          className="h-10 rounded-lg px-3"
+          size="icon"
+          className="size-8"
           aria-pressed={som}
           title={som ? "Som de pedido novo ligado" : "Som de pedido novo desligado"}
           onClick={() => {
@@ -244,160 +431,16 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
           }}
         >
           {som ? (
-            <Bell className="size-4 text-purple-800" aria-hidden />
+            <Bell className="size-3.5 text-purple-800" aria-hidden />
           ) : (
-            <BellOff className="size-4 text-ink-500" aria-hidden />
+            <BellOff className="size-3.5 text-ink-500" aria-hidden />
           )}
           <span className="sr-only">Som de pedido novo</span>
         </Button>
       </div>
 
-      {verFiltros ? (
-        <div className="rounded-xl border border-base-200 bg-card p-3">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="space-y-1 text-xs font-medium text-ink-500">
-              Unidade
-              <select
-                className={campo}
-                value={filtros.unidade}
-                onChange={(e) => setFiltros({ ...filtros, unidade: e.target.value })}
-              >
-                <option value="">Todas as unidades</option>
-                {unidades.data?.itens.flatMap((u) =>
-                  u.codigo ? (
-                    <option key={u.id} value={u.codigo}>
-                      {u.nome}
-                    </option>
-                  ) : (
-                    []
-                  ),
-                )}
-              </select>
-            </label>
-            <fieldset className="space-y-1 text-xs font-medium text-ink-500 sm:col-span-2">
-              <legend>Origem</legend>
-              <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label="Origem">
-                <button
-                  type="button"
-                  aria-pressed={filtros.origem.length === 0}
-                  onClick={() => setFiltros({ ...filtros, origem: [] })}
-                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
-                    filtros.origem.length === 0
-                      ? "border-purple-800 bg-purple-800 text-white"
-                      : "border-base-200 text-ink-700 hover:bg-base-100"
-                  }`}
-                >
-                  Todas
-                </button>
-                {ORIGENS_PEDIDO.map((o) => {
-                  const marcado = filtros.origem.includes(o);
-                  return (
-                    <button
-                      key={o}
-                      type="button"
-                      aria-pressed={marcado}
-                      onClick={() =>
-                        setFiltros({
-                          ...filtros,
-                          origem: marcado
-                            ? filtros.origem.filter((x) => x !== o)
-                            : [...filtros.origem, o],
-                        })
-                      }
-                      className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
-                        marcado
-                          ? "border-purple-800 bg-purple-800 text-white"
-                          : "border-base-200 text-ink-700 hover:bg-base-100"
-                      }`}
-                    >
-                      {ROTULO_FILTRO_ORIGEM[o]}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
-            <label className="space-y-1 text-xs font-medium text-ink-500">
-              Entrega ou retirada
-              <select
-                className={campo}
-                value={filtros.modalidade}
-                onChange={(e) =>
-                  setFiltros({ ...filtros, modalidade: e.target.value as Filtros["modalidade"] })
-                }
-              >
-                <option value="">Entrega e retirada</option>
-                <option value="delivery">Entrega</option>
-                <option value="retirada">Retirada</option>
-              </select>
-            </label>
-            <label className="space-y-1 text-xs font-medium text-ink-500">
-              De
-              <input
-                type="date"
-                className={campo}
-                value={filtros.desde}
-                onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })}
-              />
-            </label>
-            <label className="space-y-1 text-xs font-medium text-ink-500">
-              Até
-              <input
-                type="date"
-                className={campo}
-                value={filtros.ate}
-                onChange={(e) => setFiltros({ ...filtros, ate: e.target.value })}
-              />
-            </label>
-          </div>
-          {visao === "lista" ? (
-            <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Status">
-              {(Object.keys(ROTULO_STATUS) as StatusPedido[]).map((s) => {
-                const marcado = filtros.status.includes(s);
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    aria-pressed={marcado}
-                    onClick={() =>
-                      setFiltros({
-                        ...filtros,
-                        status: marcado
-                          ? filtros.status.filter((x) => x !== s)
-                          : [...filtros.status, s],
-                      })
-                    }
-                    className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
-                      marcado
-                        ? "border-purple-800 bg-purple-800 text-white"
-                        : "border-base-200 text-ink-700 hover:bg-base-100"
-                    }`}
-                  >
-                    <span className={`size-1.5 rounded-full ${TOM_STATUS[s].ponto}`} />
-                    {ROTULO_STATUS[s]}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
-            <span>
-              {fuso.data?.origem === "empresa"
-                ? `Datas no fuso da empresa (${zona}); o dia final entra.`
-                : "Fuso da empresa indisponível; as datas usam Brasília e o dia final entra."}
-            </span>
-            {ativos > 0 ? (
-              <button
-                type="button"
-                className="font-medium text-purple-800 hover:underline"
-                onClick={() => setFiltros({ ...VAZIO, busca: filtros.busca })}
-              >
-                Limpar filtros
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : ativos > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
+      {ativos > 0 ? (
+        <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-base-200 bg-card px-3 py-1.5">
           {!origemPadrao ? (
             <Ficha onTirar={() => setFiltros({ ...filtros, origem: [] })}>
               {filtros.origem.length === 0
@@ -436,56 +479,42 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
       ) : null}
 
       {periodo.erro ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="shrink-0 px-3 py-1.5 text-sm text-destructive">
           {periodo.erro}
         </p>
       ) : null}
 
       {visao === "quadro" ? (
-        <>
-          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:hidden">
-            {COLUNAS_PEDIDO.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                aria-pressed={coluna === c.id}
-                onClick={() => setColuna(c.id)}
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium ${
-                  coluna === c.id
-                    ? "border-purple-800 bg-purple-800 text-white"
-                    : "border-base-200 bg-card text-ink-700"
-                }`}
-              >
-                <span className={`size-2 rounded-full ${TOM_STATUS[c.status[0]].ponto}`} />
-                {c.rotulo}
-              </button>
-            ))}
-          </div>
-          <div className="grid gap-3 lg:grid-cols-5">
-            {COLUNAS_PEDIDO.map((c) => (
-              <div key={c.id} className={coluna === c.id ? "block" : "hidden lg:block"}>
-                <Coluna
-                  ctx={ctx}
-                  titulo={c.rotulo}
-                  status={[...c.status]}
-                  consulta={consulta}
-                  agora={agora}
-                  pausa={pausa}
-                  onAbrir={setNumero}
-                />
-              </div>
-            ))}
-          </div>
-        </>
+        <div className="flex min-h-0 flex-1 gap-2 overflow-x-auto bg-base-100 p-2">
+          {COLUNAS_PEDIDO.map((c) => (
+            <div
+              key={c.id}
+              id={`coluna-${c.id}`}
+              className={`min-h-0 w-full min-w-0 lg:block lg:w-auto lg:min-w-[13.5rem] lg:flex-1 ${coluna === c.id ? "block" : "hidden"}`}
+            >
+              <Coluna
+                ctx={ctx}
+                titulo={ROTULO_COLUNA[c.id]}
+                status={[...c.status]}
+                consulta={consulta}
+                agora={agora}
+                pausa={pausa}
+                onAbrir={setNumero}
+              />
+            </div>
+          ))}
+        </div>
       ) : (
-        <Lista
-          ctx={ctx}
-          status={filtros.status}
-          consulta={consulta}
-          agora={agora}
-          pausa={pausa}
-          onAbrir={setNumero}
-        />
+        <div className="min-h-0 flex-1 overflow-y-auto bg-base-100 p-2">
+          <Lista
+            ctx={ctx}
+            status={filtros.status}
+            consulta={consulta}
+            agora={agora}
+            pausa={pausa}
+            onAbrir={setNumero}
+          />
+        </div>
       )}
       <Detalhe ctx={ctx} numero={numero} fechar={() => setNumero(null)} />
     </div>
@@ -510,9 +539,11 @@ function Ficha({ children, onTirar }: { children: React.ReactNode; onTirar: () =
 
 function Indicadores({
   ctx,
+  coluna,
   onEscolher,
 }: {
   ctx: ContextoGateway;
+  coluna: IdColuna;
   onEscolher: (id: IdColuna) => void;
 }) {
   const fn = useServerFn(pedidos);
@@ -527,24 +558,17 @@ function Indicadores({
       return r.dados as ContagemPedidos;
     },
   });
-  if (q.isLoading)
-    return (
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-16 rounded-xl" />
-        ))}
-      </div>
-    );
-  if (!q.data) return null;
+  if (q.isLoading) return <Skeleton className="h-8 min-w-0 flex-1 rounded-lg" />;
+  if (!q.data) return <span className="min-w-0 flex-1" />;
   const a = q.data.em_andamento ?? {};
   const novos = q.data.aguardando_loja.total;
-  const itens: { id: IdColuna; rotulo: string; valor: number; detalhe?: string }[] = [
+  const itens: { id: IdColuna; rotulo: string; valor?: number; detalhe?: string }[] = [
     {
       id: "aguardando",
-      rotulo: "Aguardando loja",
+      rotulo: "Aguardando",
       valor: novos,
       ...(novos > 0 && q.data.aguardando_loja.mais_antigo_em
-        ? { detalhe: `mais antigo ${tempoDesde(q.data.aguardando_loja.mais_antigo_em)}` }
+        ? { detalhe: tempoDesde(q.data.aguardando_loja.mais_antigo_em) }
         : {}),
     },
     { id: "confirmado", rotulo: "Confirmados", valor: a["confirmado"] ?? 0 },
@@ -554,57 +578,41 @@ function Indicadores({
       rotulo: "Prontos / saíram",
       valor: (a["pronto_retirada"] ?? 0) + (a["saiu_entrega"] ?? 0),
     },
+    { id: "concluido", rotulo: "Concluídos" },
   ];
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+    <div className="order-last flex w-full min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] lg:order-none lg:w-auto lg:flex-1">
       {itens.map((i) => {
-        const destaque = i.id === "aguardando" && i.valor > 0;
+        const destaque = i.id === "aguardando" && (i.valor ?? 0) > 0;
+        const coluna0 = COLUNAS_PEDIDO.find((c) => c.id === i.id)?.status[0] ?? "concluido";
         return (
           <button
             key={i.id}
             type="button"
+            aria-pressed={coluna === i.id}
             onClick={() => onEscolher(i.id)}
-            className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2 text-xs transition-colors ${
               destaque
                 ? "border-gold-500 bg-gold-300/20 hover:bg-gold-300/30"
-                : "border-base-200 bg-card hover:bg-base-100"
-            }`}
+                : "border-transparent hover:bg-base-100"
+            } ${coluna === i.id ? "max-lg:border-purple-800 max-lg:bg-purple-50" : ""}`}
           >
-            <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-500">
-              {i.rotulo}
-            </span>
-            <span className="flex items-baseline gap-2">
-              <span
-                className={`font-display text-2xl leading-tight ${destaque ? "text-gold-700" : "text-purple-800"}`}
-              >
-                {i.valor}
-              </span>
-              {i.detalhe ? (
-                <span className="truncate text-xs text-gold-700">{i.detalhe}</span>
-              ) : null}
-            </span>
+            <span className={`size-2 rounded-full ${TOM_STATUS[coluna0].ponto}`} aria-hidden />
+            <span className="text-ink-700">{i.rotulo}</span>
+            {i.valor !== undefined ? (
+              <span className="font-semibold tabular-nums text-ink-900">{i.valor}</span>
+            ) : null}
+            {i.detalhe ? <span className="text-gold-700">{i.detalhe}</span> : null}
           </button>
         );
       })}
-      <div
-        className={`col-span-2 rounded-xl border px-3 py-2.5 sm:col-span-1 ${
-          q.data.avisos_com_falha > 0
-            ? "border-destructive/30 bg-destructive/5"
-            : "border-base-200 bg-card"
-        }`}
-      >
-        <span className="block text-[11px] font-medium uppercase tracking-wide text-ink-500">
-          Avisos com falha
+      {q.data.avisos_com_falha > 0 ? (
+        <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-2 text-xs text-destructive">
+          <AlertTriangle className="size-3.5" aria-hidden />
+          {q.data.avisos_com_falha}{" "}
+          {q.data.avisos_com_falha === 1 ? "aviso falhou" : "avisos falharam"}
         </span>
-        <span
-          className={`flex items-center gap-1.5 font-display text-2xl leading-tight ${
-            q.data.avisos_com_falha > 0 ? "text-destructive" : "text-purple-800"
-          }`}
-        >
-          {q.data.avisos_com_falha > 0 ? <AlertTriangle className="size-4" aria-hidden /> : null}
-          {q.data.avisos_com_falha}
-        </span>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -660,22 +668,24 @@ function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   const primeiro = p.status[0] ?? "concluido";
   return (
-    <section className="flex flex-col rounded-xl bg-base-100/70 p-2 lg:max-h-[calc(100vh-15rem)]">
-      <header className="flex items-center gap-2 px-1.5 pb-2 pt-1">
+    <section className="flex h-full min-h-0 flex-col">
+      <header className="flex shrink-0 items-center gap-2 px-1 pb-1.5">
         <span className={`size-2 rounded-full ${TOM_STATUS[primeiro].ponto}`} />
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-700">{titulo}</h2>
+        <h2 className="min-w-0 flex-1 truncate font-sans text-xs font-semibold text-ink-700">
+          {titulo}
+        </h2>
         {q.isSuccess ? (
-          <span className="rounded-full bg-card px-2 text-xs font-semibold text-ink-700">
+          <span className="rounded-full bg-card px-1.5 text-[11px] font-semibold tabular-nums text-ink-700">
             {itens.length}
             {q.hasNextPage ? "+" : ""}
           </span>
         ) : null}
       </header>
-      <div className="space-y-2 overflow-y-auto pr-0.5 lg:min-h-24">
+      <div className="relative min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain">
         {q.isLoading || q.isPending ? (
           <>
-            <Skeleton className="h-24 rounded-lg" />
-            <Skeleton className="h-24 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
           </>
         ) : null}
         {q.isError ? (
@@ -684,13 +694,12 @@ function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
           </p>
         ) : null}
         {q.isSuccess && itens.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-base-200 px-3 py-6 text-center text-xs text-ink-500">
-            Nenhum pedido
-          </p>
+          <p className="px-3 py-4 text-center text-xs text-ink-500">Nenhum pedido</p>
         ) : null}
         {itens.map((pedido) => (
           <CartaoPedido
             key={pedido.id}
+            ctx={p.ctx}
             pedido={pedido}
             agora={p.agora}
             onAbrir={() => p.onAbrir(pedido.numero)}
@@ -698,7 +707,8 @@ function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
         ))}
         {q.hasNextPage ? (
           <Button
-            className="min-h-10 w-full"
+            size="sm"
+            className="w-full"
             variant="ghost"
             disabled={q.isFetchingNextPage}
             onClick={() => void q.fetchNextPage()}
@@ -716,7 +726,7 @@ function Lista(p: PropsLista) {
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   return (
     <div className="overflow-hidden rounded-xl border border-base-200 bg-card">
-      <div className="hidden grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_minmax(0,9rem)_110px_90px] gap-3 border-b border-base-200 bg-base-100/60 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-500 md:grid">
+      <div className="hidden grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_170px_minmax(0,9rem)_110px_90px] gap-3 border-b border-base-200 bg-base-50 px-3 py-1.5 text-xs font-medium text-ink-500 md:grid">
         <span>Pedido</span>
         <span>Cliente</span>
         <span>Unidade</span>
@@ -769,7 +779,7 @@ function SeloStatus({ status }: { status: StatusPedido }) {
   const tom = TOM_STATUS[status] ?? TOM_STATUS.concluido;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${tom.selo}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${tom.selo}`}
     >
       <span className={`size-1.5 rounded-full ${tom.ponto}`} />
       {ROTULO_STATUS[status] ?? status}
@@ -803,7 +813,13 @@ function EtiquetaOrigemCanal({ origem, canal }: { origem?: string | null; canal?
 }
 
 /** Indicador compacto do aviso ao cliente: enviado, falhou ou desligado. */
-function MarcaAviso({ status }: { status: string | null | undefined }) {
+function MarcaAviso({
+  status,
+  compacto = false,
+}: {
+  status: string | null | undefined;
+  compacto?: boolean;
+}) {
   const texto = textoAviso(status);
   if (!texto) return null;
   const cor =
@@ -815,73 +831,111 @@ function MarcaAviso({ status }: { status: string | null | undefined }) {
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${cor}`} title={texto}>
       <MessageCircle className="size-3" aria-hidden />
-      {texto.replace(/^Aviso /, "")}
+      {compacto && status !== "falhou" ? (
+        <span className="sr-only">{texto}</span>
+      ) : (
+        texto.replace(/^Aviso /, "")
+      )}
     </span>
   );
 }
 
 function CartaoPedido({
+  ctx,
   pedido,
   agora,
   onAbrir,
 }: {
+  ctx: ContextoGateway;
   pedido: PedidoLista;
   agora: number;
   onAbrir: () => void;
 }) {
+  const fn = useServerFn(pedidos);
+  const cache = useQueryClient();
   const cliente = nomeClientePedido(pedido.cliente);
-  const novo = pedido.status === "aguardando_loja";
-  const minutos = (agora - Date.parse(pedido.criado_em)) / 60000;
-  const atrasado = novo && minutos >= 15;
+  const espera =
+    pedido.status === "aguardando_loja" ? urgenciaEspera(pedido.criado_em, agora) : null;
+  const passo = proximoPasso(pedido.proximos_status);
+  const avancar = useMutation({
+    mutationFn: async (status: string) => {
+      const r = await fn({
+        data: { acao: "status", empresa: ctx.empresa, numero: pedido.numero, status },
+      });
+      if (!r.ok) throw new Error(r.erro.mensagem);
+    },
+    onSuccess: () => {
+      toast.success(`Pedido #${pedido.numero} atualizado.`);
+      void cache.invalidateQueries({ queryKey: ["pedidos", ctx.empresa ?? "vinculada"] });
+    },
+    onError: (e: Error) => {
+      // Inclui "Este pedido já foi atualizado": o quadro recarrega e mostra o estado certo.
+      toast.error(e.message);
+      void cache.invalidateQueries({ queryKey: ["pedidos", ctx.empresa ?? "vinculada"] });
+    },
+    retry: false,
+  });
   return (
-    <button
-      type="button"
-      onClick={onAbrir}
-      className={`group block w-full rounded-lg border bg-card p-3 text-left shadow-[0_1px_2px_rgba(26,21,32,0.05)] transition hover:-translate-y-px hover:border-purple-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 ${
-        novo ? "border-l-4 border-base-200 border-l-gold-500" : "border-base-200"
-      }`}
+    <article
+      className={`rounded-lg border border-base-200 bg-card transition-colors hover:border-purple-300 ${espera ? BARRA_ESPERA[espera] : ""}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex min-w-0 items-center gap-1.5">
-          <span className="font-semibold text-purple-800">#{pedido.numero}</span>
-          <EtiquetaOrigemCanal origem={pedido.origem ?? null} canal={pedido.canal ?? null} />
-        </span>
-        <span
-          className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-medium ${
-            atrasado ? "text-destructive" : "text-ink-500"
-          }`}
-        >
-          <Clock className="size-3" aria-hidden />
-          {tempoDesde(pedido.criado_em, agora).replace(/^há /, "")}
-        </span>
-      </div>
-      <p className="mt-1 flex items-center gap-1.5 truncate text-sm font-medium text-ink-700">
-        {pedido.cliente?.canal ? (
-          <span className="shrink-0 text-ink-500">
-            <IconeCanal tipo={pedido.cliente.canal.tipo || pedido.cliente.canal.icone} />
+      <button
+        type="button"
+        onClick={onAbrir}
+        className="block w-full rounded-t-lg px-2.5 pb-1 pt-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+      >
+        <span className="flex items-center justify-between gap-2">
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            <span className="text-sm font-semibold tabular-nums text-purple-800">
+              #{pedido.numero}
+            </span>
+            <EtiquetaOrigemCanal origem={pedido.origem ?? null} canal={pedido.canal ?? null} />
           </span>
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-medium tabular-nums ${
+              espera ? TOM_ESPERA[espera] : "text-ink-500"
+            }`}
+          >
+            <Clock className="size-3" aria-hidden />
+            {tempoDesde(pedido.criado_em, agora).replace(/^há /, "")}
+          </span>
+        </span>
+        <span className="mt-0.5 flex items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-sm text-ink-900">{cliente.nome}</span>
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-ink-900">
+            {reais(pedido.total)}
+          </span>
+        </span>
+        <span className="mt-0.5 flex items-center gap-1 text-xs text-ink-500">
+          <IconeModalidade modalidade={pedido.modalidade} />
+          <span className="min-w-0 truncate">
+            {pedido.unidade_nome || pedido.unidade || "Sem unidade"}
+            {pedido.horario ? ` · ${pedido.horario}` : ""} · {pedido.numero_itens}{" "}
+            {pedido.numero_itens === 1 ? "item" : "itens"}
+          </span>
+        </span>
+      </button>
+      <div className="flex min-h-8 items-center justify-between gap-2 px-2.5 pb-1.5">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 truncate text-[11px] text-ink-500">
+            {textoPagamento(pedido.pagamento)}
+          </span>
+          <MarcaAviso status={pedido.aviso?.status} compacto />
+        </span>
+        {passo ? (
+          <Button
+            size="sm"
+            variant={pedido.status === "aguardando_loja" ? "default" : "outline"}
+            className="h-6 shrink-0 gap-1 px-2 text-xs"
+            disabled={avancar.isPending}
+            onClick={() => avancar.mutate(passo.status)}
+          >
+            {avancar.isPending ? "Salvando…" : passo.rotulo}
+            <ArrowRight className="size-3" aria-hidden />
+          </Button>
         ) : null}
-        <span className="truncate">{cliente.nome}</span>
-      </p>
-      {cliente.temNome && cliente.fone ? (
-        <p className="truncate text-xs text-ink-500">{cliente.fone}</p>
-      ) : null}
-      <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-500">
-        <IconeModalidade modalidade={pedido.modalidade} />
-        <span className="truncate">
-          {pedido.unidade_nome || pedido.unidade || "Unidade não informada"}
-          {pedido.horario ? ` · ${pedido.horario}` : ""}
-        </span>
-      </p>
-      <p className="mt-1 truncate text-xs text-ink-700">{textoPagamento(pedido.pagamento)}</p>
-      <div className="mt-2 flex items-center justify-between gap-2 border-t border-base-200 pt-2">
-        <span className="text-xs text-ink-500">
-          {pedido.numero_itens} {pedido.numero_itens === 1 ? "item" : "itens"}
-        </span>
-        <MarcaAviso status={pedido.aviso?.status} />
-        <span className="text-sm font-semibold text-ink-700">{reais(pedido.total)}</span>
       </div>
-    </button>
+    </article>
   );
 }
 
@@ -899,7 +953,7 @@ function LinhaPedido({
     <button
       type="button"
       onClick={onAbrir}
-      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_120px_minmax(0,9rem)_110px_90px]"
+      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_170px_minmax(0,9rem)_110px_90px]"
     >
       <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-purple-800">
         #{pedido.numero}
@@ -1210,7 +1264,13 @@ function Detalhe({
                   </div>
                   <div className="flex justify-between">
                     <dt>Taxa de entrega</dt>
-                    <dd>{reais(pedido.taxa_entrega)}</dd>
+                    <dd>
+                      {pedido.frete_gratis
+                        ? "Grátis"
+                        : pedido.taxa_origem === "a_confirmar"
+                          ? "A confirmar com o cliente"
+                          : reais(pedido.taxa_entrega)}
+                    </dd>
                   </div>
                   <div className="flex justify-between text-base font-semibold text-ink-700">
                     <dt>Total</dt>

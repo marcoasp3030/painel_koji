@@ -1,3 +1,4 @@
+import type { ConjuntoOpcoes, paraEnvio } from "./opcoes-item";
 /** Cardápio CAT2: edição dos dados do item, prévia de disponibilidade e histórico. */
 import { precoTexto, type ItemCardapio, type PedidoCardapio } from "./cardapio";
 import type { ResultadoItem } from "./cardapio-ux";
@@ -18,6 +19,7 @@ export type AlteracaoItem = {
   antes: Record<string, unknown> | null;
   depois: Record<string, unknown> | null;
 };
+export type { ConjuntoOpcoes };
 export type ServicosCat2 = {
   obter: (id: number) => Promise<ItemCardapio>;
   categorias: (unidade: string, arquivadas?: boolean) => Promise<{ categorias: CategoriaItem[] }>;
@@ -28,6 +30,15 @@ export type ServicosCat2 = {
   ) => Promise<{ itens: AlteracaoItem[]; proximo_cursor: number | null }>;
   /** PATCH com o atualizado_em de `item`, exatamente como foi lido. */
   editar: (item: ItemCardapio, campos: CamposItem) => Promise<ResultadoItem>;
+  opcoes: (id: number) => Promise<ConjuntoOpcoes>;
+  salvarOpcoes: (
+    id: number,
+    corpo: {
+      grupos: ReturnType<typeof paraEnvio>;
+      atualizado_em: string | null;
+      aplicar_em?: "todas";
+    },
+  ) => Promise<ConjuntoOpcoes & { aplicado_em?: { ok: boolean }[] }>;
   /** Troca o item na lista em memória (ex.: "Recarregar" depois de um 409). */
   atualizarLocal: (item: ItemCardapio) => void;
 };

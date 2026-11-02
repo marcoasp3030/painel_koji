@@ -15,6 +15,7 @@ function PaginaCardapio() {
       titulo="Cardápio"
       descricao="Organize os itens e seus horários de disponibilidade, unidade por unidade."
       papeis={["plataforma", "gestor", "supervisor", "funcionario"]}
+      telaCheia
     >
       {(ctx) => <Cardapio key={ctx.empresa ?? "vinculada"} ctx={ctx} />}
     </PaginaGateway>
