@@ -1,3 +1,9 @@
+## Atualização VPS cardápio/taxas/isolamento (02/11/2026)
+
+- Painel no ar: `bc492eb` (imagem `painel:bc492eb…`). Gateway: `8f5208a`, schema 61.
+- Migração painel `20261102120000_isolamento_empresas` aplicada. Gateway 056–061 aplicadas pelo `implantar.sh`.
+- Cuidado: não deixar `POSTGRES_PASSWORD` exportada no shell (sobrescreve o `.env` no compose). Migrações do painel: `docker compose -f docker-compose.yml run --rm --no-deps migracoes`.
+
 ## Isolamento entre empresas (01/11/2026)
 
 Pedidos, conversas, cardápio e integrações de um cliente não são devolvidos a outro: o servidor só aceita vínculo ativo e o teste MULTI1-a recusa empresa alheia antes da chamada. Não há ambiente separado (um banco, um login, uma chave do gateway).

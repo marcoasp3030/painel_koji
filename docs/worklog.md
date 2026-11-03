@@ -1,3 +1,19 @@
+## [2026-11-02 22:50] — Atualização completa painel+gateway (GitHub → VPS)
+- **Autor:** Auto
+- **Objetivo:** Trazer as 3 atualizações do GitHub (cardápio público, taxas, isolamento) de forma segura.
+- **Arquivos alterados:**
+ - pull `bc492eb` — painel; pull/`8f5208a` — gateway (inclui correção `public.unaccent`)
+ - `supabase/migrations/20261102120000_isolamento_empresas.sql` — aplicada
+ - `.env` do painel — `POSTGRES_PASSWORD` realinhada ao volume (sem commit)
+ - gateway `.env` — `PAINEL_PUBLIC_URL` (sem commit)
+- **Resumo das mudanças:** Gateway implantado via `implantar.sh` (suíte 415 OK, backup, migrações 056–061, saúde). Painel: migração isolamento + `publicar-painel.sh` → `painel:bc492eb…`. Auth/api-rest/home/gateway health 200.
+- **Decisões e justificativas:** `docker compose run migracoes` sem `--no-deps` recriou banco/auth; `POSTGRES_PASSWORD` exportada no shell sobrescrevia o `.env` e derrubava GoTrue/PostgREST. Correção: `unset POSTGRES_PASSWORD`, realinhar roles, migrar com `--no-deps`, publicar só o painel.
+- **Comandos executados:** gateway `implantar.sh cardapio-publico-20261102` → OK; painel migracoes → OK; `publicar-painel.sh` → OK; smoke → 200.
+- **Erros e resoluções:** suíte 1 falha (`unaccent` sem schema) → `public.unaccent` + push `8f5208a`; auth 502 por override de senha no shell → unset + recreate.
+- **Pendências / TODO:** conferir `WORKERS`/`CONCORRENCIA_POR_WORKER` na VPS (docs CAPACIDADE); não exportar `POSTGRES_PASSWORD` no shell.
+- **Próximos passos:** hard refresh no navegador; validar cardápio público e Entrega nas unidades.
+- **Volta painel:** tag `painel:volta-*` criada pelo script; gateway volta `gateway:0cc55d5`.
+
 ## [2026-11-02] — Taxa de entrega por bairro e CEP
 
 - Nova seção Entrega em Unidades, só com pedidos em uso: valor fixo, por bairro ou por CEP, bairros não atendidos e frete grátis. Até aqui o cadastro existia só na API.
