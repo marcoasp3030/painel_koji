@@ -6,6 +6,7 @@ import {
   CreditCard,
   Loader2,
   MapPin,
+  MessageCircle,
   MessageSquareText,
   QrCode,
   ShoppingBag,
@@ -35,6 +36,7 @@ import {
   type UnidadeCardapio,
 } from "@/lib/cardapio";
 import { EnderecoEntrega, type ResultadoCep } from "./EnderecoEntrega";
+import { FinalizarWhatsapp, type Finalizacao, type SituacaoFinalizacao } from "./FinalizarWhatsapp";
 
 export type DadosPedido = {
   modalidade: "delivery" | "retirada" | null;
@@ -113,18 +115,25 @@ export function Contador({
 }
 
 function Bloco({
+  id,
+  destaque,
   icone,
   titulo,
   children,
 }: {
+  id?: string;
+  destaque?: boolean;
   icone: ReactNode;
   titulo: string;
   children: ReactNode;
 }) {
   return (
     <section
+      id={id}
       aria-label={titulo}
-      className="rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgba(26,21,32,0.07)]"
+      className={`scroll-mt-3 rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgba(26,21,32,0.07)] transition-shadow duration-300 ${
+        destaque ? "ring-2 ring-[var(--cd-marca)]" : ""
+      }`}
     >
       <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-ink-900">
         <span className="flex size-7 items-center justify-center rounded-full bg-purple-100 text-[var(--cd-marca)]">
@@ -195,6 +204,9 @@ export function PedidoCliente({
   recarregar,
   fechar,
   enviar,
+  loja,
+  finalizar,
+  consultarFinalizacao,
   concluir,
   buscarCep,
   cotarTaxa,
@@ -213,6 +225,10 @@ export function PedidoCliente({
   recarregar: () => Promise<void>;
   fechar: () => void;
   enviar: (corpo: CorpoEnvio) => Promise<RespostaEnvio>;
+  /** Link da loja: o pedido termina com uma mensagem no WhatsApp. */
+  loja: boolean;
+  finalizar: (corpo: CorpoEnvio) => Promise<RespostaEnvio>;
+  consultarFinalizacao: (codigo: string) => Promise<SituacaoFinalizacao | null>;
   concluir: (numero: string, total: number) => void;
   buscarCep: (cep: string) => Promise<ResultadoCep>;
   cotarTaxa: (corpo: {
@@ -224,6 +240,8 @@ export function PedidoCliente({
 }) {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [finalizacao, setFinalizacao] = useState<Finalizacao | null>(null);
+  const [destaque, setDestaque] = useState<string | null>(null);
   const { modalidade, forma, precisaTroco, troco, maioridade, observacao } = dados;
   // Taxa por área precisa de bairro e CEP separados: o endereço solto da conversa não mostra o valor antes de pedir.
   const usarDaConversa = dados.usarDaConversa && !unidade.taxa_por_area;
@@ -282,34 +300,46 @@ export function PedidoCliente({
   const r = resumoDoPedido(linhas, categorias, taxa);
   const formaAtual = unidade.formas.find((f) => f.codigo === forma);
   const trocoValor = Number(troco.replace(",", "."));
-  const pendencia = (() => {
-    if (!r.quantidade) return "Seu pedido está vazio";
-    if (r.fora.length) return "Tire os itens indisponíveis";
+  // O que falta e onde: o botão leva o cliente até o bloco, em vez de só ficar cinza.
+  const falta = ((): [string, string] | null => {
+    if (!r.quantidade) return ["Seu pedido está vazio", "pedido-itens"];
+    if (r.fora.length) return ["Tire os itens indisponíveis", "pedido-itens"];
     if (unidade.pedido_minimo !== null && r.subtotal < unidade.pedido_minimo)
-      return `Pedido mínimo: ${reais(unidade.pedido_minimo)}`;
-    if (!modalidade) return "Escolha entrega ou retirada";
+      return [`Pedido mínimo: ${reais(unidade.pedido_minimo)}`, "pedido-itens"];
+    if (!modalidade) return ["Escolha entrega ou retirada", "pedido-receber"];
     if (modalidade === "delivery" && !usarDaConversa) {
-      const falta = faltaNoEndereco(dados.endereco);
-      if (falta) return falta;
+      const endereco = faltaNoEndereco(dados.endereco);
+      if (endereco) return [endereco, "pedido-receber"];
     }
     if (porArea) {
-      if (cotando) return "Calculando a taxa de entrega…";
-      if (temArea && !cotada) return "Não foi possível calcular a taxa. Tente de novo";
+      if (cotando) return ["Calculando a taxa de entrega…", "pedido-receber"];
+      if (temArea && !cotada)
+        return ["Não foi possível calcular a taxa. Tente de novo", "pedido-receber"];
       const area = pendenciaDaArea(cotada, bairroConfirmado);
-      if (area) return area;
+      if (area) return [area, "pedido-receber"];
     }
-    if (!forma) return "Escolha a forma de pagamento";
-    if (precisaTroco && !(trocoValor > r.total)) return "Informe o valor para troco";
-    if (r.alcoolico && !maioridade) return "Confirme que tem 18 anos ou mais";
+    if (!forma) return ["Escolha a forma de pagamento", "pedido-pagamento"];
+    if (precisaTroco && !(trocoValor > r.total))
+      return ["Informe o valor para troco", "pedido-pagamento"];
+    if (r.alcoolico && !maioridade)
+      return ["Confirme que tem 18 anos ou mais", "pedido-maioridade"];
     return null;
   })();
+  const pendencia = falta?.[0] ?? null;
+
+  function levarAoQueFalta() {
+    if (!falta) return;
+    document.getElementById(falta[1])?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setDestaque(falta[1]);
+    window.setTimeout(() => setDestaque(null), 1800);
+  }
 
   async function mandar() {
     if (pendencia || !modalidade || !forma || enviando || previa || fechada) return;
     setEnviando(true);
     setErro(null);
     try {
-      const resposta = await enviar({
+      const corpo = {
         unidade: unidade.codigo,
         itens: linhas.map((l) => ({
           item_id: l.item_id,
@@ -328,7 +358,18 @@ export function PedidoCliente({
         observacao: observacao.trim() || null,
         maioridade_confirmada: maioridade,
         total_visto: r.total,
-      });
+      };
+      if (loja) {
+        const resposta = await finalizar(corpo);
+        if (resposta.ok) {
+          setFinalizacao(resposta.dados as unknown as Finalizacao);
+          return;
+        }
+        setErro(textoRecusa(resposta.motivo));
+        await recarregar().catch(() => undefined);
+        return;
+      }
+      const resposta = await enviar(corpo);
       if (resposta.ok) {
         const total = resposta.dados["total"];
         concluir(String(resposta.dados["numero"]), typeof total === "number" ? total : r.total);
@@ -344,6 +385,18 @@ export function PedidoCliente({
     }
   }
 
+  if (finalizacao) {
+    return (
+      <FinalizarWhatsapp
+        finalizacao={finalizacao}
+        total={r.total}
+        consultar={consultarFinalizacao}
+        concluir={concluir}
+        voltar={() => setFinalizacao(null)}
+      />
+    );
+  }
+
   return (
     <>
       <SheetHeader className="border-b border-base-200 bg-card px-4 py-3 pr-10 text-left">
@@ -352,7 +405,12 @@ export function PedidoCliente({
       </SheetHeader>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-base-100 p-3">
-        <Bloco icone={<ShoppingBag className="size-4" aria-hidden />} titulo="Itens">
+        <Bloco
+          id="pedido-itens"
+          destaque={destaque === "pedido-itens"}
+          icone={<ShoppingBag className="size-4" aria-hidden />}
+          titulo="Itens"
+        >
           <ul className="divide-y divide-base-200">
             {linhas.map((l) => {
               const item = itens.get(l.item_id);
@@ -411,7 +469,12 @@ export function PedidoCliente({
         </Bloco>
 
         {modalidades.length ? (
-          <Bloco icone={<MapPin className="size-4" aria-hidden />} titulo="Como receber">
+          <Bloco
+            id="pedido-receber"
+            destaque={destaque === "pedido-receber"}
+            icone={<MapPin className="size-4" aria-hidden />}
+            titulo="Como receber"
+          >
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Como receber">
               {modalidades.map((m) => (
                 <Escolha2
@@ -524,7 +587,12 @@ export function PedidoCliente({
           </Bloco>
         ) : null}
 
-        <Bloco icone={<Wallet className="size-4" aria-hidden />} titulo="Pagamento">
+        <Bloco
+          id="pedido-pagamento"
+          destaque={destaque === "pedido-pagamento"}
+          icone={<Wallet className="size-4" aria-hidden />}
+          titulo="Pagamento"
+        >
           {unidade.formas.length ? (
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Pagamento">
               {unidade.formas.map((f) => (
@@ -577,7 +645,12 @@ export function PedidoCliente({
         </Bloco>
 
         {r.alcoolico ? (
-          <label className="flex items-start gap-2 rounded-2xl bg-card p-4 text-base shadow-[0_1px_3px_rgba(26,21,32,0.07)]">
+          <label
+            id="pedido-maioridade"
+            className={`flex scroll-mt-3 items-start gap-2 rounded-2xl bg-card p-4 text-base shadow-[0_1px_3px_rgba(26,21,32,0.07)] ${
+              destaque === "pedido-maioridade" ? "ring-2 ring-[var(--cd-marca)]" : ""
+            }`}
+          >
             <input
               type="checkbox"
               className="mt-0.5 size-5 shrink-0 accent-purple-800"
@@ -638,9 +711,15 @@ export function PedidoCliente({
         ) : null}
         <button
           type="button"
-          disabled={Boolean(pendencia) || enviando || previa || fechada}
-          onClick={() => void mandar()}
-          className="flex h-13 min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-purple-800 px-4 text-base font-semibold text-[var(--cd-sobre)] transition-colors active:bg-purple-900 disabled:bg-base-200 disabled:font-medium disabled:text-ink-700"
+          disabled={enviando || previa || fechada}
+          onClick={() => (pendencia ? levarAoQueFalta() : void mandar())}
+          className={`flex h-13 min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-semibold transition-transform active:scale-[0.98] disabled:bg-base-200 disabled:font-medium disabled:text-ink-700 ${
+            pendencia
+              ? "bg-base-200 font-medium text-ink-700"
+              : loja
+                ? "bg-[#25d366] text-[#0b3d20]"
+                : "bg-purple-800 text-[var(--cd-sobre)] active:bg-purple-900"
+          }`}
         >
           {enviando ? (
             <Loader2 className="size-5 animate-spin" aria-label="Enviando" />
@@ -648,10 +727,22 @@ export function PedidoCliente({
             "Prévia: envio desligado"
           ) : fechada ? (
             "Unidade fechada agora"
+          ) : pendencia ? (
+            pendencia
+          ) : loja ? (
+            <>
+              <MessageCircle className="size-5" aria-hidden />
+              Finalizar no WhatsApp · {reais(r.total)}
+            </>
           ) : (
-            (pendencia ?? `Enviar pedido · ${reais(r.total)}`)
+            `Enviar pedido · ${reais(r.total)}`
           )}
         </button>
+        {previa ? (
+          <p className="text-center text-xs text-ink-500">
+            Para fazer um pedido de verdade, use o Link da loja, no painel.
+          </p>
+        ) : null}
       </div>
     </>
   );

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Bike,
+  Copy,
   ExternalLink,
   ImagePlus,
   Loader2,
@@ -45,7 +46,7 @@ import {
   salvarAparencia,
   type AparenciaSalva,
 } from "@/lib/gateway-aparencia.functions";
-import { previaCardapio } from "@/lib/gateway-conversas.functions";
+import { linkDaLoja, previaCardapio } from "@/lib/gateway-conversas.functions";
 import { prepararImagem, problemaNaImagem } from "@/lib/imagem-cliente";
 import type { ContextoGateway } from "./Gateway";
 
@@ -245,7 +246,7 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
           {sujo ? "Alterações não salvas" : "Assim o cliente vê o cardápio pelo link."}
         </p>
         <Button variant="ghost" size="sm" onClick={abrirPrevia}>
-          <ExternalLink className="size-3.5" aria-hidden /> Abrir prévia real
+          <ExternalLink className="size-3.5" aria-hidden /> Prévia (não envia pedido)
         </Button>
         {q.data?.aparencia ? (
           <Button variant="ghost" size="sm" onClick={() => setConfirmarPadrao(true)}>
@@ -268,6 +269,8 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
 
       <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_380px] lg:overflow-hidden">
         <div className="min-w-0 lg:overflow-y-auto">
+          <LinkDaLoja empresa={ctx.empresa} />
+
           <Secao titulo="Identidade">
             <Linha titulo="Nome no cardápio" ajuda="Vazio: usa o nome da empresa.">
               <Input
@@ -470,6 +473,93 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** O link que a loja divulga: é por ele que o cliente pede sem ter uma conversa aberta. */
+function LinkDaLoja({ empresa }: { empresa: ContextoGateway["empresa"] }) {
+  const cache = useQueryClient();
+  const pedir = useServerFn(linkDaLoja);
+  const chave = ["cardapio-link-loja", empresa];
+  const q = useQuery({
+    queryKey: chave,
+    queryFn: () => pedir({ data: { empresa } }),
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const trocar = useMutation({
+    mutationFn: () => pedir({ data: { empresa, renovar: true } }),
+    onSuccess: (dados) => {
+      cache.setQueryData(chave, dados);
+      toast.success("Link trocado. O anterior não abre mais.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const url = q.data?.url;
+  return (
+    <Secao titulo="Link da loja">
+      <div className="space-y-2 px-4 py-3">
+        <p className="text-sm text-ink-500">
+          Coloque na bio e nas redes. O cliente monta o pedido e finaliza pelo WhatsApp.
+        </p>
+        {q.isError ? (
+          <p role="alert" className="text-sm text-destructive">
+            Não foi possível gerar o link. Confira o endereço público do painel no gateway.
+          </p>
+        ) : (
+          <>
+            <Input
+              readOnly
+              aria-label="Endereço do link da loja"
+              value={url ?? "Gerando…"}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <div className="flex flex-wrap gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!url}
+                onClick={() =>
+                  url &&
+                  navigator.clipboard.writeText(url).then(
+                    () => toast.success("Link copiado."),
+                    () => toast.error("Não foi possível copiar. Selecione o link e copie."),
+                  )
+                }
+              >
+                <Copy className="size-3.5" aria-hidden /> Copiar
+              </Button>
+              <Button
+                size="sm"
+                disabled={!url}
+                onClick={() => url && window.open(url, "_blank", "noopener")}
+              >
+                <ExternalLink className="size-3.5" aria-hidden /> Abrir e fazer pedido
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!url || trocar.isPending}
+                onClick={() => {
+                  if (window.confirm("Trocar o link? O atual deixa de abrir para todos.")) {
+                    trocar.mutate();
+                  }
+                }}
+              >
+                Trocar link
+              </Button>
+            </div>
+          </>
+        )}
+        {q.data && !q.data.whatsapp_conectado ? (
+          <p className="flex items-start gap-2 rounded-lg bg-gold-300/20 p-2 text-sm text-ink-700">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+            Conecte um WhatsApp ativo em Canais. Sem ele, o cliente monta o pedido, mas não consegue
+            finalizar.
+          </p>
+        ) : null}
+      </div>
+    </Secao>
   );
 }
 

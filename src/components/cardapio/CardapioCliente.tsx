@@ -51,6 +51,8 @@ import {
 import {
   cotarTaxaCardapio,
   enviarPedidoCardapio,
+  finalizarCardapio,
+  situacaoDoCardapio,
   lerCardapio,
   lerCep,
   lerUnidadeCardapio,
@@ -59,6 +61,7 @@ import { temaDoCardapio, type AparenciaCardapio, type Tema } from "@/lib/cardapi
 import type { ResultadoCep } from "./EnderecoEntrega";
 import { CapaLoja, MarcaLoja, TopoCardapio, type InfoLoja } from "./TopoCardapio";
 import { Contador, DADOS_VAZIOS, PedidoCliente, type DadosPedido } from "./PedidoCliente";
+import type { SituacaoFinalizacao } from "./FinalizarWhatsapp";
 
 type CarrinhoInicial = {
   unidade: string | null;
@@ -72,6 +75,7 @@ type Inicio = {
   empresa: string;
   aparencia?: AparenciaCardapio | null;
   previa?: boolean;
+  loja?: boolean;
   usado?: { numero: string };
   unidades?: UnidadeCardapio[];
   carrinho?: CarrinhoInicial | null;
@@ -182,6 +186,8 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
   const nome = aparencia?.nome_exibicao || inicio.empresa;
   const lerUnidade = useServerFn(lerUnidadeCardapio);
   const enviar = useServerFn(enviarPedidoCardapio);
+  const finalizar = useServerFn(finalizarCardapio);
+  const lerSituacao = useServerFn(situacaoDoCardapio);
   const consultarCep = useServerFn(lerCep);
   const cotar = useServerFn(cotarTaxaCardapio);
   const ler = useServerFn(lerCardapio);
@@ -303,6 +309,14 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
       return r.ok ? (r.dados as unknown as CotacaoTaxa) : null;
     },
     [cotar, token],
+  );
+
+  const consultarFinalizacao = useCallback(
+    async (codigo: string) => {
+      const r = await lerSituacao({ data: { token, codigo } });
+      return r.ok ? (r.dados as unknown as SituacaoFinalizacao) : null;
+    },
+    [lerSituacao, token],
   );
 
   const visiveis = useMemo(() => filtrarCategorias(categorias ?? [], busca), [categorias, busca]);
@@ -610,6 +624,9 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
               recarregar={() => carregar(unidade.codigo)}
               fechar={() => setVerPedido(false)}
               enviar={(corpo) => enviar({ data: { token, ...corpo } })}
+              loja={Boolean(inicio.loja)}
+              finalizar={(corpo) => finalizar({ data: { token, ...corpo } })}
+              consultarFinalizacao={consultarFinalizacao}
               concluir={(numero, total) => {
                 gravarSalvo(chaveSalvo, null);
                 setEnviado({ numero, total });

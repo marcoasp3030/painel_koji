@@ -325,6 +325,10 @@ const MENSAGEM_RECUSA: Record<string, string> = {
   fora_area: "Não entregamos neste endereço. Escolha retirada ou outro endereço.",
   bairro_nao_reconhecido: "Não encontramos este bairro. Confira o endereço.",
   falta_cep: "Informe o CEP para calcular a taxa.",
+  whatsapp_indisponivel:
+    "O WhatsApp da loja não está disponível agora. Tente de novo em instantes.",
+  codigo_expirado: "O tempo para enviar a mensagem acabou. Volte ao pedido e finalize de novo.",
+  codigo_invalido: "Não encontramos este pedido. Volte e finalize de novo.",
   link_invalido: "Este link não é válido. Peça um novo na conversa.",
   link_expirado: "Este link expirou. Peça um novo na conversa.",
   muitas_chamadas: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.",

@@ -328,6 +328,22 @@ export const previaCardapio = createServerFn({ method: "POST" })
     });
   });
 
+/** Link fixo da loja, para divulgar. Com `renovar`, o anterior deixa de abrir. */
+export const linkDaLoja = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, renovar: z.boolean().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      return (
+        await t.chamar<{ url: string; whatsapp_conectado: boolean }>("POST", ["cardapio", "loja"], {
+          corpo: { renovar: Boolean(data.renovar) },
+        })
+      ).dados;
+    });
+  });
+
 export const apagarNota = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

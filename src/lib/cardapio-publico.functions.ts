@@ -87,37 +87,46 @@ const escolha = z.object({
   quantidade: z.number().int().min(1).max(20),
 });
 
+const corpoDoPedido = z.object({
+  token,
+  unidade,
+  itens: z
+    .array(
+      z.object({
+        item_id: z.number().int().positive(),
+        quantidade: z.number().int().min(1).max(99),
+        observacao: z.string().max(300).nullable(),
+        opcoes: z.array(escolha).max(50),
+      }),
+    )
+    .min(1)
+    .max(50),
+  modalidade: z.enum(["delivery", "retirada"]),
+  endereco: z.string().max(500).nullable(),
+  bairro: z.string().max(80).nullable(),
+  cep: z
+    .string()
+    .regex(/^\d{8}$/)
+    .nullable(),
+  bairro_confirmado: z.boolean(),
+  forma_pagamento: z.string().regex(/^[a-z0-9_]{1,40}$/),
+  troco_para: z.number().positive().max(100000).nullable(),
+  observacao: z.string().max(500).nullable(),
+  maioridade_confirmada: z.boolean(),
+  total_visto: z.number().min(0),
+});
+
 export const enviarPedidoCardapio = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        token,
-        unidade,
-        itens: z
-          .array(
-            z.object({
-              item_id: z.number().int().positive(),
-              quantidade: z.number().int().min(1).max(99),
-              observacao: z.string().max(300).nullable(),
-              opcoes: z.array(escolha).max(50),
-            }),
-          )
-          .min(1)
-          .max(50),
-        modalidade: z.enum(["delivery", "retirada"]),
-        endereco: z.string().max(500).nullable(),
-        bairro: z.string().max(80).nullable(),
-        cep: z
-          .string()
-          .regex(/^\d{8}$/)
-          .nullable(),
-        bairro_confirmado: z.boolean(),
-        forma_pagamento: z.string().regex(/^[a-z0-9_]{1,40}$/),
-        troco_para: z.number().positive().max(100000).nullable(),
-        observacao: z.string().max(500).nullable(),
-        maioridade_confirmada: z.boolean(),
-        total_visto: z.number().min(0),
-      })
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => corpoDoPedido.parse(d))
   .handler(({ data }) => chamar("pedido", data));
+
+/** Link da loja: confere o pedido e devolve o código e o link do WhatsApp. O pedido nasce da mensagem do cliente. */
+export const finalizarCardapio = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => corpoDoPedido.parse(d))
+  .handler(({ data }) => chamar("finalizar", data));
+
+export const situacaoDoCardapio = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token, codigo: z.string().regex(/^[A-Z0-9]{6}$/) }).parse(d),
+  )
+  .handler(({ data }) => chamar("situacao", data));
