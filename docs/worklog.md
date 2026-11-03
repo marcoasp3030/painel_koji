@@ -10,6 +10,18 @@
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh e conferir as duas telas.
 
+## [2026-11-03 11:39] — Botão "Fazer outro pedido" no cardápio do cliente
+- **Autor:** Auto
+- **Objetivo:** Depois de "Pedido enviado!", permitir outro pedido (loja) ou pedir novo link (conversa/usado).
+- **Arquivos alterados:**
+ - `src/components/cardapio/CardapioCliente.tsx` — modificado — botão nos blocos `enviado` e `usado`
+ - `src/lib/cardapio.ts` — modificado — helpers `depoisDeOutroPedidoLoja`, `whatsappDaConversa`
+ - `src/lib/cardapio.test.ts` — modificado — 3 testes
+- **Resumo das mudanças:** Loja: limpa rascunho/pedido e volta ao cardápio (ou escolha de unidade). Conversa/usado: mostra "Peça um novo link na conversa" (+ wa.me se houver número). Prévia inalterada.
+- **Comandos executados:** `bun test cardapio.test.ts` → 18 OK; publicar → (em seguida).
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh e conferir as duas telas.
+
 ## [2026-11-03 00:09] — Link da loja + finalização WhatsApp na VPS
 - **Autor:** Auto
 - **Objetivo:** Publicar `ff9e521` junto com gateway `ff865b6`.
