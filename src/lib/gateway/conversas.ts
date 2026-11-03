@@ -294,26 +294,43 @@ export function vizinhaNaLista(itens: Conversa[], atual: string | null | undefin
   if (indice < 0) return itens[0] ?? null;
   return itens[indice + passo] ?? null;
 }
-/** Quem aguarda há mais tempo, fora a conversa aberta. Depende da ordem de `ordenarConversas`. */
+/** Quem aguarda há mais tempo, fora a conversa aberta. Independente da ordem da lista. */
 export function proximaDaFila(itens: Conversa[], atual: string | null | undefined) {
-  return itens.find((c) => c.aguardando_atendente_desde && c.conversation_id !== atual) ?? null;
+  return (
+    [...itens]
+      .filter((c) => c.aguardando_atendente_desde && c.conversation_id !== atual)
+      .sort(
+        (a, b) =>
+          Date.parse(a.aguardando_atendente_desde!) - Date.parse(b.aguardando_atendente_desde!) ||
+          a.conversation_id.localeCompare(b.conversation_id),
+      )[0] ?? null
+  );
+}
+function instanteAtividade(c: Conversa) {
+  return Date.parse(c.ultima_em ?? c.atualizado_em ?? "") || 0;
 }
 /**
- * Fila de espera primeiro (mais antiga no topo). O resto por atividade recente ou,
- * com `porRecencia: false`, na ordem em que o gateway devolveu.
+ * Lista principal: atividade mais recente no topo (nova mensagem sobe a conversa).
+ * Aba Aguardando (`porEspera`): quem espera há mais tempo primeiro.
+ * `porRecencia: false` e sem `porEspera`: mantém a ordem do gateway.
  */
-export function ordenarConversas(itens: Conversa[], { porRecencia = true } = {}) {
+export function ordenarConversas(
+  itens: Conversa[],
+  { porRecencia = true, porEspera = false }: { porRecencia?: boolean; porEspera?: boolean } = {},
+) {
   return [...itens].sort((a, b) => {
-    const pa = !!a.aguardando_atendente_desde,
-      pb = !!b.aguardando_atendente_desde;
-    if (pa !== pb) return Number(pb) - Number(pa);
-    if (pa && pb)
-      return (
-        Date.parse(a.aguardando_atendente_desde!) - Date.parse(b.aguardando_atendente_desde!) ||
-        a.conversation_id.localeCompare(b.conversation_id)
-      );
+    if (porEspera) {
+      const pa = !!a.aguardando_atendente_desde,
+        pb = !!b.aguardando_atendente_desde;
+      if (pa !== pb) return Number(pb) - Number(pa);
+      if (pa && pb)
+        return (
+          Date.parse(a.aguardando_atendente_desde!) - Date.parse(b.aguardando_atendente_desde!) ||
+          a.conversation_id.localeCompare(b.conversation_id)
+        );
+    }
     if (!porRecencia) return 0;
-    return (Date.parse(b.ultima_em ?? "") || 0) - (Date.parse(a.ultima_em ?? "") || 0);
+    return instanteAtividade(b) - instanteAtividade(a) || a.conversation_id.localeCompare(b.conversation_id);
   });
 }
 export type Leitura = { inicio: string; vistas: Record<string, string> };

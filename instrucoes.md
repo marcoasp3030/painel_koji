@@ -1,3 +1,8 @@
+## Conversas por recência (02/11/2026)
+
+- Lista Todas/Minhas: a conversa com a mensagem mais nova fica no topo (não fica atrás da fila antiga de “aguardando”).
+- Aba Aguardando e “Abrir próxima”: continuam pela espera mais antiga.
+
 ## Atualização VPS cardápio/taxas/isolamento (02/11/2026)
 
 - Painel no ar: `bc492eb` (imagem `painel:bc492eb…`). Gateway: `8f5208a`, schema 61.

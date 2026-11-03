@@ -96,7 +96,9 @@ test("histórico combina páginas sem duplicar e ordena IDs; atendimento tem pri
     ultima_em: "2026-10-09T11:00:00Z",
     aguardando_atendente_desde: "2026-10-09T10:00:00Z",
   } as Conversa;
-  expect(ordenarConversas([a, b])[0]?.conversation_id).toBe("b");
+  // Recência manda: mensagem nova sobe, mesmo com outra conversa aguardando.
+  expect(ordenarConversas([a, b])[0]?.conversation_id).toBe("a");
+  expect(ordenarConversas([a, b], { porEspera: true })[0]?.conversation_id).toBe("b");
 });
 test("estado, telefone e canal usam só o que a lista já devolve", () => {
   const agora = Date.parse("2026-10-10T22:00:00Z");
@@ -259,7 +261,7 @@ test("PED1-c nome de cadastro: mesma regra do gateway; vazio apaga", () => {
   ).toBe("+55 11 94728-1513");
 });
 
-test("PED1-c ordem de cadastro mantém a ordem do gateway, fila de espera no topo", () => {
+test("lista por recência: atividade mais nova no topo; aba espera usa idade da fila", () => {
   const c = (id: string, ultima_em: string, espera: string | null = null) =>
     ({
       conversation_id: id,
@@ -272,11 +274,14 @@ test("PED1-c ordem de cadastro mantém a ordem do gateway, fila de espera no top
     c("e", "2026-10-10T09:00:00Z", "2026-10-10T09:00:00Z"),
   ];
   expect(ordenarConversas(itens, { porRecencia: false }).map((x) => x.conversation_id)).toEqual([
-    "e",
     "a",
     "b",
+    "e",
   ]);
-  expect(ordenarConversas(itens).map((x) => x.conversation_id)).toEqual(["e", "b", "a"]);
+  expect(ordenarConversas(itens).map((x) => x.conversation_id)).toEqual(["b", "a", "e"]);
+  expect(
+    ordenarConversas(itens, { porEspera: true, porRecencia: false }).map((x) => x.conversation_id),
+  ).toEqual(["e", "a", "b"]);
 });
 
 const AGORA = Date.parse("2026-11-01T12:00:00-03:00");
@@ -314,11 +319,11 @@ test("vizinhaNaLista anda uma posição e para nas pontas", () => {
 });
 
 test("proximaDaFila abre a espera mais antiga e pula a conversa aberta", () => {
-  const itens = ordenarConversas([
+  const itens = [
     fila("nova", minutosAtras(2)),
     fila("sem-espera"),
     fila("antiga", minutosAtras(40)),
-  ]);
+  ];
   expect(proximaDaFila(itens, null)?.conversation_id).toBe("antiga");
   expect(proximaDaFila(itens, "antiga")?.conversation_id).toBe("nova");
   expect(proximaDaFila([fila("sem-espera")], null)).toBeNull();

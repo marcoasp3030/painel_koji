@@ -492,6 +492,7 @@ export function Conversas({
     });
   }, []);
   const porCanal = new Map((canais.data?.itens ?? []).map((c) => [c.id, c]));
+  // Todas/Minhas: a mensagem mais nova sobe a conversa. Aba Aguardando: quem espera há mais tempo.
   const itens = ordenarConversas(
     [
       ...new Map(
@@ -501,7 +502,9 @@ export function Conversas({
         ].map((c) => [c.conversation_id, c]),
       ).values(),
     ],
-    { porRecencia: ordem === "recentes" },
+    soAguardando
+      ? { porEspera: true, porRecencia: false }
+      : { porRecencia: ordem === "recentes" },
   );
   // A conversa aberta tem leitura própria: pode sair da aba (assumida, transferida) e seguir aberta.
   const abertaId = selecionada?.conversation_id;

@@ -79,7 +79,10 @@ export const listarConversas = createServerFn({ method: "POST" })
               .map((c) => mascararConversa(t.papel, c)),
           );
           if (!dados.proximo_cursor)
-            return { itens: ordenarConversas(itens), proximo_cursor: null };
+            return {
+              itens: ordenarConversas(itens, { porEspera: true, porRecencia: false }),
+              proximo_cursor: null,
+            };
           if (dados.proximo_cursor === cursor) break;
           cursor = dados.proximo_cursor;
         }

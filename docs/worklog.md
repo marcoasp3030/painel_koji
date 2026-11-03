@@ -1,3 +1,18 @@
+## [2026-11-02 23:01] — Conversas: mais recente sempre no topo
+- **Autor:** Auto
+- **Objetivo:** Nova mensagem sobe a conversa para o primeiro lugar da lista.
+- **Arquivos alterados:**
+ - `src/lib/gateway/conversas.ts` — modificado — recência pura; `porEspera` só na fila
+ - `src/components/luxtia/Conversas.tsx` — modificado — Todas/Minhas por recência
+ - `src/lib/gateway-conversas.functions.ts` — modificado — aba Aguardando por idade
+ - `src/lib/gateway/conversas.test.ts` — modificado — expectativas
+- **Resumo das mudanças:** Antes a fila “aguardando” ficava pinada no topo e conversas novas (ex.: Carlos) iam para baixo. Agora a atividade mais recente sobe; a aba Aguardando continua pela espera mais antiga.
+- **Decisões e justificativas:** Pedido do Marco após não achar a conversa que acabou de falar.
+- **Comandos executados:** `bun test conversas.test.ts` → 22 OK.
+- **Erros e resoluções:** —
+- **Pendências / TODO:** publicar painel
+- **Próximos passos:** `publicar-painel.sh` + hard refresh
+
 ## [2026-11-02 22:50] — Atualização completa painel+gateway (GitHub → VPS)
 - **Autor:** Auto
 - **Objetivo:** Trazer as 3 atualizações do GitHub (cardápio público, taxas, isolamento) de forma segura.
