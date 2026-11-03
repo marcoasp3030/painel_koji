@@ -420,17 +420,13 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
           <MessageCircle className="mt-0.5 size-4 shrink-0 text-[var(--cd-marca)]" aria-hidden />A
           unidade vai confirmar pela conversa. Pode fechar esta página.
         </p>
-        {inicio.loja ? (
-          <button
-            type="button"
-            onClick={outroPedidoLoja}
-            className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[var(--cd-marca)] bg-card px-5 text-sm font-semibold text-[var(--cd-marca)] shadow-sm"
-          >
-            Fazer outro pedido
-          </button>
-        ) : (
-          <FazerOutroPedidoConversa whatsapp={inicio.whatsapp} />
-        )}
+        <button
+          type="button"
+          onClick={outroPedidoLoja}
+          className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[var(--cd-marca)] bg-card px-5 text-sm font-semibold text-[var(--cd-marca)] shadow-sm"
+        >
+          Fazer outro pedido
+        </button>
       </Tela>
     );
   }

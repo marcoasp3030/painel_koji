@@ -1,14 +1,7 @@
 ## Fazer outro pedido no cardápio (03/11/2026)
 
-- Tela "Pedido enviado!": botão **Fazer outro pedido**.
-- Link da loja: recomeça cardápio vazio (vários pedidos no mesmo link).
-- Link da conversa / `usado`: não reabre o cardápio; pede novo link na conversa (WhatsApp se houver número).
-
-## Fazer outro pedido no cardápio (03/11/2026)
-
-- Tela "Pedido enviado!": botão **Fazer outro pedido**.
-- Link da loja: recomeça cardápio vazio (vários pedidos no mesmo link).
-- Link da conversa / `usado`: não reabre o cardápio; pede novo link na conversa (WhatsApp se houver número).
+- Tela "Pedido enviado!": **Fazer outro pedido** volta ao cardápio inicial (vazio, sem rascunho).
+- Tela `usado` (link da conversa já consumido): pede novo link na conversa (WhatsApp se houver número).
 
 ## Link da loja / finalização WhatsApp (03/11/2026)
 

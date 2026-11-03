@@ -1,14 +1,13 @@
-## [2026-11-03 11:39] — Botão "Fazer outro pedido" no cardápio do cliente
+## [2026-11-03 11:50] — "Fazer outro pedido" volta ao cardápio
 - **Autor:** Auto
-- **Objetivo:** Depois de "Pedido enviado!", permitir outro pedido (loja) ou pedir novo link (conversa/usado).
+- **Objetivo:** No "Pedido enviado!", o botão deve voltar à tela inicial do cardápio (não mostrar "Peça um novo link").
 - **Arquivos alterados:**
- - `src/components/cardapio/CardapioCliente.tsx` — modificado — botão nos blocos `enviado` e `usado`
- - `src/lib/cardapio.ts` — modificado — helpers `depoisDeOutroPedidoLoja`, `whatsappDaConversa`
- - `src/lib/cardapio.test.ts` — modificado — 3 testes
-- **Resumo das mudanças:** Loja: limpa rascunho/pedido e volta ao cardápio (ou escolha de unidade). Conversa/usado: mostra "Peça um novo link na conversa" (+ wa.me se houver número). Prévia inalterada.
-- **Comandos executados:** `bun test cardapio.test.ts` → 18 OK; publicar → (em seguida).
+ - `src/components/cardapio/CardapioCliente.tsx` — modificado — `enviado` sempre recomeça o cardápio
+ - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Removido o ramo que, sem `inicio.loja`, mostrava o texto da conversa. A tela `usado` (link já consumido) mantém o pedido de novo link.
+- **Comandos executados:** publicar → (em seguida).
 - **Pendências / TODO:** —
-- **Próximos passos:** hard refresh e conferir as duas telas.
+- **Próximos passos:** hard refresh.
 
 ## [2026-11-03 11:39] — Botão "Fazer outro pedido" no cardápio do cliente
 - **Autor:** Auto
@@ -17,10 +16,10 @@
  - `src/components/cardapio/CardapioCliente.tsx` — modificado — botão nos blocos `enviado` e `usado`
  - `src/lib/cardapio.ts` — modificado — helpers `depoisDeOutroPedidoLoja`, `whatsappDaConversa`
  - `src/lib/cardapio.test.ts` — modificado — 3 testes
-- **Resumo das mudanças:** Loja: limpa rascunho/pedido e volta ao cardápio (ou escolha de unidade). Conversa/usado: mostra "Peça um novo link na conversa" (+ wa.me se houver número). Prévia inalterada.
-- **Comandos executados:** `bun test cardapio.test.ts` → 18 OK; publicar → (em seguida).
+- **Resumo das mudanças:** Loja: limpa rascunho/pedido e volta ao cardápio. Ajuste seguinte: em `enviado` sempre volta ao cardápio.
+- **Comandos executados:** `bun test cardapio.test.ts` → 18 OK.
 - **Pendências / TODO:** —
-- **Próximos passos:** hard refresh e conferir as duas telas.
+- **Próximos passos:** —
 
 ## [2026-11-03 00:09] — Link da loja + finalização WhatsApp na VPS
 - **Autor:** Auto
