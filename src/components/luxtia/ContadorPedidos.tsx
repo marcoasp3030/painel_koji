@@ -9,12 +9,22 @@ import type { PapelGateway } from "@/lib/gateway/tipos";
 import { somPedidoLigado, tocarPedidoNovo } from "@/lib/pedidos-som";
 
 const CHAVE_EMPRESA = "luxtia:gateway-empresa";
+export const EVENTO_PEDIDO_VOLTOU = "luxtia:pedido-voltou";
 
 export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefined }) {
   const fn = useServerFn(pedidos);
   const [empresa, setEmpresa] = useState<string | null>(null);
   const [usuario, setUsuario] = useState("local");
   const visto = useRef<number | null>(null);
+  // Pedido que voltou para "aguardando a loja" por desfazer: não é pedido novo, sem som nem aviso.
+  const voltas = useRef(0);
+  useEffect(() => {
+    const contar = () => {
+      voltas.current += 1;
+    };
+    window.addEventListener(EVENTO_PEDIDO_VOLTOU, contar);
+    return () => window.removeEventListener(EVENTO_PEDIDO_VOLTOU, contar);
+  }, []);
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user.id) setUsuario(data.session.user.id);
@@ -52,6 +62,10 @@ export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefi
     const anterior = visto.current;
     visto.current = total;
     if (anterior === null || total <= anterior) return;
+    if (voltas.current > 0) {
+      voltas.current = Math.max(0, voltas.current - (total - anterior));
+      return;
+    }
     if (somPedidoLigado(usuario)) tocarPedidoNovo();
     const empresaAviso = papel === "plataforma" ? empresa : null;
     void fn({

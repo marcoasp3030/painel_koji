@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { criarClienteGateway } from "./cliente.server";
 import { criarModuloGateway } from "./modulo.server";
 import { esquecerNomesRecentes, executarPedidos } from "./pedidos.server";
+import { podeDesfazer } from "./pedidos";
 import {
   proximoPasso,
   acoesPedido,
@@ -309,4 +310,10 @@ test("proximoPasso avança e nunca oferece recusar ou cancelar", () => {
   expect(proximoPasso([])).toBeNull();
   expect(proximoPasso(undefined)).toBeNull();
   expect(proximoPasso(["status_novo", "concluido"])?.rotulo).toBe("Concluir");
+});
+
+test("recusa, cancelamento e pedido aguardando não se desfazem", () => {
+  const passos = ["confirmado", "em_preparo", "pronto_retirada", "saiu_entrega", "concluido"];
+  expect(passos.every(podeDesfazer)).toBe(true);
+  expect(["aguardando_loja", "recusado", "cancelado", "x"].some(podeDesfazer)).toBe(false);
 });

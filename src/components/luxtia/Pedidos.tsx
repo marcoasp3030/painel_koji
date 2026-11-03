@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,15 +14,18 @@ import {
   List,
   MapPin,
   MessageCircle,
+  Printer,
   Search,
   SlidersHorizontal,
   Store,
+  Undo2,
   X,
 } from "lucide-react";
 import { peloMenos } from "@/lib/acesso/papeis";
 import { avisos } from "@/lib/gateway-avisos.functions";
 import { pedidos } from "@/lib/gateway-pedidos.functions";
 import {
+  podeDesfazer,
   COLUNAS_PEDIDO,
   ORIGENS_PEDIDO,
   ROTULO_FILTRO_ORIGEM,
@@ -49,6 +52,9 @@ import { useGestao } from "./gestao-base";
 import { textoCanal, urgenciaEspera, type UrgenciaEspera } from "@/lib/gateway/conversas";
 import { IconeCanal, SeloOrigemNome } from "./Conversas";
 import { Button } from "@/components/ui/button";
+import { ImpressaoPedidos } from "./ImpressaoPedidos";
+import { EVENTO_PEDIDO_VOLTOU } from "./ContadorPedidos";
+import { imprimirPedido, lerPrefImpressao, linhasDasOpcoes } from "@/lib/impressao-pedido";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -437,6 +443,7 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
           )}
           <span className="sr-only">Som de pedido novo</span>
         </Button>
+        <ImpressaoPedidos ctx={ctx} fuso={zona} />
       </div>
 
       {ativos > 0 ? (
@@ -516,9 +523,55 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
           />
         </div>
       )}
-      <Detalhe ctx={ctx} numero={numero} fechar={() => setNumero(null)} />
+      <Detalhe ctx={ctx} fuso={zona} numero={numero} fechar={() => setNumero(null)} />
     </div>
   );
+}
+
+/** Desfaz o último passo do pedido e diz o que aconteceu com o aviso ao cliente. */
+function useVoltarPedido(ctx: ContextoGateway) {
+  const fn = useServerFn(pedidos);
+  const cache = useQueryClient();
+  return useCallback(
+    async (numero: string, de: string) => {
+      if (!podeDesfazer(de)) return;
+      const r = await fn({ data: { acao: "voltar", empresa: ctx.empresa, numero, de } });
+      const feito = r.ok
+        ? (r.dados as { desfeito?: { para: StatusPedido; aviso_ja_enviado: boolean } }).desfeito
+        : undefined;
+      // Antes de recarregar: o contador do menu precisa saber que não é pedido novo.
+      if (feito?.para === "aguardando_loja") window.dispatchEvent(new Event(EVENTO_PEDIDO_VOLTOU));
+      await cache.invalidateQueries({ queryKey: ["pedidos", ctx.empresa ?? "vinculada"] });
+      if (!r.ok) {
+        toast.error(r.erro.mensagem);
+        return;
+      }
+      toast.success(
+        `Pedido #${numero} voltou para ${(feito ? ROTULO_STATUS[feito.para] : "o passo anterior").toLowerCase()}.`,
+      );
+      if (feito?.aviso_ja_enviado)
+        toast.warning(
+          `O cliente já tinha recebido o aviso de "${ROTULO_STATUS[de as StatusPedido]}". Se precisar, explique pela conversa.`,
+          { duration: 12_000 },
+        );
+    },
+    [fn, cache, ctx.empresa],
+  );
+}
+
+/** Aviso do passo feito, com "Desfazer" por alguns segundos quando o passo pode voltar. */
+function avisarPasso(
+  numero: string,
+  status: string,
+  desfazer: (n: string, de: string) => Promise<void>,
+) {
+  const rotulo = (ROTULO_STATUS[status as StatusPedido] ?? status).toLowerCase();
+  toast.success(`Pedido #${numero}: ${rotulo}.`, {
+    duration: 10_000,
+    ...(podeDesfazer(status)
+      ? { action: { label: "Desfazer", onClick: () => void desfazer(numero, status) } }
+      : {}),
+  });
 }
 
 function Ficha({ children, onTirar }: { children: React.ReactNode; onTirar: () => void }) {
@@ -857,6 +910,7 @@ function CartaoPedido({
   const espera =
     pedido.status === "aguardando_loja" ? urgenciaEspera(pedido.criado_em, agora) : null;
   const passo = proximoPasso(pedido.proximos_status);
+  const desfazer = useVoltarPedido(ctx);
   const avancar = useMutation({
     mutationFn: async (status: string) => {
       const r = await fn({
@@ -864,8 +918,8 @@ function CartaoPedido({
       });
       if (!r.ok) throw new Error(r.erro.mensagem);
     },
-    onSuccess: () => {
-      toast.success(`Pedido #${pedido.numero} atualizado.`);
+    onSuccess: (_, status) => {
+      avisarPasso(pedido.numero, status, desfazer);
       void cache.invalidateQueries({ queryKey: ["pedidos", ctx.empresa ?? "vinculada"] });
     },
     onError: (e: Error) => {
@@ -995,10 +1049,12 @@ function LinhaPedido({
 
 function Detalhe({
   ctx,
+  fuso,
   numero,
   fechar,
 }: {
   ctx: ContextoGateway;
+  fuso: string;
   numero: string | null;
   fechar: () => void;
 }) {
@@ -1025,6 +1081,7 @@ function Detalhe({
     },
   });
   const reenviarFn = useServerFn(avisos);
+  const desfazer = useVoltarPedido(ctx);
   async function reenviar(status: string, incerto: boolean) {
     if (
       !numero ||
@@ -1100,7 +1157,7 @@ function Detalhe({
         }
         return;
       }
-      toast.success(`Pedido #${numero}: ${botao.rotulo.toLowerCase()}.`);
+      avisarPasso(numero, status, desfazer);
       setAcao(null);
       setMotivo("");
       setPrevisao("");
@@ -1125,6 +1182,20 @@ function Detalhe({
             {pedido ? <SeloStatus status={pedido.status} /> : null}
             {pedido ? (
               <EtiquetaOrigemCanal origem={pedido.origem ?? null} canal={pedido.canal ?? null} />
+            ) : null}
+            {pedido ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto h-7"
+                onClick={() =>
+                  void imprimirPedido(pedido, lerPrefImpressao(ctx.empresa ?? "vinculada"), {
+                    fuso,
+                  })
+                }
+              >
+                <Printer className="size-3.5" aria-hidden /> Imprimir
+              </Button>
             ) : null}
           </div>
           <SheetDescription className="flex flex-wrap items-center gap-x-2 text-xs text-ink-500">
@@ -1249,6 +1320,11 @@ function Detalhe({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block">{item.nome}</span>
+                        {linhasDasOpcoes(item.opcoes).map((l) => (
+                          <span key={l} className="block text-xs text-ink-700">
+                            + {l}
+                          </span>
+                        ))}
                         {item.observacao ? (
                           <span className="block text-xs text-ink-500">{item.observacao}</span>
                         ) : null}
@@ -1442,6 +1518,27 @@ function Detalhe({
                 Pedido encerrado, sem próximos passos.
               </p>
             )}
+            {pedido?.voltar_para && !acao ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-ink-700"
+                disabled={ocupado}
+                title="Para corrigir um clique errado. Vale até 1 hora depois do passo."
+                onClick={async () => {
+                  setOcupado(true);
+                  try {
+                    await desfazer(pedido.numero, pedido.status);
+                    await q.refetch();
+                  } finally {
+                    setOcupado(false);
+                  }
+                }}
+              >
+                <Undo2 className="size-3.5" aria-hidden /> Voltar para{" "}
+                {ROTULO_STATUS[pedido.voltar_para].toLowerCase()}
+              </Button>
+            ) : null}
             {erro ? (
               <p role="alert" className="text-sm text-destructive">
                 {erro}

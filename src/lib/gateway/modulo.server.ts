@@ -593,6 +593,13 @@ const REGRAS: Regra[] = [
   // Pedidos PED1-a: leitura e mudança de status para admin e atendente.
   { metodo: "GET", caminho: ["pedidos"], papeis: FUNC },
   { metodo: "GET", caminho: ["pedidos", "*"], papeis: FUNC },
+  // Desfazer o último passo (clique errado): o gateway confere a janela e o status visto.
+  {
+    metodo: "POST",
+    caminho: ["pedidos", "*", "voltar"],
+    papeis: FUNC,
+    corpo: soChaves(["de"], "Campos inválidos."),
+  },
   {
     metodo: "POST",
     caminho: ["pedidos", "*", "status"],

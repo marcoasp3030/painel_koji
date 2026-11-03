@@ -837,3 +837,15 @@ test("papel Plataforma em vínculo de empresa é recusado; só o super admin o t
   expect(() => resolverTenant(perfil, "empresa_a")).toThrow(AcessoNegado);
   expect(resolverTenant({ ...perfil, superAdmin: true }, "empresa_a").papel).toBe("plataforma");
 });
+
+describe("desfazer passo do pedido", () => {
+  test("o atendente desfaz, mas só mandando o status visto", () => {
+    autorizar("funcionario", "POST", ["pedidos", "59859", "voltar"], { de: "confirmado" });
+    expect(() =>
+      autorizar("funcionario", "POST", ["pedidos", "59859", "voltar"], {
+        de: "confirmado",
+        status: "x",
+      }),
+    ).toThrow(AcessoNegado);
+  });
+});

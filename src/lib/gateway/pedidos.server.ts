@@ -99,6 +99,23 @@ export async function executarPedidos(
       });
       return { ok: true, dados: dados as Json };
     }
+    if (d.acao === "voltar") {
+      try {
+        const { dados } = await t.chamar("POST", ["pedidos", d.numero, "voltar"], {
+          corpo: { de: d.de },
+        });
+        return { ok: true, dados: dados as Json };
+      } catch (e) {
+        if (e instanceof GatewayErro && e.codigo === "CONFLICT")
+          return erro(
+            "status",
+            e.detalhes["motivo"] === "pedido_mudou"
+              ? "Este pedido já foi atualizado"
+              : "Não dá mais para desfazer: o prazo de 1 hora passou.",
+          );
+        throw e;
+      }
+    }
     const { dados } = await t.chamar<{ itens?: PedidoComCliente[] }>("GET", ["pedidos"], {
       query: queryLista(d),
     });
@@ -195,8 +212,7 @@ export async function comNomeAtual(t: Escopo, pedidos: PedidoComCliente[]) {
 
 function mascararTelefones(papel: Escopo["papel"], pedidos: PedidoComCliente[]) {
   for (const p of pedidos) {
-    if (p.cliente?.telefone)
-      p.cliente.telefone = telefoneParaPapel(papel, p.cliente.telefone);
+    if (p.cliente?.telefone) p.cliente.telefone = telefoneParaPapel(papel, p.cliente.telefone);
   }
 }
 

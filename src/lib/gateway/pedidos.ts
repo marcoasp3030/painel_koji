@@ -205,6 +205,15 @@ export const pedidoSchema = z.discriminatedUnion("acao", [
   z
     .object({
       ...alvo,
+      acao: z.literal("voltar"),
+      numero,
+      /** O status que a tela mostra: se o pedido mudou nesse meio-tempo, nada é desfeito. */
+      de: z.enum(["confirmado", "em_preparo", "pronto_retirada", "saiu_entrega", "concluido"]),
+    })
+    .strict(),
+  z
+    .object({
+      ...alvo,
       acao: z.literal("status"),
       numero,
       status: z.enum(STATUS_PEDIDO),
@@ -230,6 +239,8 @@ export type ItemPedido = {
   subtotal: number;
   observacao: string | null;
   alcoolico: boolean;
+  /** Escolhas copiadas no pedido (tamanho, adicionais). Ausente em pedido antigo. */
+  opcoes?: { grupo?: string | null; opcao?: string | null; quantidade?: number | null }[];
 };
 export type PedidoLista = {
   id: number;
@@ -262,6 +273,8 @@ export type PedidoLista = {
   pagamento?: PagamentoPedido | null;
   /** Passos que o gateway libera. Opcional na lista para tolerar um gateway anterior. */
   proximos_status?: string[];
+  /** Clique errado: o passo de agora pode ser desfeito, voltando para este status. */
+  voltar_para?: StatusPedido | null;
 };
 export type EventoPedido = {
   de: string | null;
@@ -307,6 +320,15 @@ export type ContagemPedidos = {
  * O passo do cartão no quadro: o primeiro avanço que o gateway libera. Recusar e cancelar pedem
  * confirmação e motivo, então ficam só no detalhe.
  */
+/** Passos que podem ser desfeitos logo depois: recusa e cancelamento não voltam. */
+export function podeDesfazer(
+  status: string,
+): status is "confirmado" | "em_preparo" | "pronto_retirada" | "saiu_entrega" | "concluido" {
+  return ["confirmado", "em_preparo", "pronto_retirada", "saiu_entrega", "concluido"].includes(
+    status,
+  );
+}
+
 export function proximoPasso(proximos: readonly string[] | null | undefined) {
   return (
     acoesPedido(proximos ?? []).find((a) => a.status !== "cancelado" && a.status !== "recusado") ??
