@@ -9,7 +9,7 @@
  - `src/components/cardapio/{RedesCardapio,TopoCardapio,CardapioCliente}.tsx` — ícones, rodapé, CTA Instagram
  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** Edição separada da aparência; campo vazio fora do PUT; erro 400 na linha; público só ativas; CTA Instagram em enviado/usado.
-- **Comandos executados:** `bun test cardapio-redes/cardapio` → 22 OK; gateway `implantar.sh card-redes-20261103` → `gateway:7ad23e8`, schema 63; publicar painel → (em seguida).
+- **Comandos executados:** `bun test` → 22 OK; gateway `implantar.sh` → `gateway:7ad23e8` schema 63; commit `176b6ce` + `publicar-painel.sh` → OK; home 200; imagem `painel:176b6ce…`.
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh; cadastrar redes e conferir cardápio/prévia.
 
