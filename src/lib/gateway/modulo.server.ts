@@ -268,6 +268,14 @@ const REGRAS: Regra[] = [
   { metodo: "PUT", caminho: ["cardapio", "aparencia"], papeis: GEST },
   { metodo: "DELETE", caminho: ["cardapio", "aparencia"], papeis: GEST },
   { metodo: "POST", caminho: ["cardapio", "aparencia", "imagem"], papeis: GEST },
+  // CARD-REDES: rota própria — o PUT da aparência não pode apagar as redes.
+  { metodo: "GET", caminho: ["cardapio", "redes"], papeis: GEST },
+  {
+    metodo: "PUT",
+    caminho: ["cardapio", "redes"],
+    papeis: GEST,
+    corpo: soChaves(["itens"], "A lista de redes é inválida."),
+  },
   { metodo: "GET", caminho: ["conversas", "*", "notas"], papeis: FUNC },
   {
     metodo: "POST",

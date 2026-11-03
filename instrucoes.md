@@ -1,3 +1,9 @@
+## CARD-REDES no painel (03/11/2026)
+
+- Aparência → **Redes e contato**: Instagram, Facebook e Telefone (campo + liga/desliga); PUT/GET `cardapio/redes`.
+- Cardápio público: ícones abaixo do slogan, rodapé “Siga a gente”, CTA Instagram em pedido enviado/`usado`.
+- Gateway `c4a3ca0`+ (migração 063). Prévia igual ao cliente.
+
 ## Fazer outro pedido no cardápio (03/11/2026)
 
 - Tela "Pedido enviado!": **Fazer outro pedido** volta ao cardápio inicial (vazio, sem rascunho).

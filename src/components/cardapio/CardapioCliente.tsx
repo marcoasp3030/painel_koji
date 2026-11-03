@@ -61,10 +61,12 @@ import {
   lerUnidadeCardapio,
 } from "@/lib/cardapio-publico.functions";
 import { temaDoCardapio, type AparenciaCardapio, type Tema } from "@/lib/cardapio-tema";
+import { instagramDasRedes, type RedePublica } from "@/lib/cardapio-redes";
 import type { ResultadoCep } from "./EnderecoEntrega";
 import { CapaLoja, MarcaLoja, TopoCardapio, type InfoLoja } from "./TopoCardapio";
 import { Contador, DADOS_VAZIOS, PedidoCliente, type DadosPedido } from "./PedidoCliente";
 import type { SituacaoFinalizacao } from "./FinalizarWhatsapp";
+import { CtaInstagramPedido, IconesRedes, RodapeRedes } from "./RedesCardapio";
 
 type CarrinhoInicial = {
   unidade: string | null;
@@ -84,6 +86,8 @@ type Inicio = {
   usado?: { numero: string };
   unidades?: UnidadeCardapio[];
   carrinho?: CarrinhoInicial | null;
+  /** Só as ativas; também vem na resposta `usado`. */
+  redes?: RedePublica[];
 };
 type Salvo = { unidade: string | null; linhas: Linha[] };
 
@@ -203,6 +207,8 @@ export function CardapioCliente() {
     );
   }
   const tema = temaDoCardapio(inicio.aparencia);
+  const nome = inicio.aparencia?.nome_exibicao || inicio.empresa;
+  const instagram = instagramDasRedes(inicio.redes);
   return (
     <div style={tema.estilo} className={tema.classe}>
       {inicio.usado ? (
@@ -212,6 +218,7 @@ export function CardapioCliente() {
         >
           <p>Este pedido já foi enviado. Acompanhe pela conversa.</p>
           <FazerOutroPedidoConversa whatsapp={inicio.whatsapp} />
+          {instagram ? <CtaInstagramPedido instagram={instagram} empresa={nome} /> : null}
         </Tela>
       ) : (
         <Cardapio token={token} inicio={inicio} tema={tema} />
@@ -223,6 +230,8 @@ export function CardapioCliente() {
 function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema: Tema }) {
   const aparencia = inicio.aparencia ?? null;
   const nome = aparencia?.nome_exibicao || inicio.empresa;
+  const redes = inicio.redes ?? [];
+  const instagram = instagramDasRedes(redes);
   const lerUnidade = useServerFn(lerUnidadeCardapio);
   const enviar = useServerFn(enviarPedidoCardapio);
   const finalizar = useServerFn(finalizarCardapio);
@@ -427,6 +436,7 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
         >
           Fazer outro pedido
         </button>
+        {instagram ? <CtaInstagramPedido instagram={instagram} empresa={nome} /> : null}
       </Tela>
     );
   }
@@ -443,6 +453,7 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
         agendado={agendado}
         guardados={linhas.length}
         unidades={unidades}
+        redes={redes}
         escolher={(u) => {
           if (u !== codigo) setLinhas([]);
           setCodigo(u);
@@ -503,6 +514,7 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
         bannerUrl={aparencia?.banner_url ?? null}
         bannerFoco={aparencia?.banner_foco ?? 50}
         infos={infos}
+        redes={redes}
       />
 
       {inicio.previa ? (
@@ -610,6 +622,8 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
           ))
         )}
       </main>
+
+      <RodapeRedes redes={redes} empresa={nome} />
 
       {resumo.quantidade > 0 ? (
         <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:slide-in-from-bottom-4">
@@ -798,6 +812,7 @@ function EscolherUnidade({
   agendado,
   guardados,
   unidades,
+  redes,
   escolher,
   verFechada,
 }: {
@@ -810,6 +825,7 @@ function EscolherUnidade({
   agendado: boolean;
   guardados: number;
   unidades: UnidadeCardapio[];
+  redes: readonly RedePublica[];
   escolher: (codigo: string) => void;
   verFechada: () => void;
 }) {
@@ -833,6 +849,7 @@ function EscolherUnidade({
           <div className="min-w-0">
             <h1 className="line-clamp-2 font-display text-2xl leading-tight">{empresa}</h1>
             {slogan ? <p className="line-clamp-2 text-sm opacity-90">{slogan}</p> : null}
+            <IconesRedes redes={redes} empresa={empresa} />
           </div>
         </div>
       </CapaLoja>

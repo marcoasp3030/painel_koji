@@ -1,6 +1,8 @@
 /** Topo da página do cliente. Fica à parte para a tela de aparência mostrar exatamente o mesmo. */
 import type { ReactNode } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
+import type { RedePublica } from "@/lib/cardapio-redes";
+import { IconesRedes } from "./RedesCardapio";
 
 export type InfoLoja = { icone: LucideIcon; titulo: string; valor: string };
 
@@ -67,6 +69,7 @@ export function TopoCardapio({
   bannerUrl,
   bannerFoco,
   infos,
+  redes = [],
 }: {
   nome: string;
   slogan: string | null;
@@ -78,6 +81,7 @@ export function TopoCardapio({
   bannerUrl: string | null;
   bannerFoco: number;
   infos: InfoLoja[];
+  redes?: readonly RedePublica[];
 }) {
   return (
     <>
@@ -87,6 +91,7 @@ export function TopoCardapio({
           <div className="min-w-0 flex-1">
             <h1 className="line-clamp-2 font-display text-2xl leading-tight">{nome}</h1>
             {slogan ? <p className="line-clamp-2 text-sm opacity-90">{slogan}</p> : null}
+            <IconesRedes redes={redes} empresa={nome} />
             <button
               type="button"
               disabled={!podeTrocar}

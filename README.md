@@ -153,6 +153,8 @@ O cliente abre `/cardapio#<token>`, sem login, monta o pedido e envia. O link é
 
 Em Loja → Aparência do cardápio, o gestor define nome, frase, logo, banner, cores, cantos e títulos, com prévia ao vivo. Das três cores saem as demais (`src/lib/cardapio-tema.ts`), sempre com contraste legível. Imagens só em PNG, JPG ou WebP: o navegador reduz e converte, e o gateway confere o formato pelos bytes. Elas ficam no banco e saem por `/api/public/cardapio-imagem/<id>`.
 
+Na mesma tela, a seção **Redes e contato** cadastra Instagram, Facebook e telefone (opcional, por empresa). Salva em rota própria (`cardapio/redes`) para não apagar ao mudar as cores. No cardápio do cliente: ícones abaixo do slogan, bloco “Siga a gente” no rodapé e CTA de Instagram após o pedido enviado. Sem redes ativas, nada aparece. Contrato: `gateway/docs/ESPEC_CARD_REDES.md`.
+
 ## Clientes da plataforma
 
 A tela Clientes é só do Super Admin e lê os dados com service role depois de conferir o papel, porque a RLS de acessos e integrações exige aal2. Suspender um cliente bloqueia a entrada no painel, mas não para os agentes: isso se faz em Empresas do gateway. Excluir exige digitar o nome do cliente.

@@ -1,3 +1,18 @@
+## [2026-11-03 13:15] — CARD-REDES no painel
+- **Autor:** Auto
+- **Objetivo:** Instagram, Facebook e telefone na Aparência e no cardápio público (ESPEC_CARD_REDES §3 e §5).
+- **Arquivos alterados:**
+ - `src/lib/cardapio-redes.ts` + `.test.ts` — criados — helpers e contrato
+ - `src/lib/gateway-redes.functions.ts` — criado — GET/PUT admin
+ - `src/lib/gateway/modulo.server.ts` — modificado — rotas `cardapio/redes`
+ - `src/components/luxtia/AparenciaCardapio.tsx` — modificado — seção Redes e contato + prévia
+ - `src/components/cardapio/{RedesCardapio,TopoCardapio,CardapioCliente}.tsx` — ícones, rodapé, CTA Instagram
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Edição separada da aparência; campo vazio fora do PUT; erro 400 na linha; público só ativas; CTA Instagram em enviado/usado.
+- **Comandos executados:** `bun test cardapio-redes/cardapio` → 22 OK; gateway `implantar.sh card-redes-20261103` → `gateway:7ad23e8`, schema 63; publicar painel → (em seguida).
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh; cadastrar redes e conferir cardápio/prévia.
+
 ## [2026-11-03 11:50] — "Fazer outro pedido" volta ao cardápio
 - **Autor:** Auto
 - **Objetivo:** No "Pedido enviado!", o botão deve voltar à tela inicial do cardápio (não mostrar "Peça um novo link").
@@ -5,9 +20,9 @@
  - `src/components/cardapio/CardapioCliente.tsx` — modificado — `enviado` sempre recomeça o cardápio
  - `instrucoes.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** Removido o ramo que, sem `inicio.loja`, mostrava o texto da conversa. A tela `usado` (link já consumido) mantém o pedido de novo link.
-- **Comandos executados:** publicar → (em seguida).
+- **Comandos executados:** commit `cc892b6` + `publicar-painel.sh` → OK; home 200; imagem `painel:cc892b6…` sha256 `5b2ff5f4e12a…`.
 - **Pendências / TODO:** —
-- **Próximos passos:** hard refresh.
+- **Próximos passos:** hard refresh e testar o botão após enviar pedido.
 
 ## [2026-11-03 11:39] — Botão "Fazer outro pedido" no cardápio do cliente
 - **Autor:** Auto

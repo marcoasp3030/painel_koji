@@ -1,5 +1,5 @@
 /** A empresa define como o cardápio aparece para o cliente, com prévia ao vivo. */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -47,7 +47,20 @@ import {
   type AparenciaSalva,
 } from "@/lib/gateway-aparencia.functions";
 import { linkDaLoja, previaCardapio } from "@/lib/gateway-conversas.functions";
+import { lerRedes, salvarRedes } from "@/lib/gateway-redes.functions";
+import {
+  AJUDA_TIPO_REDE,
+  itensParaSalvarRedes,
+  linhasFixasDasRedes,
+  redesAtivasParaExibir,
+  ROTULO_TIPO_REDE,
+  TIPOS_REDE,
+  type RedeAdmin,
+  type TipoRede,
+} from "@/lib/cardapio-redes";
 import { prepararImagem, problemaNaImagem } from "@/lib/imagem-cliente";
+import { Switch } from "@/components/ui/switch";
+import { RodapeRedes } from "@/components/cardapio/RedesCardapio";
 import type { ContextoGateway } from "./Gateway";
 
 type Form = {
@@ -118,6 +131,8 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
   const [base, setBase] = useState<Form>(VAZIO);
   const [enviando, setEnviando] = useState<"logo" | "banner" | null>(null);
   const [confirmarPadrao, setConfirmarPadrao] = useState(false);
+  const [redesPrevia, setRedesPrevia] = useState<RedeAdmin[]>(() => linhasFixasDasRedes([]));
+  const aoMudarRedes = useCallback((itens: RedeAdmin[]) => setRedesPrevia(itens), []);
   const carregado = useRef(false);
 
   useEffect(() => {
@@ -437,13 +452,15 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
               />
             </Linha>
           </Secao>
+
+          <RedesEContato empresa={ctx.empresa} onPrevia={aoMudarRedes} />
         </div>
 
         <aside
           aria-label="Prévia"
           className="flex justify-center border-base-200 bg-base-100 p-4 max-lg:border-t lg:overflow-y-auto lg:border-l"
         >
-          <Vitrine form={form} />
+          <Vitrine form={form} redes={redesPrevia} />
         </aside>
       </div>
 
@@ -473,6 +490,145 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** CARD-REDES: três linhas fixas; salva em rota própria para não misturar com as cores. */
+function RedesEContato({
+  empresa,
+  onPrevia,
+}: {
+  empresa: ContextoGateway["empresa"];
+  onPrevia: (itens: RedeAdmin[]) => void;
+}) {
+  const cache = useQueryClient();
+  const ler = useServerFn(lerRedes);
+  const salvar = useServerFn(salvarRedes);
+  const chave = ["cardapio-redes", empresa];
+  const q = useQuery({
+    queryKey: chave,
+    queryFn: () => ler({ data: { empresa } }),
+    refetchOnWindowFocus: false,
+  });
+  const [linhas, setLinhas] = useState<RedeAdmin[]>(() => linhasFixasDasRedes([]));
+  const [base, setBase] = useState<RedeAdmin[]>(() => linhasFixasDasRedes([]));
+  const [erros, setErros] = useState<Partial<Record<TipoRede, string>>>({});
+  const carregado = useRef(false);
+
+  useEffect(() => {
+    if (!q.data || carregado.current) return;
+    carregado.current = true;
+    const fixas = linhasFixasDasRedes(q.data.itens);
+    setLinhas(fixas);
+    setBase(fixas);
+  }, [q.data]);
+
+  useEffect(() => {
+    onPrevia(linhas);
+  }, [linhas, onPrevia]);
+
+  const sujo = JSON.stringify(linhas) !== JSON.stringify(base);
+
+  const gravar = useMutation({
+    mutationFn: () =>
+      salvar({
+        data: { empresa, itens: itensParaSalvarRedes(linhas) },
+      }),
+    onSuccess: (r) => {
+      if (r && typeof r === "object" && "ok" in r && r.ok === false) {
+        const proximo: Partial<Record<TipoRede, string>> = {};
+        if (r.tipo) proximo[r.tipo] = r.mensagem;
+        setErros(proximo);
+        toast.error(r.mensagem);
+        return;
+      }
+      const fixas = linhasFixasDasRedes(r.itens);
+      setLinhas(fixas);
+      setBase(fixas);
+      setErros({});
+      void cache.invalidateQueries({ queryKey: chave });
+      toast.success("Redes salvas. O cardápio já mostra para os clientes.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function mudarLinha(tipo: TipoRede, parte: Partial<Pick<RedeAdmin, "valor" | "ativo">>) {
+    setErros((e) => {
+      if (!e[tipo]) return e;
+      const { [tipo]: _, ...resto } = e;
+      return resto;
+    });
+    setLinhas((atual) => atual.map((l) => (l.tipo === tipo ? { ...l, ...parte } : l)));
+  }
+
+  return (
+    <Secao titulo="Redes e contato">
+      <p className="border-b border-base-200/70 px-4 py-2 text-sm text-ink-500">
+        Opcional. Aparece no cardápio de todas as unidades. Campo vazio não é mostrado.
+      </p>
+      {TIPOS_REDE.map((tipo) => {
+        const linha = linhas.find((l) => l.tipo === tipo)!;
+        const erro = erros[tipo];
+        return (
+          <div
+            key={tipo}
+            className="grid gap-x-6 gap-y-1.5 border-b border-base-200/70 px-4 py-2.5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink-900">{ROTULO_TIPO_REDE[tipo]}</p>
+              <p className="mt-0.5 text-xs text-ink-500">{AJUDA_TIPO_REDE[tipo]}</p>
+            </div>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Input
+                className="h-9 min-w-0 flex-1"
+                aria-label={ROTULO_TIPO_REDE[tipo]}
+                aria-invalid={Boolean(erro)}
+                placeholder={AJUDA_TIPO_REDE[tipo]}
+                value={linha.valor}
+                onChange={(e) => mudarLinha(tipo, { valor: e.target.value })}
+              />
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-ink-700">
+                <Switch
+                  checked={linha.ativo}
+                  disabled={!linha.valor.trim()}
+                  aria-label={`${ROTULO_TIPO_REDE[tipo]}: mostrar no cardápio`}
+                  onCheckedChange={(ativo) => mudarLinha(tipo, { ativo })}
+                />
+                Mostrar
+              </label>
+              {erro ? (
+                <p role="alert" className="w-full text-xs text-destructive">
+                  {erro}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+      <div className="flex justify-end gap-2 px-4 py-2">
+        {sujo ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setLinhas(base);
+              setErros({});
+            }}
+          >
+            Desfazer
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          size="sm"
+          disabled={!sujo || gravar.isPending}
+          onClick={() => gravar.mutate()}
+        >
+          {gravar.isPending ? "Salvando…" : "Salvar redes"}
+        </Button>
+      </div>
+    </Secao>
   );
 }
 
@@ -765,7 +921,7 @@ const EXEMPLOS: ItemCardapio[] = [
 ];
 
 /** Usa as mesmas peças da página do cliente, para a prévia não enganar. */
-function Vitrine({ form }: { form: Form }) {
+function Vitrine({ form, redes }: { form: Form; redes: RedeAdmin[] }) {
   const cores = {
     cor_primaria: corValida(form.cor_primaria) ? form.cor_primaria : CORES_PADRAO.cor_primaria,
     cor_destaque: corValida(form.cor_destaque) ? form.cor_destaque : CORES_PADRAO.cor_destaque,
@@ -781,6 +937,8 @@ function Vitrine({ form }: { form: Form }) {
     banner_url: form.banner_url,
     banner_foco: form.banner_foco,
   });
+  const nome = form.nome_exibicao.trim() || "Sua empresa";
+  const redesAtivas = redesAtivasParaExibir(redes);
   return (
     <div className="h-[640px] w-[320px] shrink-0 overflow-hidden rounded-[2.25rem] border-[7px] border-ink-900 bg-ink-900 shadow-xl lg:sticky lg:top-0">
       <div
@@ -788,7 +946,7 @@ function Vitrine({ form }: { form: Form }) {
         className={`relative h-full overflow-y-auto overflow-x-hidden bg-base-100 pb-20 text-ink-900 ${tema.classe}`}
       >
         <TopoCardapio
-          nome={form.nome_exibicao.trim() || "Sua empresa"}
+          nome={nome}
           slogan={form.slogan.trim() || null}
           unidade="Unidade Centro"
           aberta
@@ -801,6 +959,7 @@ function Vitrine({ form }: { form: Form }) {
             { icone: Store, titulo: "Retirada", valor: "Sem taxa" },
             { icone: Receipt, titulo: "Mínimo", valor: reais(30) },
           ]}
+          redes={redesAtivas}
         />
         <div className="flex gap-1.5 overflow-hidden px-4 py-3">
           <span className="shrink-0 rounded-full bg-purple-800 px-3.5 py-1.5 text-sm font-medium text-[var(--cd-sobre)]">
@@ -829,6 +988,7 @@ function Vitrine({ form }: { form: Form }) {
             />
           </ul>
         </div>
+        <RodapeRedes redes={redesAtivas} empresa={nome} />
         <div className="sticky bottom-3 mx-3 mt-4 flex h-14 items-center gap-3 rounded-2xl bg-purple-800 px-4 text-base font-semibold text-[var(--cd-sobre)] shadow-lg">
           <span className="relative">
             <ShoppingBag className="size-5" aria-hidden />
