@@ -321,6 +321,27 @@ export function montarEndereco(e: Endereco) {
   return `${partes.join(" - ")}${referencia ? `. Referência: ${referencia}` : ""}`.slice(0, 500);
 }
 
+/** Texto do botão "Fazer outro pedido" no link da conversa (uso único). */
+export const TEXTO_NOVO_LINK_CONVERSA = "Peça um novo link na conversa";
+
+/**
+ * Depois de "Fazer outro pedido" no link da loja: pedido vazio e, se houver várias unidades,
+ * volta à escolha; com uma só, mantém essa unidade.
+ */
+export function depoisDeOutroPedidoLoja(unidades: Pick<UnidadeCardapio, "codigo">[]) {
+  return {
+    linhas: [] as Linha[],
+    unidade: unidades.length === 1 ? (unidades[0]?.codigo ?? null) : null,
+    limparRascunho: true as const,
+  };
+}
+
+/** Link wa.me quando a página tem o número da loja; senão null (só o texto). */
+export function whatsappDaConversa(numero: string | null | undefined) {
+  const digitos = (numero ?? "").replace(/\D/g, "");
+  return digitos.length >= 10 ? `https://wa.me/${digitos}` : null;
+}
+
 const MENSAGEM_RECUSA: Record<string, string> = {
   fora_area: "Não entregamos neste endereço. Escolha retirada ou outro endereço.",
   bairro_nao_reconhecido: "Não encontramos este bairro. Confira o endereço.",

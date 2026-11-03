@@ -3,6 +3,7 @@ import {
   ajustarRepeticao,
   alternarOpcao,
   chaveDaLinha,
+  depoisDeOutroPedidoLoja,
   ENDERECO_VAZIO,
   faltaNoEndereco,
   faltaNasEscolhas,
@@ -15,9 +16,11 @@ import {
   proximaAbertura,
   resumoDoPedido,
   somarLinha,
+  TEXTO_NOVO_LINK_CONVERSA,
   textoAbertura,
   textoRecusa,
   unidadeLiberada,
+  whatsappDaConversa,
   type Categoria,
   type Grupo,
   type ItemCardapio,
@@ -243,5 +246,27 @@ describe("taxa da entrega na página", () => {
     const bairro = cot({ motivo: "bairro_nao_reconhecido", pedir: "confirmar_bairro" });
     expect(pendenciaDaArea(bairro, false)).toBe("Confirme o bairro");
     expect(pendenciaDaArea(bairro, true)).toBeNull();
+  });
+});
+
+describe("fazer outro pedido", () => {
+  test("link da loja volta ao cardápio vazio e sem rascunho", () => {
+    const varias = depoisDeOutroPedidoLoja([{ codigo: "a" }, { codigo: "b" }]);
+    expect(varias).toEqual({ linhas: [], unidade: null, limparRascunho: true });
+    const unica = depoisDeOutroPedidoLoja([{ codigo: "patio" }]);
+    expect(unica).toEqual({ linhas: [], unidade: "patio", limparRascunho: true });
+  });
+
+  test("link da conversa pede um novo link na conversa", () => {
+    expect(TEXTO_NOVO_LINK_CONVERSA).toBe("Peça um novo link na conversa");
+    expect(whatsappDaConversa("5511947281513")).toBe("https://wa.me/5511947281513");
+    expect(whatsappDaConversa(null)).toBeNull();
+    expect(whatsappDaConversa("123")).toBeNull();
+  });
+
+  test("reabrir link usado: mesmo botão e mesma mensagem da conversa", () => {
+    // A tela `inicio.usado` reutiliza o mesmo texto e o mesmo wa.me, quando houver número.
+    expect(TEXTO_NOVO_LINK_CONVERSA).toBe("Peça um novo link na conversa");
+    expect(whatsappDaConversa("+55 (11) 94728-1513")).toBe("https://wa.me/5511947281513");
   });
 });

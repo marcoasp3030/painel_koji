@@ -27,6 +27,7 @@ import {
 import {
   ajustarRepeticao,
   alternarOpcao,
+  depoisDeOutroPedidoLoja,
   faltaNasEscolhas,
   filtrarCategorias,
   mapaDeItens,
@@ -37,9 +38,11 @@ import {
   reais,
   resumoDoPedido,
   somarLinha,
+  TEXTO_NOVO_LINK_CONVERSA,
   textoAbertura,
   textoRecusa,
   unidadeLiberada,
+  whatsappDaConversa,
   type Categoria,
   type CotacaoTaxa,
   type Escolha,
@@ -76,6 +79,8 @@ type Inicio = {
   aparencia?: AparenciaCardapio | null;
   previa?: boolean;
   loja?: boolean;
+  /** Número WhatsApp da loja, quando o gateway enviar; usado no link “novo pedido” da conversa. */
+  whatsapp?: string | null;
   usado?: { numero: string };
   unidades?: UnidadeCardapio[];
   carrinho?: CarrinhoInicial | null;
@@ -119,6 +124,39 @@ function Tela({
       <h1 className="mt-4 font-display text-3xl leading-tight text-[var(--cd-marca)]">{titulo}</h1>
       <div className="mt-2 max-w-xs text-base text-ink-700">{children}</div>
     </main>
+  );
+}
+
+/** Link da conversa (uso único): não volta ao cardápio; pede um novo link no WhatsApp. */
+function FazerOutroPedidoConversa({ whatsapp }: { whatsapp?: string | null }) {
+  const [pedido, setPedido] = useState(false);
+  const url = whatsappDaConversa(whatsapp);
+  if (pedido) {
+    return (
+      <div className="mt-6 space-y-3 text-center">
+        <p className="text-base font-medium text-ink-900">{TEXTO_NOVO_LINK_CONVERSA}</p>
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25d366] px-5 text-sm font-semibold text-[#0b3d20]"
+          >
+            <MessageCircle className="size-4" aria-hidden />
+            Abrir conversa no WhatsApp
+          </a>
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setPedido(true)}
+      className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[var(--cd-marca)] bg-card px-5 text-sm font-semibold text-[var(--cd-marca)] shadow-sm"
+    >
+      Fazer outro pedido
+    </button>
   );
 }
 
@@ -172,7 +210,8 @@ export function CardapioCliente() {
           titulo={`Pedido nº ${inicio.usado.numero}`}
           icone={<CheckCircle2 className="size-16 text-success" aria-hidden />}
         >
-          Este pedido já foi enviado. Acompanhe pela conversa.
+          <p>Este pedido já foi enviado. Acompanhe pela conversa.</p>
+          <FazerOutroPedidoConversa whatsapp={inicio.whatsapp} />
         </Tela>
       ) : (
         <Cardapio token={token} inicio={inicio} tema={tema} />
@@ -350,6 +389,21 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
         ?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
   }, [categoriaAtiva]);
 
+  function outroPedidoLoja() {
+    const proximo = depoisDeOutroPedidoLoja(unidades);
+    gravarSalvo(chaveSalvo, null);
+    setEnviado(null);
+    setLinhas(proximo.linhas);
+    setDados({ ...DADOS_VAZIOS });
+    setCodigo(proximo.unidade);
+    setBusca("");
+    setAberto(null);
+    setVerPedido(false);
+    setTrocarUnidade(false);
+    setCategoriaAtiva(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   if (enviado) {
     return (
       <Tela
@@ -366,6 +420,17 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
           <MessageCircle className="mt-0.5 size-4 shrink-0 text-[var(--cd-marca)]" aria-hidden />A
           unidade vai confirmar pela conversa. Pode fechar esta página.
         </p>
+        {inicio.loja ? (
+          <button
+            type="button"
+            onClick={outroPedidoLoja}
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[var(--cd-marca)] bg-card px-5 text-sm font-semibold text-[var(--cd-marca)] shadow-sm"
+          >
+            Fazer outro pedido
+          </button>
+        ) : (
+          <FazerOutroPedidoConversa whatsapp={inicio.whatsapp} />
+        )}
       </Tela>
     );
   }

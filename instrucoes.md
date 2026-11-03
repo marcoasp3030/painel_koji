@@ -1,3 +1,13 @@
+## Fazer outro pedido no cardápio (03/11/2026)
+
+- Tela "Pedido enviado!": botão **Fazer outro pedido**.
+- Link da loja: recomeça cardápio vazio (vários pedidos no mesmo link).
+- Link da conversa / `usado`: não reabre o cardápio; pede novo link na conversa (WhatsApp se houver número).
+
+## Link da loja / finalização WhatsApp (03/11/2026)
+
+- Gateway `ff865b6` (migração 062). Painel `ff9e521`. Card Link da loja, tela de finalização e botão do que falta.
+
 ## Conversas por recência (02/11/2026)
 
 - Lista Todas/Minhas: a conversa com a mensagem mais nova fica no topo (não fica atrás da fila antiga de “aguardando”).
