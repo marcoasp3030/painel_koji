@@ -1,3 +1,9 @@
+## Pedidos: lista atualiza sozinha (04/11/2026)
+
+- Lista: a cada 15 s (aba visível) só a 1ª página; pausa com diálogo de status aberto.
+- Contagem muda (`aguardando_loja` / `em_andamento`): invalida lista e detalhe na hora.
+- Pedido novo: destaque no card, título "(1) Novo pedido", som (preferência no sino da tela).
+
 ## Fazer outro pedido: conversa vs loja (04/11/2026)
 
 - Link da conversa: após enviar, "Fazer outro pedido" pede novo link (não reabre o cardápio).

@@ -60,6 +60,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  contagemMudouSinais,
+  DESTAQUE_PEDIDO_MS,
+  devePausarAtualizacaoLista,
+  houvePedidoNovo,
+  INTERVALO_LISTA_MS,
+  mesclarPrimeiraPagina,
+  sinaisDaContagem,
+  TITULO_NOVO_PEDIDO,
+  type SinaisContagem,
+} from "@/lib/pedidos-atualizacao";
 import { definirSomPedido, somPedidoLigado } from "@/lib/pedidos-som";
 import {
   Sheet,
@@ -154,6 +165,16 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
   const [agora, setAgora] = useState(Date.now());
   const [usuario, setUsuario] = useState("local");
   const [som, setSom] = useState(false);
+  /** Diálogo de status / envio no detalhe: a lista não atualiza para não “pular”. */
+  const [congelarLista, setCongelarLista] = useState(false);
+  const [destaques, setDestaques] = useState<ReadonlySet<string>>(() => new Set());
+  const sinaisVistos = useRef<SinaisContagem | null>(null);
+  const tituloBase = useRef<string | null>(null);
+  const avisoTitulo = useRef(false);
+  /** Contagem mudou com a lista congelada: atualiza assim que o diálogo fecha. */
+  const listaPendente = useRef(false);
+  const cache = useQueryClient();
+  const fnPedidos = useServerFn(pedidos);
   useEffect(() => {
     const id = setInterval(() => setAgora(Date.now()), 15000);
     return () => clearInterval(id);
@@ -168,7 +189,10 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
       setUsuario(id);
       setSom(somPedidoLigado(id));
     });
-  }, []);
+    const syncSom = () => setSom(somPedidoLigado(usuario));
+    window.addEventListener("luxtia:pedidos-som", syncSom);
+    return () => window.removeEventListener("luxtia:pedidos-som", syncSom);
+  }, [usuario]);
   const fuso = useQuery({
     queryKey: ["gestao", ctx.empresa, "fuso"],
     queryFn: () =>
@@ -202,6 +226,102 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
     ...(filtros.busca.trim().length >= 2 ? { busca: filtros.busca.trim() } : {}),
   };
   const pausa = Boolean(periodo.erro) || !fuso.isFetched;
+  const chaveEmpresa = ctx.empresa ?? "vinculada";
+
+  // Mesma query do contador do menu: quando muda aguardando/em andamento, atualiza a lista na hora.
+  const contagem = useQuery({
+    queryKey: ["pedidos", chaveEmpresa, "contagem"],
+    staleTime: 10_000,
+    refetchInterval: INTERVALO_LISTA_MS,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      const r = await fnPedidos({ data: { acao: "contagem", empresa: ctx.empresa } });
+      if (!r.ok) throw new Error(r.erro.mensagem);
+      return r.dados as ContagemPedidos;
+    },
+  });
+
+  useEffect(() => {
+    if (!contagem.isSuccess || !contagem.data) return;
+    const agoraSinais = sinaisDaContagem(contagem.data);
+    const antes = sinaisVistos.current;
+    sinaisVistos.current = agoraSinais;
+    if (!antes || !contagemMudouSinais(antes, agoraSinais)) return;
+
+    if (congelarLista) listaPendente.current = true;
+    else void cache.invalidateQueries({ queryKey: ["pedidos", chaveEmpresa, "lista"] });
+    if (numero) {
+      void cache.invalidateQueries({ queryKey: ["pedidos", chaveEmpresa, "detalhe", numero] });
+    }
+
+    if (!houvePedidoNovo(antes.aguardando, agoraSinais.aguardando)) return;
+
+    // Som fica no ContadorPedidos (menu), para não tocar duas vezes.
+
+    const delta = agoraSinais.aguardando - antes.aguardando;
+    void fnPedidos({
+      data: {
+        acao: "listar",
+        empresa: ctx.empresa,
+        status: ["aguardando_loja"],
+        limite: Math.min(Math.max(delta, 1), 20),
+      },
+    }).then((r) => {
+      if (!r.ok) return;
+      const itens = (r.dados as { itens?: PedidoLista[] }).itens ?? [];
+      if (!itens.length) return;
+      setDestaques((d) => {
+        const prox = new Set(d);
+        for (const p of itens) prox.add(p.numero);
+        return prox;
+      });
+      window.setTimeout(() => {
+        setDestaques((d) => {
+          const prox = new Set(d);
+          for (const p of itens) prox.delete(p.numero);
+          return prox;
+        });
+      }, DESTAQUE_PEDIDO_MS);
+    });
+
+    if (!tituloBase.current) tituloBase.current = document.title;
+    document.title = TITULO_NOVO_PEDIDO;
+    avisoTitulo.current = true;
+  }, [
+    contagem.data,
+    contagem.dataUpdatedAt,
+    contagem.isSuccess,
+    congelarLista,
+    cache,
+    chaveEmpresa,
+    numero,
+    fnPedidos,
+    ctx.empresa,
+  ]);
+
+  useEffect(() => {
+    if (congelarLista || !listaPendente.current) return;
+    listaPendente.current = false;
+    void cache.invalidateQueries({ queryKey: ["pedidos", chaveEmpresa, "lista"] });
+  }, [congelarLista, cache, chaveEmpresa]);
+
+  useEffect(() => {
+    function restaurarTitulo() {
+      if (!avisoTitulo.current) return;
+      if (document.visibilityState !== "visible") return;
+      document.title = tituloBase.current || document.title.replace(/^\(1\) Novo pedido\s*—?\s*/, "") || "Pedidos | Luxtia";
+      avisoTitulo.current = false;
+    }
+    document.addEventListener("visibilitychange", restaurarTitulo);
+    window.addEventListener("focus", restaurarTitulo);
+    window.addEventListener("click", restaurarTitulo);
+    return () => {
+      document.removeEventListener("visibilitychange", restaurarTitulo);
+      window.removeEventListener("focus", restaurarTitulo);
+      window.removeEventListener("click", restaurarTitulo);
+      if (avisoTitulo.current && tituloBase.current) document.title = tituloBase.current;
+    };
+  }, []);
   const origemPadrao = filtros.origem.length === 0;
   const ativos =
     (origemPadrao ? 0 : 1) +
@@ -506,6 +626,8 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
                 consulta={consulta}
                 agora={agora}
                 pausa={pausa}
+                congelar={congelarLista}
+                destaques={destaques}
                 onAbrir={setNumero}
               />
             </div>
@@ -519,11 +641,19 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
             consulta={consulta}
             agora={agora}
             pausa={pausa}
+            congelar={congelarLista}
+            destaques={destaques}
             onAbrir={setNumero}
           />
         </div>
       )}
-      <Detalhe ctx={ctx} fuso={zona} numero={numero} fechar={() => setNumero(null)} />
+      <Detalhe
+        ctx={ctx}
+        fuso={zona}
+        numero={numero}
+        fechar={() => setNumero(null)}
+        onCongelar={setCongelarLista}
+      />
     </div>
   );
 }
@@ -682,11 +812,15 @@ function usePagina(
     busca?: string;
   },
   pausa: boolean,
+  congelar: boolean,
   limite: number,
 ) {
   const fn = useServerFn(pedidos);
-  return useInfiniteQuery({
-    queryKey: ["pedidos", ctx.empresa ?? "vinculada", "lista", status, consulta, limite],
+  const cache = useQueryClient();
+  const chave = ["pedidos", ctx.empresa ?? "vinculada", "lista", status, consulta, limite];
+  const chaveEstavel = JSON.stringify(chave);
+  const q = useInfiniteQuery({
+    queryKey: chave,
     enabled: !pausa,
     initialPageParam: null as number | null,
     queryFn: async ({ pageParam }) => {
@@ -705,6 +839,33 @@ function usePagina(
     },
     getNextPageParam: (p) => p.proximo_cursor,
   });
+
+  // A cada 15 s (aba visível), só a primeira página — sem pular se há diálogo de status.
+  useEffect(() => {
+    if (pausa || congelar) return;
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      void (async () => {
+        const r = await fn({
+          data: {
+            acao: "listar",
+            empresa: ctx.empresa,
+            ...(status.length ? { status } : {}),
+            ...consulta,
+            cursor: null,
+            limite,
+          },
+        });
+        if (!r.ok) return;
+        const primeira = r.dados as { itens: PedidoLista[]; proximo_cursor: number | null };
+        cache.setQueryData(chave, (atual: typeof q.data) => mesclarPrimeiraPagina(atual, primeira));
+      })();
+    };
+    const id = window.setInterval(tick, INTERVALO_LISTA_MS);
+    return () => window.clearInterval(id);
+  }, [pausa, congelar, fn, ctx.empresa, status, consulta, limite, cache, chaveEstavel]);
+
+  return q;
 }
 
 type PropsLista = {
@@ -713,11 +874,13 @@ type PropsLista = {
   consulta: Parameters<typeof usePagina>[2];
   agora: number;
   pausa: boolean;
+  congelar: boolean;
+  destaques: ReadonlySet<string>;
   onAbrir: (numero: string) => void;
 };
 
 function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
-  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, 20);
+  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, p.congelar, 20);
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   const primeiro = p.status[0] ?? "concluido";
   return (
@@ -755,6 +918,7 @@ function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
             ctx={p.ctx}
             pedido={pedido}
             agora={p.agora}
+            destaque={p.destaques.has(pedido.numero)}
             onAbrir={() => p.onAbrir(pedido.numero)}
           />
         ))}
@@ -775,7 +939,7 @@ function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
 }
 
 function Lista(p: PropsLista) {
-  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, 50);
+  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, p.congelar, 50);
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   return (
     <div className="overflow-hidden rounded-xl border border-base-200 bg-card">
@@ -808,7 +972,12 @@ function Lista(p: PropsLista) {
       <ul className="divide-y divide-base-200">
         {itens.map((pedido) => (
           <li key={pedido.id}>
-            <LinhaPedido pedido={pedido} agora={p.agora} onAbrir={() => p.onAbrir(pedido.numero)} />
+            <LinhaPedido
+              pedido={pedido}
+              agora={p.agora}
+              destaque={p.destaques.has(pedido.numero)}
+              onAbrir={() => p.onAbrir(pedido.numero)}
+            />
           </li>
         ))}
       </ul>
@@ -897,11 +1066,13 @@ function CartaoPedido({
   ctx,
   pedido,
   agora,
+  destaque,
   onAbrir,
 }: {
   ctx: ContextoGateway;
   pedido: PedidoLista;
   agora: number;
+  destaque?: boolean;
   onAbrir: () => void;
 }) {
   const fn = useServerFn(pedidos);
@@ -931,7 +1102,11 @@ function CartaoPedido({
   });
   return (
     <article
-      className={`rounded-lg border border-base-200 bg-card transition-colors hover:border-purple-300 ${espera ? BARRA_ESPERA[espera] : ""}`}
+      className={`rounded-lg border bg-card transition-colors hover:border-purple-300 ${
+        destaque
+          ? "border-gold-500 bg-gold-300/20 shadow-[0_0_0_1px_var(--gold-500)] duration-500 motion-safe:animate-in motion-safe:fade-in"
+          : "border-base-200"
+      } ${espera ? BARRA_ESPERA[espera] : ""}`}
     >
       <button
         type="button"
@@ -996,10 +1171,12 @@ function CartaoPedido({
 function LinhaPedido({
   pedido,
   agora,
+  destaque,
   onAbrir,
 }: {
   pedido: PedidoLista;
   agora: number;
+  destaque?: boolean;
   onAbrir: () => void;
 }) {
   const cliente = nomeClientePedido(pedido.cliente);
@@ -1007,7 +1184,9 @@ function LinhaPedido({
     <button
       type="button"
       onClick={onAbrir}
-      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_170px_minmax(0,9rem)_110px_90px]"
+      className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-purple-50/60 focus-visible:bg-purple-50 focus-visible:outline-none md:grid-cols-[90px_minmax(0,1.4fr)_minmax(0,1fr)_170px_minmax(0,9rem)_110px_90px] ${
+        destaque ? "bg-gold-300/25" : ""
+      }`}
     >
       <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-purple-800">
         #{pedido.numero}
@@ -1052,11 +1231,13 @@ function Detalhe({
   fuso,
   numero,
   fechar,
+  onCongelar,
 }: {
   ctx: ContextoGateway;
   fuso: string;
   numero: string | null;
   fechar: () => void;
+  onCongelar: (congelar: boolean) => void;
 }) {
   const fn = useServerFn(pedidos);
   const cache = useQueryClient();
@@ -1071,6 +1252,10 @@ function Detalhe({
     setPrevisao("");
     setErro(null);
   }, [numero]);
+  useEffect(() => {
+    onCongelar(devePausarAtualizacaoLista({ dialogoStatus: Boolean(acao), ocupado }));
+    return () => onCongelar(false);
+  }, [acao, ocupado, onCongelar]);
   const q = useQuery({
     queryKey: ["pedidos", ctx.empresa ?? "vinculada", "detalhe", numero],
     enabled: Boolean(numero),

@@ -1,3 +1,15 @@
+## [2026-11-04 12:20] — Pedidos: lista atualiza sozinha
+- **Autor:** Auto
+- **Objetivo:** Lista de Pedidos reflete pedido novo sem recarregar (contador já atualizava).
+- **Arquivos alterados:**
+ - `src/lib/pedidos-atualizacao.ts` + `.test.ts` — criados — pausa, sinais, merge 1ª página
+ - `src/components/luxtia/Pedidos.tsx` — modificado — intervalo 15 s, invalidação pela contagem, destaque e título
+ - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Com diálogo de status a lista não pula; ao fechar, aplica o que ficou pendente. Som continua no ContadorPedidos + sino na tela.
+- **Comandos executados:** `bun test pedidos-atualizacao` → 4 OK; publicar → (em seguida).
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh na tela Pedidos e enviar um pedido de teste.
+
 ## [2026-11-04 12:10] — Corrige "Fazer outro pedido" no link da conversa
 - **Autor:** Auto
 - **Objetivo:** Impedir pedido falso ao clicar "Fazer outro pedido" no link da conversa; tratar `repetido`.
