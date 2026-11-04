@@ -11,9 +11,9 @@
  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** Menu só gestor/plataforma; filtros de período/unidade/teste; cartões, gráficos e abas; vazio com atalho teste/piloto.
 - **Decisões e justificativas:** Rota irmã `/ia/visao-vendas` (não filha de pedidos) para o menu não marcar Pedidos como ativo; regra GEST antes do curinga `pedidos/*`.
-- **Comandos executados:** `bun test` pedidos-visao-vendas + modulo → em andamento
-- **Pendências / TODO:** publicar
-- **Próximos passos:** `publicar-painel.sh`; hard refresh como gestor.
+- **Comandos executados:** `bun test` pedidos-visao-vendas + modulo → 46 OK; commit `6c3595e` + `publicar-painel.sh` → OK; home 200; imagem `painel:6c3595e…`.
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh como gestor; conferir cartões e abas com período de 30 dias.
 
 ## [2026-11-04 12:27] — Corrige atualização automática da lista de Pedidos
 - **Autor:** Auto
