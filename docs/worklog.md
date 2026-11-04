@@ -8,7 +8,7 @@
  - `src/lib/gateway/modulo.test.ts` — modificado — gestor recusa DELETE canais
  - `instrucoes.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** Só plataforma vê; ativo desabilitado; nome igual libera Excluir; toast com totais; 404 recarrega a lista.
-- **Comandos executados:** `bun test canal-excluir/modulo` → 40 OK; publicar → (em seguida).
+- **Comandos executados:** `bun test canal-excluir/modulo` → 40 OK; commit `26ec60e` + `publicar-painel.sh` → OK; home 200.
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh como plataforma; desativar canal e excluir.
 
