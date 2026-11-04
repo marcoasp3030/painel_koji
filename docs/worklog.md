@@ -6,7 +6,7 @@
  - `src/components/luxtia/Pedidos.tsx` — modificado — intervalo 15 s, invalidação pela contagem, destaque e título
  - `instrucoes.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** Com diálogo de status a lista não pula; ao fechar, aplica o que ficou pendente. Som continua no ContadorPedidos + sino na tela.
-- **Comandos executados:** `bun test pedidos-atualizacao` → 4 OK; publicar → (em seguida).
+- **Comandos executados:** `bun test pedidos-atualizacao` → 4 OK; commit `4141022` + `publicar-painel.sh` → OK; home 200; imagem `painel:4141022…`.
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh na tela Pedidos e enviar um pedido de teste.
 
