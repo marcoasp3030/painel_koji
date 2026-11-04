@@ -1,3 +1,20 @@
+## [2026-11-04 13:53] — PED-BI: tela Visão de vendas
+- **Autor:** Auto
+- **Objetivo:** Tela Visão de vendas (gestor+) no painel conforme ESPEC_PED_BI.
+- **Arquivos alterados:**
+ - `src/lib/pedidos-visao-vendas.ts` + `.test.ts` — criados — filtros, variação, calor, tipos
+ - `src/lib/gateway-pedidos-indicadores.functions.ts` — criado — GET indicadores
+ - `src/lib/gateway/modulo.server.ts` + `.test.ts` — modificado — GEST em `pedidos/indicadores`
+ - `src/components/luxtia/VisaoVendas.tsx` — criado — UI completa
+ - `src/routes/.../visao-vendas.tsx`, `routeTree.gen.ts`, `nav.ts`, `AppShell.tsx` — rota/menu
+ - `Conversas.tsx` + rota — telefone sozinho preenche a busca
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Menu só gestor/plataforma; filtros de período/unidade/teste; cartões, gráficos e abas; vazio com atalho teste/piloto.
+- **Decisões e justificativas:** Rota irmã `/ia/visao-vendas` (não filha de pedidos) para o menu não marcar Pedidos como ativo; regra GEST antes do curinga `pedidos/*`.
+- **Comandos executados:** `bun test` pedidos-visao-vendas + modulo → em andamento
+- **Pendências / TODO:** publicar
+- **Próximos passos:** `publicar-painel.sh`; hard refresh como gestor.
+
 ## [2026-11-04 12:27] — Corrige atualização automática da lista de Pedidos
 - **Autor:** Auto
 - **Objetivo:** Lista não atualizava sozinha no teste; contador do menu já subia.

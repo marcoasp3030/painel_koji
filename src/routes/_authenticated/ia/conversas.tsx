@@ -40,7 +40,9 @@ function PaginaConversas() {
                   ...(busca.telefone ? { telefone: busca.telefone } : {}),
                   ...(busca.canal ? { canal: busca.canal } : {}),
                 }
-              : null
+              : busca.telefone
+                ? { telefone: busca.telefone }
+                : null
           }
         />
       )}

@@ -336,6 +336,7 @@ describe("papéis", () => {
       ["POST", ["canais", "can_1", "webhook"]],
       ["GET", ["pedidos"]],
       ["GET", ["pedidos", "contagem"]],
+      ["GET", ["pedidos", "indicadores"]],
       ["GET", ["pedidos", "59859"]],
       ["POST", ["pedidos", "59859", "status"], { status: "confirmado" }],
       ["GET", ["anexos"]],
@@ -397,6 +398,7 @@ describe("papéis", () => {
       ["POST", ["webhooks-saida", "wh_1", "rotacionar-segredo"]],
       ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
       ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
+      ["GET", ["pedidos", "indicadores"]],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -811,6 +813,11 @@ describe("rotas do atendimento alcançam quem atende", () => {
       autorizar("supervisor", metodo, partes, corpo);
       expect(() => autorizar("funcionario", metodo, partes, corpo)).toThrow(AcessoNegado);
     }
+  });
+  test("visão de vendas (indicadores) fica a partir de gestor", () => {
+    autorizar("gestor", "GET", ["pedidos", "indicadores"]);
+    expect(() => autorizar("supervisor", "GET", ["pedidos", "indicadores"])).toThrow(AcessoNegado);
+    expect(() => autorizar("funcionario", "GET", ["pedidos", "indicadores"])).toThrow(AcessoNegado);
   });
   test("transferir para um colega fica a partir de supervisor", () => {
     const corpo = { para: "a@b.test" };

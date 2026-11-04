@@ -267,8 +267,9 @@ export function Conversas({
   abertura,
 }: {
   ctx: ContextoGateway;
+  /** Com conversa: abre o detalhe. Só telefone: preenche a busca da fila (ex.: Visão de vendas). */
   abertura?: {
-    conversa: string;
+    conversa?: string;
     nome?: string;
     telefone?: string;
     canal?: string;
@@ -286,7 +287,9 @@ export function Conversas({
   const [etiqueta, setEtiqueta] = useState("");
   const [estado, setEstado] = useState<"" | EstadoConversa>(""),
     [ordem, setOrdem] = useState<"recentes" | "id">("recentes"),
-    [busca, setBusca] = useState(""),
+    [busca, setBusca] = useState(() =>
+      !abertura?.conversa && abertura?.telefone ? abertura.telefone.replace(/\D/g, "") : "",
+    ),
     [desde, setDesde] = useState("");
   // A fila de espera tem leitura própria (todas as páginas, ordenada pela idade da espera).
   const soAguardando = estado === "aguardando_atendente";
@@ -296,13 +299,15 @@ export function Conversas({
     const id = setInterval(() => setAgora(Date.now()), 30000);
     return () => clearInterval(id);
   }, []);
-  const [filtroBusca, setFiltroBusca] = useState("");
+  const [filtroBusca, setFiltroBusca] = useState(() =>
+    !abertura?.conversa && abertura?.telefone ? abertura.telefone.replace(/\D/g, "") : "",
+  );
   useEffect(() => {
     const t = setTimeout(() => setFiltroBusca(busca), 350);
     return () => clearTimeout(t);
   }, [busca]);
   const [selecionada, setSelecionada] = useState<Conversa | null>(
-    abertura?.conversa ? esbocoConversa(abertura) : null,
+    abertura?.conversa ? esbocoConversa({ conversa: abertura.conversa, ...abertura }) : null,
   );
   const conversaVinda = abertura?.conversa;
   const nomeVindo = abertura?.nome;

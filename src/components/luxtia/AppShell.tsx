@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  BarChart3,
   BellRing,
   Bot,
   Building2,
@@ -59,6 +60,7 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   simular: FlaskConical,
   conversas: MessagesSquare,
   pedidos: ClipboardList,
+  vendas: BarChart3,
   operacao: Gauge,
   modelos: Layers,
   configuracoes: Settings,

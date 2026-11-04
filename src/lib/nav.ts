@@ -14,6 +14,7 @@ export type IconeMenu =
   | "simular"
   | "conversas"
   | "pedidos"
+  | "vendas"
   | "operacao"
   | "modelos"
   | "configuracoes"
@@ -49,6 +50,14 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     label: "Pedidos",
     grupo: "Atendimento",
     icone: "pedidos",
+    papeis: ["plataforma"],
+    tela: "pedidos",
+  },
+  {
+    to: "/ia/visao-vendas",
+    label: "Visão de vendas",
+    grupo: "Atendimento",
+    icone: "vendas",
     papeis: ["plataforma"],
     tela: "pedidos",
   },
@@ -183,6 +192,14 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Atendimento",
     icone: "pedidos",
     papeis: ["gestor", "supervisor", "funcionario"],
+    tela: "pedidos",
+  },
+  {
+    to: "/ia/visao-vendas",
+    label: "Visão de vendas",
+    grupo: "Atendimento",
+    icone: "vendas",
+    papeis: ["gestor"],
     tela: "pedidos",
   },
   {

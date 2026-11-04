@@ -31,6 +31,7 @@ import { Route as AuthenticatedIaDocumentosRouteImport } from './routes/_authent
 import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authenticated/ia/modelos'
 import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
+import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authenticated/ia/visao-vendas'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
 import { Route as AuthenticatedIaWebhooksSaidaRouteImport } from './routes/_authenticated/ia/webhooks-saida'
@@ -161,6 +162,12 @@ const AuthenticatedIaPedidosRoute = AuthenticatedIaPedidosRouteImport.update({
   path: '/ia/pedidos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaVisaoVendasRoute =
+  AuthenticatedIaVisaoVendasRouteImport.update({
+    id: '/ia/visao-vendas',
+    path: '/ia/visao-vendas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   id: '/ia/simular',
   path: '/ia/simular',
@@ -258,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
@@ -293,6 +301,7 @@ export interface FileRoutesByTo {
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
@@ -331,6 +340,7 @@ export interface FileRoutesById {
   '/_authenticated/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/_authenticated/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/_authenticated/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
+    | '/ia/visao-vendas'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/webhooks-saida'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
+    | '/ia/visao-vendas'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/webhooks-saida'
@@ -441,6 +453,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/modelos'
     | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
+    | '/_authenticated/ia/visao-vendas'
     | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
     | '/_authenticated/ia/webhooks-saida'
@@ -621,6 +634,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaPedidosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/visao-vendas': {
+      id: '/_authenticated/ia/visao-vendas'
+      path: '/ia/visao-vendas'
+      fullPath: '/ia/visao-vendas'
+      preLoaderRoute: typeof AuthenticatedIaVisaoVendasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/simular': {
       id: '/_authenticated/ia/simular'
       path: '/ia/simular'
@@ -750,6 +770,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaModelosRoute: typeof AuthenticatedIaModelosRoute
   AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
+  AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
   AuthenticatedIaWebhooksSaidaRoute: typeof AuthenticatedIaWebhooksSaidaRoute
@@ -780,6 +801,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaModelosRoute: AuthenticatedIaModelosRoute,
   AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
+  AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
   AuthenticatedIaWebhooksSaidaRoute: AuthenticatedIaWebhooksSaidaRoute,

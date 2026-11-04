@@ -1,3 +1,10 @@
+## PED-BI: Visão de vendas (04/11/2026)
+
+- Menu **Visão de vendas** (`/ia/visao-vendas`), só gestor e plataforma (supervisor/funcionário não veem; gateway 403).
+- GET `pedidos/indicadores` (gateway `df32f57`+): período com atalhos, unidade, incluir teste/piloto.
+- Cartões (faturamento, pedidos, ticket, clientes novos, % perda) com seta de variação; evolução, calor, pizzas; abas Produtos/Clientes/Entrega/Operação/Unidades.
+- Sem venda: estado vazio + atalho para ligar teste/piloto. Telefone do cliente abre Conversas na busca.
+
 ## Pedidos: lista atualiza sozinha — correção (04/11/2026)
 
 - Bug: o tick de `setAgora` (15 s) cancelava o `setInterval` da lista no mesmo ciclo; a 1ª página quase nunca atualizava.
