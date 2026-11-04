@@ -7,7 +7,7 @@
  - `src/components/cardapio/PedidoCliente.tsx` — `repetido: true` não conclui como sucesso
  - `instrucoes.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** Loja mantém reset do cardápio. Conversa mostra o mesmo fluxo da tela `usado`. Reenvio do link usado mostra aviso com o nº do pedido anterior.
-- **Comandos executados:** `bun test cardapio.test.ts` → 19 OK; publicar → (em seguida).
+- **Comandos executados:** `bun test cardapio.test.ts` → 19 OK; commit `cdeb059` + `publicar-painel.sh` → OK; home 200; imagem `painel:cdeb059…`.
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh; testar link da conversa e da loja.
 
