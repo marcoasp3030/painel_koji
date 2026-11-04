@@ -33,13 +33,16 @@ import {
   mapaDeItens,
   mudarQuantidade,
   novaLinha,
+  outroPedidoVoltaAoCardapio,
   precoUnitario,
   proximaAbertura,
   reais,
   resumoDoPedido,
+  respostaDePedidoEhRepetida,
   somarLinha,
   TEXTO_NOVO_LINK_CONVERSA,
   textoAbertura,
+  textoLinkJaUsado,
   textoRecusa,
   unidadeLiberada,
   whatsappDaConversa,
@@ -288,6 +291,8 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
   const [trocarUnidade, setTrocarUnidade] = useState(false);
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [enviado, setEnviado] = useState<{ numero: string; total: number } | null>(null);
+  /** Link da conversa reenviado: gateway devolveu `repetido` (pedido antigo, nada novo). */
+  const [linkJaUsado, setLinkJaUsado] = useState<string | null>(null);
 
   const unidade = unidades.find((u) => u.codigo === codigo) ?? null;
 
@@ -413,6 +418,30 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  if (linkJaUsado) {
+    const url = whatsappDaConversa(inicio.whatsapp);
+    return (
+      <Tela
+        titulo="Link já usado"
+        icone={<CheckCircle2 className="size-16 text-success" aria-hidden />}
+      >
+        <p>{textoLinkJaUsado(linkJaUsado)}</p>
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25d366] px-5 text-sm font-semibold text-[#0b3d20]"
+          >
+            <MessageCircle className="size-4" aria-hidden />
+            Abrir conversa no WhatsApp
+          </a>
+        ) : null}
+        {instagram ? <CtaInstagramPedido instagram={instagram} empresa={nome} /> : null}
+      </Tela>
+    );
+  }
+
   if (enviado) {
     return (
       <Tela
@@ -429,13 +458,17 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
           <MessageCircle className="mt-0.5 size-4 shrink-0 text-[var(--cd-marca)]" aria-hidden />A
           unidade vai confirmar pela conversa. Pode fechar esta página.
         </p>
-        <button
-          type="button"
-          onClick={outroPedidoLoja}
-          className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[var(--cd-marca)] bg-card px-5 text-sm font-semibold text-[var(--cd-marca)] shadow-sm"
-        >
-          Fazer outro pedido
-        </button>
+        {outroPedidoVoltaAoCardapio(Boolean(inicio.loja)) ? (
+          <button
+            type="button"
+            onClick={outroPedidoLoja}
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[var(--cd-marca)] bg-card px-5 text-sm font-semibold text-[var(--cd-marca)] shadow-sm"
+          >
+            Fazer outro pedido
+          </button>
+        ) : (
+          <FazerOutroPedidoConversa whatsapp={inicio.whatsapp} />
+        )}
         {instagram ? <CtaInstagramPedido instagram={instagram} empresa={nome} /> : null}
       </Tela>
     );
@@ -702,8 +735,14 @@ function Cardapio({ token, inicio, tema }: { token: string; inicio: Inicio; tema
               loja={Boolean(inicio.loja)}
               finalizar={(corpo) => finalizar({ data: { token, ...corpo } })}
               consultarFinalizacao={consultarFinalizacao}
-              concluir={(numero, total) => {
+              concluir={(numero, total, repetido) => {
                 gravarSalvo(chaveSalvo, null);
+                if (repetido) {
+                  setLinkJaUsado(numero);
+                  setEnviado(null);
+                  return;
+                }
+                setLinkJaUsado(null);
                 setEnviado({ numero, total });
               }}
               buscarCep={buscarCep}

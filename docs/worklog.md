@@ -1,3 +1,16 @@
+## [2026-11-04 12:10] — Corrige "Fazer outro pedido" no link da conversa
+- **Autor:** Auto
+- **Objetivo:** Impedir pedido falso ao clicar "Fazer outro pedido" no link da conversa; tratar `repetido`.
+- **Arquivos alterados:**
+ - `src/lib/cardapio.ts` + `.test.ts` — helpers `outroPedidoVoltaAoCardapio`, `respostaDePedidoEhRepetida`, `textoLinkJaUsado`
+ - `src/components/cardapio/CardapioCliente.tsx` — conversa usa CTA de novo link; tela link já usado
+ - `src/components/cardapio/PedidoCliente.tsx` — `repetido: true` não conclui como sucesso
+ - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Loja mantém reset do cardápio. Conversa mostra o mesmo fluxo da tela `usado`. Reenvio do link usado mostra aviso com o nº do pedido anterior.
+- **Comandos executados:** `bun test cardapio.test.ts` → 19 OK; publicar → (em seguida).
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh; testar link da conversa e da loja.
+
 ## [2026-11-04 11:20] — CANAL-EXC: Excluir canal (plataforma)
 - **Autor:** Auto
 - **Objetivo:** Botão Excluir canal na tela Canais (ESPEC_CANAL_EXC).

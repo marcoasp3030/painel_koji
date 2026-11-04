@@ -12,12 +12,15 @@ import {
   montarEndereco,
   mudarQuantidade,
   novaLinha,
+  outroPedidoVoltaAoCardapio,
   precoUnitario,
   proximaAbertura,
   resumoDoPedido,
+  respostaDePedidoEhRepetida,
   somarLinha,
   TEXTO_NOVO_LINK_CONVERSA,
   textoAbertura,
+  textoLinkJaUsado,
   textoRecusa,
   unidadeLiberada,
   whatsappDaConversa,
@@ -250,18 +253,29 @@ describe("taxa da entrega na página", () => {
 });
 
 describe("fazer outro pedido", () => {
-  test("link da loja volta ao cardápio vazio e sem rascunho", () => {
+  test("link da loja: Fazer outro pedido continua voltando ao cardápio vazio", () => {
+    expect(outroPedidoVoltaAoCardapio(true)).toBe(true);
     const varias = depoisDeOutroPedidoLoja([{ codigo: "a" }, { codigo: "b" }]);
     expect(varias).toEqual({ linhas: [], unidade: null, limparRascunho: true });
     const unica = depoisDeOutroPedidoLoja([{ codigo: "patio" }]);
     expect(unica).toEqual({ linhas: [], unidade: "patio", limparRascunho: true });
   });
 
-  test("link da conversa pede um novo link na conversa", () => {
+  test("link da conversa: depois de enviar, mostra texto do novo link e não abre o cardápio", () => {
+    expect(outroPedidoVoltaAoCardapio(false)).toBe(false);
     expect(TEXTO_NOVO_LINK_CONVERSA).toBe("Peça um novo link na conversa");
     expect(whatsappDaConversa("5511947281513")).toBe("https://wa.me/5511947281513");
     expect(whatsappDaConversa(null)).toBeNull();
     expect(whatsappDaConversa("123")).toBeNull();
+  });
+
+  test("resposta repetido: true não mostra tela de sucesso", () => {
+    expect(respostaDePedidoEhRepetida({ numero: "42", repetido: true })).toBe(true);
+    expect(respostaDePedidoEhRepetida({ numero: "42", total: 10 })).toBe(false);
+    expect(respostaDePedidoEhRepetida(null)).toBe(false);
+    expect(textoLinkJaUsado("42")).toBe(
+      "Este link já foi usado no pedido nº 42. Peça um novo link na conversa para fazer outro pedido.",
+    );
   });
 
   test("reabrir link usado: mesmo botão e mesma mensagem da conversa", () => {

@@ -336,6 +336,23 @@ export function depoisDeOutroPedidoLoja(unidades: Pick<UnidadeCardapio, "codigo"
   };
 }
 
+/** Só o link da loja reabre o cardápio; o da conversa pede um link novo. */
+export function outroPedidoVoltaAoCardapio(loja: boolean) {
+  return loja;
+}
+
+/**
+ * Gateway devolve `repetido: true` quando o link da conversa já foi usado:
+ * o número é do pedido anterior e nada novo foi gravado — não é sucesso.
+ */
+export function respostaDePedidoEhRepetida(dados: { repetido?: unknown } | null | undefined) {
+  return dados?.repetido === true;
+}
+
+export function textoLinkJaUsado(numero: string) {
+  return `Este link já foi usado no pedido nº ${numero}. Peça um novo link na conversa para fazer outro pedido.`;
+}
+
 /** Link wa.me quando a página tem o número da loja; senão null (só o texto). */
 export function whatsappDaConversa(numero: string | null | undefined) {
   const digitos = (numero ?? "").replace(/\D/g, "");

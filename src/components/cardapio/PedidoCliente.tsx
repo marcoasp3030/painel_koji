@@ -27,6 +27,7 @@ import {
   precoUnitario,
   reais,
   resumoDoPedido,
+  respostaDePedidoEhRepetida,
   textoRecusa,
   type Categoria,
   type Endereco,
@@ -229,7 +230,8 @@ export function PedidoCliente({
   loja: boolean;
   finalizar: (corpo: CorpoEnvio) => Promise<RespostaEnvio>;
   consultarFinalizacao: (codigo: string) => Promise<SituacaoFinalizacao | null>;
-  concluir: (numero: string, total: number) => void;
+  /** `repetido`: o gateway não gravou pedido novo (link da conversa já usado). */
+  concluir: (numero: string, total: number, repetido?: boolean) => void;
   buscarCep: (cep: string) => Promise<ResultadoCep>;
   cotarTaxa: (corpo: {
     unidade: string;
@@ -371,8 +373,13 @@ export function PedidoCliente({
       }
       const resposta = await enviar(corpo);
       if (resposta.ok) {
+        const numero = String(resposta.dados["numero"] ?? "");
+        if (respostaDePedidoEhRepetida(resposta.dados)) {
+          concluir(numero, r.total, true);
+          return;
+        }
         const total = resposta.dados["total"];
-        concluir(String(resposta.dados["numero"]), typeof total === "number" ? total : r.total);
+        concluir(numero, typeof total === "number" ? total : r.total);
         return;
       }
       setErro(textoRecusa(resposta.motivo));

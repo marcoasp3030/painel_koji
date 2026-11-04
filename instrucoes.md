@@ -1,3 +1,9 @@
+## Fazer outro pedido: conversa vs loja (04/11/2026)
+
+- Link da conversa: após enviar, "Fazer outro pedido" pede novo link (não reabre o cardápio).
+- Resposta `repetido: true` do POST pedido: tela "Link já usado", sem "Pedido enviado!".
+- Link da loja: continua reiniciando o cardápio vazio.
+
 ## CANAL-EXC no painel (04/11/2026)
 
 - Em Canais, só plataforma: ação **Excluir canal** (desabilitada se ativo).
