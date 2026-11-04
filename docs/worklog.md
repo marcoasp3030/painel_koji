@@ -1,3 +1,18 @@
+## [2026-11-04 12:27] — Corrige atualização automática da lista de Pedidos
+- **Autor:** Auto
+- **Objetivo:** Lista não atualizava sozinha no teste; contador do menu já subia.
+- **Arquivos alterados:**
+ - `src/lib/pedidos-atualizacao.ts` + `.test.ts` — modificado — evento `luxtia:pedido-novo`
+ - `src/components/luxtia/ContadorPedidos.tsx` — modificado — dispara o evento no toast de pedido novo
+ - `src/components/luxtia/Pedidos.tsx` — modificado — refetch no evento; merge 1ª página no tick de `agora` (sem setInterval)
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** O `setAgora` a cada 15 s reiniciava o intervalo da lista no mesmo ciclo e o tick nunca rodava. Agora o merge usa o tick de `agora` e o contador avisa a tela para refetch imediato.
+- **Decisões e justificativas:** Amarrar ao caminho que já funciona (ContadorPedidos) evita depender só da invalidação por contagem compartilhada.
+- **Comandos executados:** `docker run oven/bun:1 bun test pedidos-atualizacao` → 5 OK
+- **Erros e resoluções:** Teste do usuário falhou → causa: race setAgora × setInterval; resolvido.
+- **Pendências / TODO:** publicar após commit
+- **Próximos passos:** `publicar-painel.sh`; hard refresh; novo pedido de teste com a tela Pedidos aberta.
+
 ## [2026-11-04 12:20] — Pedidos: lista atualiza sozinha
 - **Autor:** Auto
 - **Objetivo:** Lista de Pedidos reflete pedido novo sem recarregar (contador já atualizava).

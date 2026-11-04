@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { pedidos } from "@/lib/gateway-pedidos.functions";
 import { textoPagamento, type ContagemPedidos, type PedidoLista } from "@/lib/gateway/pedidos";
 import type { PapelGateway } from "@/lib/gateway/tipos";
+import { EVENTO_PEDIDO_NOVO } from "@/lib/pedidos-atualizacao";
 import { somPedidoLigado, tocarPedidoNovo } from "@/lib/pedidos-som";
 
 const CHAVE_EMPRESA = "luxtia:gateway-empresa";
@@ -79,9 +80,14 @@ export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefi
       .then((r) => {
         const item = r.ok ? (r.dados as { itens?: PedidoLista[] }).itens?.[0] : undefined;
         const numero = item?.numero ? ` #${item.numero}` : "";
+        // A tela Pedidos escuta e refetch a lista no mesmo momento do toast.
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_PEDIDO_NOVO, { detail: { numero: item?.numero ?? null } }),
+        );
         toast.message(`Novo pedido${numero} · ${textoPagamento(item?.pagamento)}`);
       })
       .catch(() => {
+        window.dispatchEvent(new CustomEvent(EVENTO_PEDIDO_NOVO, { detail: { numero: null } }));
         toast.message("Novo pedido");
       });
   }, [q.dataUpdatedAt, q.isSuccess, total, usuario, papel, empresa, fn]);

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   contagemMudouSinais,
   devePausarAtualizacaoLista,
+  EVENTO_PEDIDO_NOVO,
   houvePedidoNovo,
   mesclarPrimeiraPagina,
   sinaisDaContagem,
@@ -48,5 +49,9 @@ describe("pedidos-atualizacao", () => {
       pages: [nova, { itens: ["b"], proximo_cursor: null }],
       pageParams: [null, 1],
     });
+  });
+
+  test("evento do contador tem nome estável para a tela Pedidos escutar", () => {
+    expect(EVENTO_PEDIDO_NOVO).toBe("luxtia:pedido-novo");
   });
 });

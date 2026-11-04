@@ -64,6 +64,7 @@ import {
   contagemMudouSinais,
   DESTAQUE_PEDIDO_MS,
   devePausarAtualizacaoLista,
+  EVENTO_PEDIDO_NOVO,
   houvePedidoNovo,
   INTERVALO_LISTA_MS,
   mesclarPrimeiraPagina,
@@ -231,7 +232,7 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
   // Mesma query do contador do menu: quando muda aguardando/em andamento, atualiza a lista na hora.
   const contagem = useQuery({
     queryKey: ["pedidos", chaveEmpresa, "contagem"],
-    staleTime: 10_000,
+    staleTime: 0,
     refetchInterval: INTERVALO_LISTA_MS,
     refetchIntervalInBackground: false,
     queryFn: async () => {
@@ -241,6 +242,10 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
     },
   });
 
+  const refetchLista = useCallback(() => {
+    void cache.refetchQueries({ queryKey: ["pedidos", chaveEmpresa, "lista"] });
+  }, [cache, chaveEmpresa]);
+
   useEffect(() => {
     if (!contagem.isSuccess || !contagem.data) return;
     const agoraSinais = sinaisDaContagem(contagem.data);
@@ -249,7 +254,7 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
     if (!antes || !contagemMudouSinais(antes, agoraSinais)) return;
 
     if (congelarLista) listaPendente.current = true;
-    else void cache.invalidateQueries({ queryKey: ["pedidos", chaveEmpresa, "lista"] });
+    else refetchLista();
     if (numero) {
       void cache.invalidateQueries({ queryKey: ["pedidos", chaveEmpresa, "detalhe", numero] });
     }
@@ -297,13 +302,41 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
     numero,
     fnPedidos,
     ctx.empresa,
+    refetchLista,
   ]);
+
+  // Contador do menu já detectou pedido novo (toast/som): força a lista na hora.
+  useEffect(() => {
+    function aoPedidoNovo(ev: Event) {
+      const numeroNovo = (ev as CustomEvent<{ numero?: string | null }>).detail?.numero;
+      if (congelarLista) {
+        listaPendente.current = true;
+      } else {
+        refetchLista();
+      }
+      if (numeroNovo) {
+        setDestaques((d) => new Set(d).add(numeroNovo));
+        window.setTimeout(() => {
+          setDestaques((d) => {
+            const prox = new Set(d);
+            prox.delete(numeroNovo);
+            return prox;
+          });
+        }, DESTAQUE_PEDIDO_MS);
+      }
+      if (!tituloBase.current) tituloBase.current = document.title;
+      document.title = TITULO_NOVO_PEDIDO;
+      avisoTitulo.current = true;
+    }
+    window.addEventListener(EVENTO_PEDIDO_NOVO, aoPedidoNovo);
+    return () => window.removeEventListener(EVENTO_PEDIDO_NOVO, aoPedidoNovo);
+  }, [congelarLista, refetchLista]);
 
   useEffect(() => {
     if (congelarLista || !listaPendente.current) return;
     listaPendente.current = false;
-    void cache.invalidateQueries({ queryKey: ["pedidos", chaveEmpresa, "lista"] });
-  }, [congelarLista, cache, chaveEmpresa]);
+    refetchLista();
+  }, [congelarLista, refetchLista]);
 
   useEffect(() => {
     function restaurarTitulo() {
@@ -814,11 +847,17 @@ function usePagina(
   pausa: boolean,
   congelar: boolean,
   limite: number,
+  /** Tick do relógio da tela (15 s): dispara o merge da 1ª página no mesmo ciclo do setAgora. */
+  agora: number,
 ) {
   const fn = useServerFn(pedidos);
   const cache = useQueryClient();
   const chave = ["pedidos", ctx.empresa ?? "vinculada", "lista", status, consulta, limite];
   const chaveEstavel = JSON.stringify(chave);
+  // Refs: o tick de `agora` não pode depender do objeto `consulta` (novo a cada render).
+  const paramsRef = useRef({ fn, empresa: ctx.empresa, status, consulta, limite, chave });
+  paramsRef.current = { fn, empresa: ctx.empresa, status, consulta, limite, chave };
+  const pularPrimeiroTick = useRef(true);
   const q = useInfiniteQuery({
     queryKey: chave,
     enabled: !pausa,
@@ -840,30 +879,31 @@ function usePagina(
     getNextPageParam: (p) => p.proximo_cursor,
   });
 
-  // A cada 15 s (aba visível), só a primeira página — sem pular se há diálogo de status.
+  // No tick de `agora` (mesmo 15 s da tela), só a 1ª página — evita setInterval que o setAgora cancelava.
   useEffect(() => {
+    if (pularPrimeiroTick.current) {
+      pularPrimeiroTick.current = false;
+      return;
+    }
     if (pausa || congelar) return;
-    const tick = () => {
-      if (document.visibilityState !== "visible") return;
-      void (async () => {
-        const r = await fn({
-          data: {
-            acao: "listar",
-            empresa: ctx.empresa,
-            ...(status.length ? { status } : {}),
-            ...consulta,
-            cursor: null,
-            limite,
-          },
-        });
-        if (!r.ok) return;
-        const primeira = r.dados as { itens: PedidoLista[]; proximo_cursor: number | null };
-        cache.setQueryData(chave, (atual: typeof q.data) => mesclarPrimeiraPagina(atual, primeira));
-      })();
-    };
-    const id = window.setInterval(tick, INTERVALO_LISTA_MS);
-    return () => window.clearInterval(id);
-  }, [pausa, congelar, fn, ctx.empresa, status, consulta, limite, cache, chaveEstavel]);
+    if (document.visibilityState !== "visible") return;
+    const { fn: f, empresa, status: st, consulta: c, limite: lim, chave: ch } = paramsRef.current;
+    void (async () => {
+      const r = await f({
+        data: {
+          acao: "listar",
+          empresa,
+          ...(st.length ? { status: st } : {}),
+          ...c,
+          cursor: null,
+          limite: lim,
+        },
+      });
+      if (!r.ok) return;
+      const primeira = r.dados as { itens: PedidoLista[]; proximo_cursor: number | null };
+      cache.setQueryData(ch, (atual: typeof q.data) => mesclarPrimeiraPagina(atual, primeira));
+    })();
+  }, [agora, pausa, congelar, cache, chaveEstavel]);
 
   return q;
 }
@@ -880,7 +920,7 @@ type PropsLista = {
 };
 
 function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
-  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, p.congelar, 20);
+  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, p.congelar, 20, p.agora);
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   const primeiro = p.status[0] ?? "concluido";
   return (
@@ -939,7 +979,7 @@ function Coluna({ titulo, ...p }: PropsLista & { titulo: string }) {
 }
 
 function Lista(p: PropsLista) {
-  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, p.congelar, 50);
+  const q = usePagina(p.ctx, p.status, p.consulta, p.pausa, p.congelar, 50, p.agora);
   const itens = q.data?.pages.flatMap((pg) => pg.itens) ?? [];
   return (
     <div className="overflow-hidden rounded-xl border border-base-200 bg-card">

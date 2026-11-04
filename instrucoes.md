@@ -1,3 +1,9 @@
+## Pedidos: lista atualiza sozinha — correção (04/11/2026)
+
+- Bug: o tick de `setAgora` (15 s) cancelava o `setInterval` da lista no mesmo ciclo; a 1ª página quase nunca atualizava.
+- Correção: merge da 1ª página no tick de `agora`; contador do menu dispara `luxtia:pedido-novo` e a tela faz `refetch` na hora.
+- Contagem muda (`aguardando_loja` / `em_andamento`): `refetch` da lista; pausa com diálogo de status; destaque e título mantidos.
+
 ## Pedidos: lista atualiza sozinha (04/11/2026)
 
 - Lista: a cada 15 s (aba visível) só a 1ª página; pausa com diálogo de status aberto.
