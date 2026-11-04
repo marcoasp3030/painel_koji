@@ -1,3 +1,10 @@
+## CANAL-EXC no painel (04/11/2026)
+
+- Em Canais, só plataforma: ação **Excluir canal** (desabilitada se ativo).
+- Modal pede o nome do canal; DELETE `canais/{id}` com `{"confirmacao"}`.
+- Toast com conversas apagadas e pedidos mantidos; 409/400/404 com mensagens fixas.
+- Gateway `140685b`+ (migração 064).
+
 ## CARD-REDES no painel (03/11/2026)
 
 - Aparência → **Redes e contato**: Instagram, Facebook e Telefone (campo + liga/desliga); PUT/GET `cardapio/redes`.

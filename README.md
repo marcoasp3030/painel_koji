@@ -149,6 +149,10 @@ Prints com dados fictícios: `docs/prints-arq-fup/` (`tests/visual/arq-fup/captu
 
 O cliente abre `/cardapio#<token>`, sem login, monta o pedido e envia. O link é da conversa, vale 24 horas e é consumido no pedido. O gateway confere tudo com as mesmas regras do agente, e a página não recebe telefone, nome nem endereço. O atendente insere o link pelo botão de cardápio na conversa, e o agente recebe `link_cardapio` no pacote. Precisa de `PAINEL_PUBLIC_URL` no gateway. Na entrega, o CEP preenche o endereço pelo gateway (ViaCEP, com BrasilAPI de reserva), e o cliente pode editar e informar número, complemento e referência. Na tela Cardápio, "Ver como cliente" abre uma prévia que não envia pedido.
 
+## Excluir canal
+
+Em Canais, o admin da plataforma pode excluir um canal **desativado**, digitando o nome para confirmar. Apaga o histórico das conversas desse canal; os pedidos ficam sem dados pessoais. Contrato: `gateway/docs/ESPEC_CANAL_EXC.md`.
+
 ## Aparência do cardápio
 
 Em Loja → Aparência do cardápio, o gestor define nome, frase, logo, banner, cores, cantos e títulos, com prévia ao vivo. Das três cores saem as demais (`src/lib/cardapio-tema.ts`), sempre com contraste legível. Imagens só em PNG, JPG ou WebP: o navegador reduz e converte, e o gateway confere o formato pelos bytes. Elas ficam no banco e saem por `/api/public/cardapio-imagem/<id>`.

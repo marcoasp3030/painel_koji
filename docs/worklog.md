@@ -1,3 +1,17 @@
+## [2026-11-04 11:20] — CANAL-EXC: Excluir canal (plataforma)
+- **Autor:** Auto
+- **Objetivo:** Botão Excluir canal na tela Canais (ESPEC_CANAL_EXC).
+- **Arquivos alterados:**
+ - `src/lib/canal-excluir.ts` + `.test.ts` — criados — regras de UI e toast
+ - `src/lib/gateway-canais.functions.ts` — modificado — `excluirCanal` (DELETE + erros)
+ - `src/routes/_authenticated/ia/canais.tsx` — modificado — botão, modal, confirmação
+ - `src/lib/gateway/modulo.test.ts` — modificado — gestor recusa DELETE canais
+ - `instrucoes.md`, `docs/worklog.md` — modificados
+- **Resumo das mudanças:** Só plataforma vê; ativo desabilitado; nome igual libera Excluir; toast com totais; 404 recarrega a lista.
+- **Comandos executados:** `bun test canal-excluir/modulo` → 40 OK; publicar → (em seguida).
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh como plataforma; desativar canal e excluir.
+
 ## [2026-11-03 13:15] — CARD-REDES no painel
 - **Autor:** Auto
 - **Objetivo:** Instagram, Facebook e telefone na Aparência e no cardápio público (ESPEC_CARD_REDES §3 e §5).

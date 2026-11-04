@@ -1,7 +1,8 @@
-/** Canais do gateway. Criar, ativar e rotacionar são do admin da plataforma. */
+/** Canais do gateway. Criar, ativar, rotacionar e excluir são do admin da plataforma. */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { ResultadoExcluirCanal } from "./canal-excluir";
 import { empresa, idRecurso } from "./gateway/esquemas";
 import type { CanalGateway, Pagina } from "./gateway/tipos";
 
@@ -121,3 +122,51 @@ export function textoWebhookUazapi(w: import("./gateway/tipos").WebhookUazapi | 
   const motivo = w.motivo ? (MOTIVO_WEBHOOK_UAZAPI[w.motivo] ?? w.motivo) : "Motivo não informado.";
   return `Webhook não cadastrado: ${motivo}`;
 }
+
+export type ErroExcluirCanal = {
+  ok: false;
+  motivo: "ativo" | "confirmacao" | "nao_encontrado";
+  mensagem: string;
+};
+
+/** CANAL-EXC: apaga o canal desativado e o histórico das conversas. Só plataforma. */
+export const excluirCanal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        canal: idRecurso,
+        confirmacao: z.string().trim().min(1).max(255),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ResultadoExcluirCanal | ErroExcluirCanal> => {
+    const g = await import("./gateway/painel.server");
+    const { GatewayErro } = await import("./gateway/erros");
+    const { AcessoNegado } = await import("./gateway/modulo.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      if (t.papel !== "plataforma") {
+        throw new AcessoNegado("Só a plataforma pode excluir um canal.");
+      }
+      try {
+        const { dados } = await t.chamar<ResultadoExcluirCanal>("DELETE", ["canais", data.canal], {
+          corpo: { confirmacao: data.confirmacao },
+        });
+        return dados;
+      } catch (e) {
+        if (!(e instanceof GatewayErro)) throw e;
+        if (e.status === 409 && e.detalhes["campo"] === "ativo") {
+          return { ok: false, motivo: "ativo", mensagem: "Desative o canal antes de excluir." };
+        }
+        if (e.status === 400 && e.detalhes["campo"] === "confirmacao") {
+          return { ok: false, motivo: "confirmacao", mensagem: "O nome não confere." };
+        }
+        if (e.status === 404) {
+          return { ok: false, motivo: "nao_encontrado", mensagem: "Canal não encontrado" };
+        }
+        throw e;
+      }
+    });
+  });

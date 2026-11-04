@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Plus, RotateCw } from "lucide-react";
+import { CheckCircle2, Plus, RotateCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Etiqueta,
@@ -25,10 +25,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  confirmacaoExcluirCanalConfere,
+  DICA_CANAL_ATIVO,
+  excluirCanalDesabilitado,
+  podeExibirExcluirCanal,
+  TEXTO_CONFIRMACAO_EXCLUIR_CANAL,
+  toastExcluirCanal,
+} from "@/lib/canal-excluir";
 import { listarAgentes } from "@/lib/gateway-agentes.functions";
 import {
   alterarCanal,
+  excluirCanal,
   listarCanais,
   refazerWebhookCanal,
   rotacionarSegredoCanal,
@@ -57,8 +67,11 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
   const listarAg = useServerFn(listarAgentes);
   const alterar = useServerFn(alterarCanal);
   const rotacionar = useServerFn(rotacionarSegredoCanal);
-  const plataforma = ctx.papel === "plataforma";
+  const apagar = useServerFn(excluirCanal);
+  const plataforma = podeExibirExcluirCanal(ctx.papel);
   const [criando, setCriando] = useState(false);
+  const [excluindo, setExcluindo] = useState<CanalGateway | null>(null);
+  const [nomeConfirmacao, setNomeConfirmacao] = useState("");
   // URL com segredo: só em memória, até o usuário fechar o aviso.
   const [segredo, setSegredo] = useState<{
     titulo: string;
@@ -115,6 +128,29 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
           ? "Webhook cadastrado na uazapi."
           : (textoWebhookUazapi(r.webhook_uazapi) ?? "Não foi possível cadastrar o webhook."),
       );
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const exclusao = useMutation({
+    mutationFn: (c: CanalGateway) =>
+      apagar({
+        data: { empresa: ctx.empresa, canal: c.id, confirmacao: nomeConfirmacao.trim() },
+      }),
+    onSuccess: (r) => {
+      if ("ok" in r && r.ok === false) {
+        toast.error(r.mensagem);
+        if (r.motivo === "nao_encontrado") {
+          setExcluindo(null);
+          setNomeConfirmacao("");
+          void recarregar();
+        }
+        return;
+      }
+      toast.success(toastExcluirCanal(r));
+      setExcluindo(null);
+      setNomeConfirmacao("");
+      void recarregar();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -259,6 +295,24 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      disabled={excluirCanalDesabilitado(c.ativo) || exclusao.isPending}
+                      title={excluirCanalDesabilitado(c.ativo) ? DICA_CANAL_ATIVO : undefined}
+                      aria-label={
+                        excluirCanalDesabilitado(c.ativo)
+                          ? `${DICA_CANAL_ATIVO}: ${c.nome}`
+                          : `Excluir canal ${c.nome}`
+                      }
+                      onClick={() => {
+                        setNomeConfirmacao("");
+                        setExcluindo(c);
+                      }}
+                    >
+                      <Trash2 className="size-4" aria-hidden /> Excluir canal
+                    </Button>
                   </div>
                 ) : null}
               </li>
@@ -293,6 +347,51 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
         valor={segredo?.url ?? null}
         onFechar={() => setSegredo(null)}
       />
+
+      <AlertDialog
+        open={Boolean(excluindo)}
+        onOpenChange={(a) => {
+          if (exclusao.isPending) return;
+          if (!a) {
+            setExcluindo(null);
+            setNomeConfirmacao("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir o canal {excluindo?.nome}?</AlertDialogTitle>
+            <AlertDialogDescription>{TEXTO_CONFIRMACAO_EXCLUIR_CANAL}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="block text-sm text-ink-900">
+            Digite o nome do canal para confirmar
+            <Input
+              className="mt-1"
+              autoComplete="off"
+              aria-label="Digite o nome do canal para confirmar"
+              value={nomeConfirmacao}
+              onChange={(e) => setNomeConfirmacao(e.target.value)}
+            />
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={exclusao.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={
+                exclusao.isPending ||
+                !excluindo ||
+                !confirmacaoExcluirCanalConfere(nomeConfirmacao, excluindo.nome)
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                if (excluindo) exclusao.mutate(excluindo);
+              }}
+            >
+              {exclusao.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
