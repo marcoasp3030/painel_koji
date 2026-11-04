@@ -8,10 +8,10 @@
  - `instrucoes.md`, `README.md`, `docs/worklog.md` — modificados
 - **Resumo das mudanças:** O `setAgora` a cada 15 s reiniciava o intervalo da lista no mesmo ciclo e o tick nunca rodava. Agora o merge usa o tick de `agora` e o contador avisa a tela para refetch imediato.
 - **Decisões e justificativas:** Amarrar ao caminho que já funciona (ContadorPedidos) evita depender só da invalidação por contagem compartilhada.
-- **Comandos executados:** `docker run oven/bun:1 bun test pedidos-atualizacao` → 5 OK
+- **Comandos executados:** `docker run oven/bun:1 bun test pedidos-atualizacao` → 5 OK; commit `12c1c56` + `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; home 200; imagem `painel:12c1c56…`.
 - **Erros e resoluções:** Teste do usuário falhou → causa: race setAgora × setInterval; resolvido.
-- **Pendências / TODO:** publicar após commit
-- **Próximos passos:** `publicar-painel.sh`; hard refresh; novo pedido de teste com a tela Pedidos aberta.
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh na tela Pedidos; enviar pedido de teste e conferir se o card aparece sem F5.
 
 ## [2026-11-04 12:20] — Pedidos: lista atualiza sozinha
 - **Autor:** Auto
