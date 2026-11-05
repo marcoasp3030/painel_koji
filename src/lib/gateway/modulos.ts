@@ -6,7 +6,51 @@ export type ModulosEmpresa = {
   itens: { id: string; nome?: string; ativo?: boolean }[];
   em_uso: string[];
   telas: TelaModulo[];
+  /** Módulos do painel que a plataforma bloqueou nesta empresa (TELAS1). Vazio = tudo liberado. */
+  bloqueadas: ModuloPainel[];
 };
+
+/**
+ * Cada opção do menu da empresa é um módulo que o super admin libera ou bloqueia (TELAS1).
+ * A lista precisa bater com `TELAS` em app/nucleo/telas.py no gateway.
+ */
+export const MODULOS_PAINEL = [
+  { id: "conversas", rotulo: "Conversas", grupo: "Atendimento" },
+  { id: "pedidos", rotulo: "Pedidos", grupo: "Atendimento" },
+  { id: "operacao", rotulo: "Operação", grupo: "Atendimento" },
+  { id: "cardapio", rotulo: "Cardápio", grupo: "Loja" },
+  { id: "unidades", rotulo: "Unidades e horários", grupo: "Loja" },
+  { id: "avisos_de_pedido", rotulo: "Avisos de pedido", grupo: "Loja" },
+  { id: "aparencia", rotulo: "Aparência do cardápio", grupo: "Loja" },
+  { id: "agentes", rotulo: "Agentes", grupo: "Agente" },
+  { id: "comportamento", rotulo: "Comportamento do agente", grupo: "Agente" },
+  { id: "documentos", rotulo: "Documentos", grupo: "Agente" },
+  { id: "simular", rotulo: "Simular conversa", grupo: "Agente" },
+  { id: "canais", rotulo: "Canais", grupo: "Integrações" },
+  { id: "chaves_formulario", rotulo: "Chaves de formulário", grupo: "Integrações" },
+  { id: "webhooks", rotulo: "Webhooks de saída", grupo: "Integrações" },
+  { id: "historico", rotulo: "Histórico de gestão", grupo: "Gestão" },
+  { id: "usuarios", rotulo: "Usuários", grupo: "Gestão" },
+] as const;
+
+export type ModuloPainel = (typeof MODULOS_PAINEL)[number]["id"];
+
+const IDS_MODULOS_PAINEL = new Set<string>(MODULOS_PAINEL.map((m) => m.id));
+
+export function ehModuloPainel(id: unknown): id is ModuloPainel {
+  return typeof id === "string" && IDS_MODULOS_PAINEL.has(id);
+}
+
+/** Módulos do painel agrupados como no menu, na ordem do catálogo. */
+export function gruposModulosPainel() {
+  const grupos: { nome: string; itens: (typeof MODULOS_PAINEL)[number][] }[] = [];
+  for (const m of MODULOS_PAINEL) {
+    const g = grupos.find((x) => x.nome === m.grupo);
+    if (g) g.itens.push(m);
+    else grupos.push({ nome: m.grupo, itens: [m] });
+  }
+  return grupos;
+}
 
 export type ModulosAgente = {
   agente_id: string;

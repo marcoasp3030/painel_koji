@@ -14,6 +14,7 @@ import {
   History,
   KeyRound,
   Layers,
+  Lock,
   Webhook,
   LogOut,
   MessagesSquare,
@@ -39,7 +40,9 @@ import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
 import {
   agruparMenu,
   filtrarMenu,
+  filtrarMenuPorBloqueio,
   filtrarMenuPorTelas,
+  moduloBloqueadoNoCaminho,
   type IconeMenu,
   type ItemMenu,
 } from "@/lib/nav";
@@ -72,6 +75,22 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
 };
 
 const CHAVE_EMPRESA = "luxtia:gateway-empresa";
+
+/** Tela aberta por link direto, mas bloqueada pelo super admin para a empresa. */
+function ModuloNaoLiberado({ nome }: { nome: string }) {
+  return (
+    <div className="mx-auto flex max-w-md flex-col items-center gap-3 px-4 py-16 text-center">
+      <span className="flex size-12 items-center justify-center rounded-full bg-purple-50 text-purple-800">
+        <Lock className="size-5" aria-hidden />
+      </span>
+      <h1 className="text-lg font-semibold text-ink-900">{nome} não está liberado</h1>
+      <p className="text-sm text-ink-500">
+        Este módulo não faz parte do acesso da sua empresa. Para usar, fale com o suporte da
+        plataforma.
+      </p>
+    </div>
+  );
+}
 
 function itemAtivo(caminho: string, destino: string) {
   return caminho === destino || caminho.startsWith(`${destino}/`);
@@ -164,10 +183,17 @@ export function AppShell({
   // assume "plataforma" para o menu não ficar só com Clientes.
   const papelMenu =
     acesso.data?.papel ?? (context === "Super Admin" ? ("plataforma" as const) : undefined);
+  // TELAS1: módulos que o super admin bloqueou na empresa. A empresa não vê nem abre;
+  // o super admin continua vendo tudo, com um cadeado no que está bloqueado.
+  const ehPlataforma = papelMenu === "plataforma";
+  const bloqueadas = modulos.data?.bloqueadas ?? [];
+  const porPapel = acesso.isPending && papelMenu == null ? nav : filtrarMenu(nav, papelMenu);
   const itens = filtrarMenuPorTelas(
-    acesso.isPending && papelMenu == null ? nav : filtrarMenu(nav, papelMenu),
+    ehPlataforma ? porPapel : filtrarMenuPorBloqueio(porPapel, bloqueadas),
     modulos.data?.telas ?? (modulos.isFetched ? [] : null),
   );
+  const bloqueadasNaEmpresa = new Set<string>(ehPlataforma ? bloqueadas : []);
+  const telaBloqueada = ehPlataforma ? null : moduloBloqueadoNoCaminho(nav, pathname, bloqueadas);
   const grupos = agruparMenu(itens);
   const atual = itens.find((item) => itemAtivo(pathname, item.to));
 
@@ -296,6 +322,12 @@ export function AppShell({
                               <span className={`min-w-0 flex-1 truncate ${textoMenu}`}>
                                 {item.label}
                               </span>
+                              {item.modulo && bloqueadasNaEmpresa.has(item.modulo) ? (
+                                <Lock
+                                  className={`size-3.5 shrink-0 text-purple-300 ${recolhido ? "lg:hidden" : ""}`}
+                                  aria-label="Bloqueado para a empresa"
+                                />
+                              ) : null}
                               {item.to === "/ia/pedidos" ? (
                                 <span
                                   className={
@@ -426,6 +458,8 @@ export function AppShell({
           >
             {seguranca.data?.bloqueado ? (
               <AtivarSegundaEtapa onPronta={() => void seguranca.refetch()} />
+            ) : telaBloqueada ? (
+              <ModuloNaoLiberado nome={telaBloqueada.label} />
             ) : (
               children
             )}

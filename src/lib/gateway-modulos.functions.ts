@@ -3,7 +3,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { empresa, idRecurso } from "./gateway/esquemas";
-import type { ModulosAgente, ModulosEmpresa } from "./gateway/modulos";
+import {
+  MODULOS_PAINEL,
+  ehModuloPainel,
+  type ModuloPainel,
+  type ModulosAgente,
+  type ModulosEmpresa,
+} from "./gateway/modulos";
 
 const idModulo = z.string().regex(/^[a-z0-9_]{2,40}$/);
 
@@ -24,6 +30,8 @@ export const obterModulosEmpresa = createServerFn({ method: "POST" })
         itens: gere && Array.isArray(dados.itens) ? dados.itens : [],
         em_uso: Array.isArray(dados.em_uso) ? dados.em_uso : [],
         telas: Array.isArray(dados.telas) ? dados.telas : [],
+        // Todos os papéis recebem: o menu e as telas da empresa dependem disso.
+        bloqueadas: Array.isArray(dados.bloqueadas) ? dados.bloqueadas.filter(ehModuloPainel) : [],
       } satisfies ModulosEmpresa;
     });
   });
@@ -49,6 +57,29 @@ export const alterarModuloEmpresa = createServerFn({ method: "POST" })
         corpo: { ativo: data.ativo },
       });
       return { ok: true as const };
+    });
+  });
+
+const idModuloPainel = z.enum(MODULOS_PAINEL.map((m) => m.id) as [ModuloPainel, ...ModuloPainel[]]);
+
+/** TELAS1: só o super admin define quais módulos do painel a empresa usa. */
+export const alterarModulosPainelEmpresa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, bloqueadas: z.array(idModuloPainel).max(40) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      if (!sessao.perfil.superAdmin) {
+        const { AcessoNegado } = await import("./gateway/modulo.server");
+        throw new AcessoNegado("Só o super admin libera ou bloqueia módulos da empresa.");
+      }
+      const t = await sessao.tenant(data.empresa);
+      const { dados } = await t.chamar<{ bloqueadas: string[] }>("PUT", ["telas"], {
+        corpo: { bloqueadas: data.bloqueadas },
+      });
+      return { bloqueadas: (dados.bloqueadas ?? []).filter(ehModuloPainel) };
     });
   });
 

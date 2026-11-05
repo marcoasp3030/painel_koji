@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronRight, Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Capacidade } from "@/components/luxtia/Capacidade";
+import { ModulosDaEmpresa } from "@/components/luxtia/ModulosDaEmpresa";
 import { Ajuda, Etiqueta, PaginaGateway, RotuloCampo, dataHora } from "@/components/luxtia/Gateway";
 import { ChipFiltro } from "@/components/luxtia/Superficie";
 import {
@@ -394,6 +395,7 @@ function PainelEmpresa({
             </div>
             <Switch id="ed-teste" checked={teste} onCheckedChange={setTeste} />
           </div>
+          <ModulosDaEmpresa empresa={empresa.id} />
           <details className="border-t border-base-200 pt-3">
             <summary className="cursor-pointer text-sm font-medium text-ink-900">Avançado</summary>
             <div className="mt-3">

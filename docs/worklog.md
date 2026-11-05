@@ -1,3 +1,19 @@
+## [2026-11-04 13:00] — TELAS1: módulos do painel por empresa
+- **Autor:** Claude Opus 5.5
+- **Objetivo:** Cada opção do menu da empresa é um módulo que o super admin libera ou bloqueia por empresa.
+- **Arquivos alterados:**
+ - `src/lib/gateway/modulos.ts` — modificado — catálogo `MODULOS_PAINEL` (16 módulos) e `bloqueadas` em `ModulosEmpresa`
+ - `src/lib/gateway-modulos.functions.ts` — modificado — devolve `bloqueadas` a todos os papéis; `alterarModulosPainelEmpresa` (só super admin)
+ - `src/lib/nav.ts` — modificado — `modulo` em cada item; `filtrarMenuPorBloqueio` e `moduloBloqueadoNoCaminho`
+ - `src/components/luxtia/AppShell.tsx` — modificado — esconde no menu, fecha a tela aberta por link; super admin vê cadeado
+ - `src/components/luxtia/ModulosDaEmpresa.tsx` — criado — seção "Módulos do painel" no painel da empresa (Empresas)
+ - `src/routes/_authenticated/ia/empresas.index.tsx` — modificado — inclui a seção
+ - `src/lib/gateway/modulos-painel.test.ts` — criado — 3 testes
+- **Resumo das mudanças:** Padrão é tudo liberado. Desligado, o módulo some do menu de todos os usuários da empresa e a página mostra "não está liberado". O gateway (TELAS1, migração 065) guarda a lista e recusa as rotas exclusivas da tela.
+- **Comandos executados:** `bun test` → 323 OK, 6 ignorados; `vite build` → OK; Playwright local como super admin com empresa temporária (removida) → salvar, contador e cadeado OK.
+- **Pendências / TODO:** conferir com um usuário de empresa depois da publicação.
+- **Próximos passos:** publicar o gateway primeiro (migração 065), depois o painel.
+
 ## [2026-11-04 12:20] — Pedidos: lista atualiza sozinha
 - **Autor:** Auto
 - **Objetivo:** Lista de Pedidos reflete pedido novo sem recarregar (contador já atualizava).

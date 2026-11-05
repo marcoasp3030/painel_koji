@@ -1,5 +1,5 @@
 /** Itens do menu lateral, agrupados para o super admin e para o cliente. */
-import type { TelaModulo } from "./gateway/modulos";
+import type { ModuloPainel, TelaModulo } from "./gateway/modulos";
 import type { PapelGateway } from "./gateway/tipos";
 
 export type IconeMenu =
@@ -34,6 +34,8 @@ export type ItemMenu = {
   papeis?: PapelGateway[];
   /** Só aparece se a empresa tiver essa tela nos módulos em uso (MULTI1-a). */
   tela?: TelaModulo;
+  /** Módulo do painel que o super admin libera ou bloqueia por empresa (TELAS1). */
+  modulo?: ModuloPainel;
 };
 
 const AGENTES_PLATAFORMA: ItemMenu[] = [
@@ -43,6 +45,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Atendimento",
     icone: "conversas",
     papeis: ["plataforma"],
+    modulo: "conversas",
   },
   {
     to: "/ia/pedidos",
@@ -51,6 +54,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     icone: "pedidos",
     papeis: ["plataforma"],
     tela: "pedidos",
+    modulo: "pedidos",
   },
   {
     to: "/ia/operacao",
@@ -58,6 +62,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Atendimento",
     icone: "operacao",
     papeis: ["plataforma"],
+    modulo: "operacao",
   },
   {
     to: "/ia/cardapio",
@@ -66,6 +71,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     icone: "cardapio",
     papeis: ["plataforma"],
     tela: "cardapio",
+    modulo: "cardapio",
   },
   {
     to: "/ia/unidades",
@@ -73,6 +79,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Loja",
     icone: "unidades",
     papeis: ["plataforma"],
+    modulo: "unidades",
   },
   {
     to: "/ia/configuracoes/avisos",
@@ -81,6 +88,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     icone: "avisos",
     papeis: ["plataforma"],
     tela: "avisos_de_pedido",
+    modulo: "avisos_de_pedido",
   },
   {
     to: "/ia/configuracoes/aparencia",
@@ -89,6 +97,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     icone: "aparencia",
     papeis: ["plataforma"],
     tela: "cardapio",
+    modulo: "aparencia",
   },
   {
     to: "/ia/agentes",
@@ -96,6 +105,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Agente",
     icone: "agentes",
     papeis: ["plataforma"],
+    modulo: "agentes",
   },
   {
     to: "/ia/configuracoes/comportamento",
@@ -103,6 +113,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Agente",
     icone: "comportamento",
     papeis: ["plataforma"],
+    modulo: "comportamento",
   },
   {
     to: "/ia/documentos",
@@ -110,6 +121,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Agente",
     icone: "documentos",
     papeis: ["plataforma"],
+    modulo: "documentos",
   },
   {
     to: "/ia/simular",
@@ -117,6 +129,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Agente",
     icone: "simular",
     papeis: ["plataforma"],
+    modulo: "simular",
   },
   {
     to: "/ia/modelos",
@@ -131,6 +144,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Integrações",
     icone: "canais",
     papeis: ["plataforma"],
+    modulo: "canais",
   },
   {
     to: "/ia/chaves",
@@ -145,6 +159,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Integrações",
     icone: "formulario",
     papeis: ["plataforma"],
+    modulo: "chaves_formulario",
   },
   {
     to: "/ia/webhooks-saida",
@@ -152,6 +167,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Integrações",
     icone: "webhooks",
     papeis: ["plataforma"],
+    modulo: "webhooks",
   },
   {
     to: "/ia/empresas",
@@ -166,6 +182,7 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     grupo: "Gestão",
     icone: "historico",
     papeis: ["plataforma"],
+    modulo: "historico",
   },
 ];
 
@@ -176,6 +193,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Atendimento",
     icone: "conversas",
     papeis: ["gestor", "supervisor", "funcionario"],
+    modulo: "conversas",
   },
   {
     to: "/ia/pedidos",
@@ -184,6 +202,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     icone: "pedidos",
     papeis: ["gestor", "supervisor", "funcionario"],
     tela: "pedidos",
+    modulo: "pedidos",
   },
   {
     to: "/ia/operacao",
@@ -191,6 +210,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Atendimento",
     icone: "operacao",
     papeis: ["gestor", "supervisor"],
+    modulo: "operacao",
   },
   {
     to: "/ia/cardapio",
@@ -199,6 +219,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     icone: "cardapio",
     papeis: ["gestor", "supervisor", "funcionario"],
     tela: "cardapio",
+    modulo: "cardapio",
   },
   {
     to: "/ia/unidades",
@@ -206,6 +227,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Loja",
     icone: "unidades",
     papeis: ["gestor", "supervisor"],
+    modulo: "unidades",
   },
   {
     to: "/ia/configuracoes/avisos",
@@ -214,6 +236,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     icone: "avisos",
     papeis: ["gestor", "supervisor"],
     tela: "avisos_de_pedido",
+    modulo: "avisos_de_pedido",
   },
   {
     to: "/ia/configuracoes/aparencia",
@@ -222,6 +245,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     icone: "aparencia",
     papeis: ["gestor"],
     tela: "cardapio",
+    modulo: "aparencia",
   },
   {
     to: "/ia/agentes",
@@ -229,6 +253,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agente",
     icone: "agentes",
     papeis: ["gestor", "supervisor"],
+    modulo: "agentes",
   },
   {
     to: "/ia/configuracoes/comportamento",
@@ -236,6 +261,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agente",
     icone: "comportamento",
     papeis: ["gestor", "supervisor"],
+    modulo: "comportamento",
   },
   {
     to: "/ia/documentos",
@@ -243,6 +269,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agente",
     icone: "documentos",
     papeis: ["gestor"],
+    modulo: "documentos",
   },
   {
     to: "/ia/simular",
@@ -250,6 +277,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Agente",
     icone: "simular",
     papeis: ["gestor", "supervisor"],
+    modulo: "simular",
   },
   {
     to: "/ia/canais",
@@ -257,6 +285,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Integrações",
     icone: "canais",
     papeis: ["gestor"],
+    modulo: "canais",
   },
   {
     to: "/ia/chaves-formulario",
@@ -264,6 +293,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Integrações",
     icone: "formulario",
     papeis: ["gestor"],
+    modulo: "chaves_formulario",
   },
   {
     to: "/ia/webhooks-saida",
@@ -271,6 +301,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Integrações",
     icone: "webhooks",
     papeis: ["gestor"],
+    modulo: "webhooks",
   },
   {
     to: "/ia/gestao/alteracoes",
@@ -278,6 +309,7 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     grupo: "Gestão",
     icone: "historico",
     papeis: ["gestor", "supervisor"],
+    modulo: "historico",
   },
 ];
 
@@ -313,6 +345,7 @@ export const TENANT_NAV: ItemMenu[] = [
     grupo: "Gestão",
     icone: "equipe",
     papeis: ["gestor", "supervisor"],
+    modulo: "usuarios",
   },
 ];
 
@@ -333,6 +366,30 @@ export function filtrarMenuPorTelas(
   if (telas == null) return itens;
   const liberadas = new Set(telas);
   return itens.filter((item) => !item.tela || liberadas.has(item.tela));
+}
+
+/** Esconde os módulos que o super admin bloqueou na empresa (TELAS1). */
+export function filtrarMenuPorBloqueio(
+  itens: ItemMenu[],
+  bloqueadas: readonly string[] | null | undefined,
+) {
+  if (!bloqueadas?.length) return itens;
+  const fora = new Set(bloqueadas);
+  return itens.filter((item) => !item.modulo || !fora.has(item.modulo));
+}
+
+/** Módulo bloqueado que cobre o caminho (a tela e as subpáginas), ou null. */
+export function moduloBloqueadoNoCaminho(
+  itens: ItemMenu[],
+  caminho: string,
+  bloqueadas: readonly string[] | null | undefined,
+) {
+  if (!bloqueadas?.length) return null;
+  const fora = new Set(bloqueadas);
+  const item = itens
+    .filter((i) => caminho === i.to || caminho.startsWith(`${i.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)[0];
+  return item?.modulo && fora.has(item.modulo) ? item : null;
 }
 
 /** Mantém a ordem em que os grupos aparecem na lista. */
