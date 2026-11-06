@@ -85,6 +85,10 @@ Admin e plataforma (CAT3-a, contrato `gateway/docs/ESPEC_CAT3.md` seção 13):
 
 Layout de gestão republicado em 30/10/2026 como `painel:bc6c695dbb029ffcc17c5acf75466bf8d20bb251`. A volta imediata é `painel:volta-20261030T165734Z`. O atendente consulta o cardápio e pode esgotar ou repor. Criar, preço, arquivar, lote e ligações ficam com admin e plataforma. O `PATCH` continua só com o que mudou e o `atualizado_em` lido. Preço vazio avisa que o item sai do atendimento. Conflito 409 oferece recarregar ou reaplicar. A disponibilidade tem prévia ao vivo e o histórico do item (quem, quando em Brasília, antes e depois) segue só para admin e plataforma. Prints com dados fictícios: `docs/prints-cat3-enc1/` (`tests/visual/cat3/capturar.cjs`).
 
+## iFood (lojas)
+
+Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a (`74d8fe2`+).
+
 ## Visão de vendas
 
 Para gestor e plataforma, em Pedidos → **Visão de vendas** (`/ia/visao-vendas`): indicadores do período (GET `pedidos/indicadores`, gateway PED-BI). Cartões com variação, gráficos (evolução, calor dia×hora, pagamentos e delivery×retirada), bloco fora da venda e abas de produtos (curva ABC), clientes (telefone abre a conversa), entrega, operação e unidades. Por padrão só origem real; dá para incluir teste/piloto. Supervisor e funcionário não veem o menu.

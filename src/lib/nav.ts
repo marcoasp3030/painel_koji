@@ -15,6 +15,7 @@ export type IconeMenu =
   | "conversas"
   | "pedidos"
   | "vendas"
+  | "ifood"
   | "operacao"
   | "modelos"
   | "configuracoes"
@@ -100,6 +101,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     tela: "cardapio",
   },
   {
+    to: "/ia/configuracoes/ifood",
+    label: "iFood (empresa)",
+    grupo: "Loja",
+    icone: "ifood",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/agentes",
     label: "Agentes",
     grupo: "Agente",
@@ -160,6 +168,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     label: "Webhooks de saída",
     grupo: "Integrações",
     icone: "webhooks",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/ifood",
+    label: "iFood",
+    grupo: "Integrações",
+    icone: "ifood",
     papeis: ["plataforma"],
   },
   {
@@ -239,6 +254,13 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     icone: "aparencia",
     papeis: ["gestor"],
     tela: "cardapio",
+  },
+  {
+    to: "/ia/configuracoes/ifood",
+    label: "iFood",
+    grupo: "Loja",
+    icone: "ifood",
+    papeis: ["gestor"],
   },
   {
     to: "/ia/agentes",

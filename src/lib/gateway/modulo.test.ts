@@ -339,6 +339,8 @@ describe("papéis", () => {
       ["GET", ["pedidos", "indicadores"]],
       ["GET", ["pedidos", "59859"]],
       ["POST", ["pedidos", "59859", "status"], { status: "confirmado" }],
+      ["GET", ["ifood", "lojas"]],
+      ["POST", ["ifood", "lojas", "loja-a-1", "conferir"]],
       ["GET", ["anexos"]],
       ["DELETE", ["anexos", "anx_1"]],
       [
@@ -399,6 +401,8 @@ describe("papéis", () => {
       ["DELETE", ["contatos", "ct_1", "opt-out-follow-up"]],
       ["PUT", ["pedidos", "avisos", "confirmado"], { texto: "x" }],
       ["GET", ["pedidos", "indicadores"]],
+      ["GET", ["ifood", "lojas"]],
+      ["POST", ["ifood", "lojas", "loja-a-1", "conferir"]],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -818,6 +822,15 @@ describe("rotas do atendimento alcançam quem atende", () => {
     autorizar("gestor", "GET", ["pedidos", "indicadores"]);
     expect(() => autorizar("supervisor", "GET", ["pedidos", "indicadores"])).toThrow(AcessoNegado);
     expect(() => autorizar("funcionario", "GET", ["pedidos", "indicadores"])).toThrow(AcessoNegado);
+  });
+  test("lojas do iFood: gestor vê e confere; supervisor e funcionário não", () => {
+    autorizar("gestor", "GET", ["ifood", "lojas"]);
+    autorizar("gestor", "POST", ["ifood", "lojas", "loja-a-1", "conferir"]);
+    expect(() => autorizar("supervisor", "GET", ["ifood", "lojas"])).toThrow(AcessoNegado);
+    expect(() => autorizar("funcionario", "GET", ["ifood", "lojas"])).toThrow(AcessoNegado);
+    expect(() => autorizar("supervisor", "POST", ["ifood", "lojas", "loja-a-1", "conferir"])).toThrow(
+      AcessoNegado,
+    );
   });
   test("transferir para um colega fica a partir de supervisor", () => {
     const corpo = { para: "a@b.test" };

@@ -32,6 +32,8 @@ import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
 import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authenticated/ia/visao-vendas'
+import { Route as AuthenticatedIaConfiguracoesIfoodRouteImport } from './routes/_authenticated/ia/configuracoes.ifood'
+import { Route as AuthenticatedIaIfoodRouteImport } from './routes/_authenticated/ia/ifood'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
 import { Route as AuthenticatedIaWebhooksSaidaRouteImport } from './routes/_authenticated/ia/webhooks-saida'
@@ -168,6 +170,18 @@ const AuthenticatedIaVisaoVendasRoute =
     path: '/ia/visao-vendas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaConfiguracoesIfoodRoute = AuthenticatedIaConfiguracoesIfoodRouteImport.update({
+  id: '/ia/configuracoes/ifood',
+  path: '/ia/configuracoes/ifood',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const AuthenticatedIaIfoodRoute = AuthenticatedIaIfoodRouteImport.update({
+  id: '/ia/ifood',
+  path: '/ia/ifood',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
 const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   id: '/ia/simular',
   path: '/ia/simular',
@@ -266,6 +280,8 @@ export interface FileRoutesByFullPath {
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
+  '/ia/ifood': typeof AuthenticatedIaIfoodRoute
+  '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
@@ -302,6 +318,8 @@ export interface FileRoutesByTo {
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
+  '/ia/ifood': typeof AuthenticatedIaIfoodRoute
+  '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
@@ -341,6 +359,8 @@ export interface FileRoutesById {
   '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/_authenticated/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
+  '/_authenticated/ia/ifood': typeof AuthenticatedIaIfoodRoute
+  '/_authenticated/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/_authenticated/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
@@ -380,6 +400,8 @@ export interface FileRouteTypes {
     | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/visao-vendas'
+    | '/ia/ifood'
+    | '/ia/configuracoes/ifood'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/webhooks-saida'
@@ -416,6 +438,8 @@ export interface FileRouteTypes {
     | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/visao-vendas'
+    | '/ia/ifood'
+    | '/ia/configuracoes/ifood'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/webhooks-saida'
@@ -454,6 +478,8 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
     | '/_authenticated/ia/visao-vendas'
+    | '/_authenticated/ia/ifood'
+    | '/_authenticated/ia/configuracoes/ifood'
     | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
     | '/_authenticated/ia/webhooks-saida'
@@ -641,6 +667,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaVisaoVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/ifood': {
+      id: '/_authenticated/ia/ifood'
+      path: '/ia/ifood'
+      fullPath: '/ia/ifood'
+      preLoaderRoute: typeof AuthenticatedIaIfoodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/configuracoes/ifood': {
+      id: '/_authenticated/ia/configuracoes/ifood'
+      path: '/ia/configuracoes/ifood'
+      fullPath: '/ia/configuracoes/ifood'
+      preLoaderRoute: typeof AuthenticatedIaConfiguracoesIfoodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/simular': {
       id: '/_authenticated/ia/simular'
       path: '/ia/simular'
@@ -771,6 +811,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
   AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
+  AuthenticatedIaIfoodRoute: typeof AuthenticatedIaIfoodRoute
+  AuthenticatedIaConfiguracoesIfoodRoute: typeof AuthenticatedIaConfiguracoesIfoodRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
   AuthenticatedIaWebhooksSaidaRoute: typeof AuthenticatedIaWebhooksSaidaRoute
@@ -802,6 +844,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
   AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,
+  AuthenticatedIaIfoodRoute: AuthenticatedIaIfoodRoute,
+  AuthenticatedIaConfiguracoesIfoodRoute: AuthenticatedIaConfiguracoesIfoodRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
   AuthenticatedIaWebhooksSaidaRoute: AuthenticatedIaWebhooksSaidaRoute,

@@ -1,3 +1,10 @@
+## IFOOD1-a: lojas do iFood (06/11/2026)
+
+- Plataforma: Integrações → **iFood** (`/ia/ifood`) — lojas autorizadas, ligar à empresa/unidade, desligar com nome.
+- Empresa (gestor+): Loja → **iFood** (`/ia/configuracoes/ifood`) — lista, situação, Conferir conexão; vazio explica Portal do Parceiro.
+- Erros: `erro.mensagem`; 503 `nao_configurado` → "integração não configurada no gateway".
+- Gateway `74d8fe2`+ (migração 065). Supervisor/funcionário não veem (403).
+
 ## PED-BI: Visão de vendas (04/11/2026)
 
 - Menu **Visão de vendas** (`/ia/visao-vendas`), só gestor e plataforma (supervisor/funcionário não veem; gateway 403).

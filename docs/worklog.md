@@ -1,3 +1,19 @@
+## [2026-11-06 18:20] — IFOOD1-a: lojas do iFood no painel
+- **Autor:** Auto
+- **Objetivo:** Telas de lojas iFood (plataforma liga/desliga; gestor vê e confere).
+- **Arquivos alterados:**
+ - `src/lib/ifood-lojas.ts` + `.test.ts` — criados — papéis, erros, confirmação, rótulos
+ - `src/lib/gateway-ifood.functions.ts` — criado — GET/PUT/DELETE/POST conferir
+ - `src/lib/gateway/modulo.server.ts` + `.test.ts` — GEST em lojas/conferir
+ - `IfoodLojasPlataforma.tsx`, `IfoodLojasEmpresa.tsx` + rotas — UI
+ - `nav.ts`, `AppShell.tsx`, `routeTree.gen.ts` — menu Integrações/Loja
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — docs
+- **Resumo das mudanças:** Plataforma em `/ia/ifood`; empresa em `/ia/configuracoes/ifood`; 503 nao_configurado com texto fixo; desligar pede o nome.
+- **Decisões e justificativas:** Lista global via `plataforma.chamar`; ligar/desligar só plataforma; gestor só GET + conferir.
+- **Comandos executados:** `bun test` ifood-lojas + modulo → 44 OK
+- **Pendências / TODO:** publicar
+- **Próximos passos:** `publicar-painel.sh`; hard refresh como plataforma e gestor.
+
 ## [2026-11-04 13:53] — PED-BI: tela Visão de vendas
 - **Autor:** Auto
 - **Objetivo:** Tela Visão de vendas (gestor+) no painel conforme ESPEC_PED_BI.

@@ -595,6 +595,9 @@ const REGRAS: Regra[] = [
   // PED-BI: visão de vendas — antes do curinga, senão supervisor/funcionário passariam.
   { metodo: "GET", caminho: ["pedidos", "indicadores"], papeis: GEST },
   { metodo: "GET", caminho: ["pedidos", "*"], papeis: FUNC },
+  // IFOOD1-a: gestor vê e confere; ligar/desligar fica só com a plataforma (bypass em autorizar).
+  { metodo: "GET", caminho: ["ifood", "lojas"], papeis: GEST },
+  { metodo: "POST", caminho: ["ifood", "lojas", "*", "conferir"], papeis: GEST },
   // Desfazer o último passo (clique errado): o gateway confere a janela e o status visto.
   {
     metodo: "POST",
