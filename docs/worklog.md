@@ -10,9 +10,9 @@
  - `instrucoes.md`, `README.md`, `docs/worklog.md` — docs
 - **Resumo das mudanças:** Plataforma em `/ia/ifood`; empresa em `/ia/configuracoes/ifood`; 503 nao_configurado com texto fixo; desligar pede o nome.
 - **Decisões e justificativas:** Lista global via `plataforma.chamar`; ligar/desligar só plataforma; gestor só GET + conferir.
-- **Comandos executados:** `bun test` ifood-lojas + modulo → 44 OK
-- **Pendências / TODO:** publicar
-- **Próximos passos:** `publicar-painel.sh`; hard refresh como plataforma e gestor.
+- **Comandos executados:** `bun test` ifood-lojas + modulo → 44 OK; commit `6368527` + `publicar-painel.sh` → OK; home 200; imagem `painel:6368527…`.
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh; plataforma em Integrações → iFood; gestor em Loja → iFood.
 
 ## [2026-11-04 13:53] — PED-BI: tela Visão de vendas
 - **Autor:** Auto
