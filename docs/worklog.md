@@ -10,10 +10,10 @@
  - `nav.ts`, `routeTree.gen.ts`, `instrucoes.md`, `README.md` — menu/docs
 - **Resumo das mudanças:** Cartões, a receber, repasses PT, gráficos, coleta com refetch; sem_permissao com texto fixo.
 - **Decisões e justificativas:** Menu Loja ao lado de iFood; padrão 30 dias alinhado ao gateway.
-- **Comandos executados:** (em andamento)
+- **Comandos executados:** `bun test` ifood-financeiro + modulo → 56 OK; commit `543aba5` + `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; home 200; imagem `painel:543aba5…`. Volta: `painel:volta-20261107T033231Z`.
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
-- **Próximos passos:** hard refresh; Loja → Financeiro iFood.
+- **Próximos passos:** hard refresh; Loja → Financeiro iFood; detalhe de pedido com financeiro coletado.
 
 ## [2026-11-07 00:10] — IFOOD1-b1: Pedidos iFood + bloco Visão
 - **Autor:** Auto
