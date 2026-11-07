@@ -9,9 +9,9 @@
  - `.env.example`, `instrucoes.md`, `README.md`, `docs/worklog.md` — docs
 - **Resumo das mudanças:** Status sem segredo; Trocar credenciais com campos vazios; limpa após salvar. Nome da variável no painel: `GATEWAY_PLATFORM_KEY` (= `PANEL_PLATFORM_KEY` do gateway). Já usada em todas as chamadas de papel plataforma quando preenchida.
 - **Decisões e justificativas:** Reutilizar a variável que o CHAVES1 já prevê; o Marco grava o valor só no `.env` do servidor.
-- **Comandos executados:** `bun test` ifood-lojas → 6 OK
-- **Pendências / TODO:** Marco preencher `GATEWAY_PLATFORM_KEY` no `.env` do painel; publicar
-- **Próximos passos:** `publicar-painel.sh`; Marco grava a chave; testar Trocar credenciais.
+- **Comandos executados:** `bun test` ifood-lojas → 6 OK; commit `20e7754` + `publicar-painel.sh` → OK; home 200; imagem `painel:20e7754…`.
+- **Pendências / TODO:** Marco preencher `GATEWAY_PLATFORM_KEY` no `.env` do painel (mesmo valor de `PANEL_PLATFORM_KEY` do gateway) e recriar o container se precisar.
+- **Próximos passos:** hard refresh em Integrações → iFood; gravar a chave; testar Trocar credenciais.
 
 ## [2026-11-06 18:20] — IFOOD1-a: lojas do iFood no painel
 - **Autor:** Auto
