@@ -115,6 +115,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     papeis: ["plataforma"],
   },
   {
+    to: "/ia/ifood-financeiro",
+    label: "Financeiro iFood",
+    grupo: "Loja",
+    icone: "ifood",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/agentes",
     label: "Agentes",
     grupo: "Agente",
@@ -272,6 +279,13 @@ const AGENTES_EMPRESA: ItemMenu[] = [
   {
     to: "/ia/configuracoes/ifood",
     label: "iFood",
+    grupo: "Loja",
+    icone: "ifood",
+    papeis: ["gestor"],
+  },
+  {
+    to: "/ia/ifood-financeiro",
+    label: "Financeiro iFood",
     grupo: "Loja",
     icone: "ifood",
     papeis: ["gestor"],

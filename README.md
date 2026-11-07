@@ -91,7 +91,11 @@ Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia
 
 ## Pedidos iFood
 
-Para gestor e plataforma, em Atendimento → **Pedidos iFood** (`/ia/pedidos-ifood`): acompanhamento dos pedidos que chegaram pelo webhook (GET `ifood/pedidos` / detalhe / POST `atualizar`). Aceite e despacho ficam no sistema do iFood. Status em português, selo **Teste**, atualização a cada 15 s com a aba visível, e “Detalhe pendente” com botão Atualizar. Gateway IFOOD1-b1.
+Para gestor e plataforma, em Atendimento → **Pedidos iFood** (`/ia/pedidos-ifood`): acompanhamento dos pedidos que chegaram pelo webhook (GET `ifood/pedidos` / detalhe / POST `atualizar`). Aceite e despacho ficam no sistema do iFood. Status em português, selo **Teste**, atualização a cada 15 s com a aba visível, e “Detalhe pendente” com botão Atualizar. No detalhe, o bloco **Financeiro do pedido** mostra créditos/débitos do iFood quando a coleta financeira já rodou. Gateway IFOOD1-b1/b2.
+
+## Financeiro iFood
+
+Para gestor e plataforma, em Loja → **Financeiro iFood** (`/ia/ifood-financeiro`): resumo do período (créditos, comissões/taxas, repasse líquido, recebido direto), a receber por data prevista, repasses (pago/pendente/retido/boletos) com títulos, gráficos por dia e por forma de pagamento, e tabela por tipo de evento. Ao abrir, o gateway coleta sozinho se a última coleta passou de 6 h; o botão Atualizar força (no máximo a cada 10 min). Gateway IFOOD1-b2.
 
 ## Visão de vendas
 

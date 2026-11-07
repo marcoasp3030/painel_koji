@@ -10,6 +10,7 @@ import {
   listarLojasIfoodEmpresa,
 } from "@/lib/gateway-ifood.functions";
 import { reais } from "@/lib/gateway/pedidos";
+import { temFinanceiroPedido } from "@/lib/ifood-financeiro";
 import {
   INTERVALO_PEDIDOS_IFOOD_MS,
   TEXTO_ACOMPANHAMENTO_IFOOD,
@@ -267,6 +268,33 @@ function PainelDetalhe({
                       <span className="tabular-nums">
                         {pg.valor == null ? "—" : reais(pg.valor)}
                       </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {temFinanceiroPedido(d.financeiro) ? (
+              <section>
+                <h3 className="mb-1 text-xs font-semibold text-ink-700">Financeiro do pedido</h3>
+                <ul className="divide-y divide-base-200 rounded-md border border-base-200 text-xs">
+                  {d.financeiro.map((f, i) => (
+                    <li key={`${f.nome}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 px-2.5 py-2">
+                      <span className="min-w-0">
+                        <span className="font-medium text-ink-900">{f.nome}</span>
+                        {f.descricao ? (
+                          <span className="mt-0.5 block text-ink-500">{f.descricao}</span>
+                        ) : null}
+                        {f.taxa_pct != null ? (
+                          <span className="mt-0.5 block text-ink-500">Taxa {f.taxa_pct}%</span>
+                        ) : null}
+                        {f.pagamento_previsto ? (
+                          <span className="mt-0.5 block text-ink-500">
+                            Previsto: {f.pagamento_previsto}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="tabular-nums font-medium text-ink-900">{reais(f.valor)}</span>
                     </li>
                   ))}
                 </ul>

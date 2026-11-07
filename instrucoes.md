@@ -1,3 +1,9 @@
+## IFOOD1-b2: Financeiro iFood (07/11/2026)
+
+- Tela **Financeiro iFood** (`/ia/ifood-financeiro`, gestor+): GET `ifood/financeiro` (padrão 30 dias); cartões créditos/débitos/repasse/direto; a receber; repasses (tipos/status em PT); gráficos por dia e por forma; tabela por tipo; rodapé de coleta + POST `atualizar`.
+- Erros: `sem_permissao` → texto fixo de acesso; demais → "iFood indisponível".
+- Detalhe do pedido iFood: bloco **Financeiro do pedido** (`financeiro`: nome, valor, % taxa, data prevista).
+
 ## IFOOD1-b1: Pedidos iFood + bloco Visão (07/11/2026)
 
 - Tela **Pedidos iFood** (`/ia/pedidos-ifood`, gestor+): lista GET `ifood/pedidos` com status em português, selo Teste, auto-refresh 15 s (aba visível), detalhe com itens/pagamentos/eventos, “Detalhe pendente” + POST `ifood/pedidos/atualizar`. Texto fixo: só acompanhamento.

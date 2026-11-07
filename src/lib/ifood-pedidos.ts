@@ -67,6 +67,8 @@ export type PedidoIfoodDetalhe = PedidoIfoodLista & {
   itens: PedidoIfoodItem[];
   pagamentos: PedidoIfoodPagamento[];
   eventos: PedidoIfoodEvento[];
+  /** IFOOD1-b2: créditos/débitos do iFood neste pedido (quando já coletado). */
+  financeiro?: import("./ifood-financeiro").LinhaFinanceiroPedido[];
 };
 
 export type ListaPedidosIfood = {

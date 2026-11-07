@@ -344,6 +344,8 @@ describe("papéis", () => {
       ["GET", ["ifood", "pedidos"]],
       ["GET", ["ifood", "pedidos", "ord-1"]],
       ["POST", ["ifood", "pedidos", "atualizar"]],
+      ["GET", ["ifood", "financeiro"]],
+      ["POST", ["ifood", "financeiro", "atualizar"]],
       ["GET", ["anexos"]],
       ["DELETE", ["anexos", "anx_1"]],
       [
@@ -409,6 +411,8 @@ describe("papéis", () => {
       ["GET", ["ifood", "pedidos"]],
       ["GET", ["ifood", "pedidos", "ord-1"]],
       ["POST", ["ifood", "pedidos", "atualizar"]],
+      ["GET", ["ifood", "financeiro"]],
+      ["POST", ["ifood", "financeiro", "atualizar"]],
     ];
     for (const op of proibidas) {
       expect({ op, recusada: Boolean(await recusada(t, op)) }).toEqual({ op, recusada: true });
@@ -847,6 +851,14 @@ describe("rotas do atendimento alcançam quem atende", () => {
       AcessoNegado,
     );
     expect(() => autorizar("supervisor", "POST", ["ifood", "pedidos", "atualizar"])).toThrow(
+      AcessoNegado,
+    );
+  });
+  test("financeiro do iFood: gestor lê e atualiza; supervisor não", () => {
+    autorizar("gestor", "GET", ["ifood", "financeiro"]);
+    autorizar("gestor", "POST", ["ifood", "financeiro", "atualizar"]);
+    expect(() => autorizar("supervisor", "GET", ["ifood", "financeiro"])).toThrow(AcessoNegado);
+    expect(() => autorizar("funcionario", "POST", ["ifood", "financeiro", "atualizar"])).toThrow(
       AcessoNegado,
     );
   });

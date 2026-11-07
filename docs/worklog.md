@@ -1,3 +1,20 @@
+## [2026-11-07 00:40] — IFOOD1-b2: Financeiro iFood
+- **Autor:** Auto
+- **Objetivo:** Tela Financeiro iFood (gestor+) e bloco financeiro no detalhe do pedido.
+- **Arquivos alterados:**
+ - `src/lib/ifood-financeiro.ts` + `.test.ts` — criado — tipos, rótulos, erros de coleta
+ - `src/lib/gateway-ifood.functions.ts` — GET/POST financeiro
+ - `src/lib/gateway/modulo.server.ts` + `.test.ts` — GEST em ifood/financeiro*
+ - `src/lib/ifood-pedidos.ts` + `IfoodPedidos.tsx` — campo/bloco financeiro do pedido
+ - `IfoodFinanceiro.tsx` + rota `/ia/ifood-financeiro` — UI
+ - `nav.ts`, `routeTree.gen.ts`, `instrucoes.md`, `README.md` — menu/docs
+- **Resumo das mudanças:** Cartões, a receber, repasses PT, gráficos, coleta com refetch; sem_permissao com texto fixo.
+- **Decisões e justificativas:** Menu Loja ao lado de iFood; padrão 30 dias alinhado ao gateway.
+- **Comandos executados:** (em andamento)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh; Loja → Financeiro iFood.
+
 ## [2026-11-07 00:10] — IFOOD1-b1: Pedidos iFood + bloco Visão
 - **Autor:** Auto
 - **Objetivo:** Tela Pedidos iFood (gestor+) e bloco WhatsApp × iFood na Visão de vendas.

@@ -11,6 +11,11 @@ import type {
 } from "./ifood-lojas";
 import { mensagemErroIfood } from "./ifood-lojas";
 import type {
+  FinanceiroIfood,
+  ResultadoAtualizarFinanceiro,
+} from "./ifood-financeiro";
+import { filtrosFinanceiroIfood } from "./ifood-financeiro";
+import type {
   ListaPedidosIfood,
   PedidoIfoodDetalhe,
   ResultadoAtualizarIfood,
@@ -285,6 +290,54 @@ export const atualizarPedidosIfood = createServerFn({ method: "POST" })
         const { dados } = await t.chamar<ResultadoAtualizarIfood>(
           "POST",
           ["ifood", "pedidos", "atualizar"],
+        );
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/** IFOOD1-b2: resumo financeiro do iFood (gestor+). Coleta sozinha se > 6 h. */
+export const lerFinanceiroIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        de: dia.optional(),
+        ate: dia.optional(),
+        loja: z.string().max(80).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<FinanceiroIfood | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<FinanceiroIfood>("GET", ["ifood", "financeiro"], {
+          query: filtrosFinanceiroIfood({ de: data.de, ate: data.ate, loja: data.loja }),
+        });
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/** IFOOD1-b2: dispara coleta agora (gateway ignora se < 10 min). */
+export const atualizarFinanceiroIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }): Promise<ResultadoAtualizarFinanceiro | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<ResultadoAtualizarFinanceiro>(
+          "POST",
+          ["ifood", "financeiro", "atualizar"],
         );
         return dados;
       } catch (e) {

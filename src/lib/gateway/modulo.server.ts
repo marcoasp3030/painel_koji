@@ -602,6 +602,9 @@ const REGRAS: Regra[] = [
   { metodo: "GET", caminho: ["ifood", "pedidos"], papeis: GEST },
   { metodo: "POST", caminho: ["ifood", "pedidos", "atualizar"], papeis: GEST, corpo: semCorpo },
   { metodo: "GET", caminho: ["ifood", "pedidos", "*"], papeis: GEST },
+  // IFOOD1-b2: financeiro só leitura + coletar agora (gestor+).
+  { metodo: "GET", caminho: ["ifood", "financeiro"], papeis: GEST },
+  { metodo: "POST", caminho: ["ifood", "financeiro", "atualizar"], papeis: GEST, corpo: semCorpo },
   // Desfazer o último passo (clique errado): o gateway confere a janela e o status visto.
   {
     metodo: "POST",
