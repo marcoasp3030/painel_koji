@@ -1,3 +1,21 @@
+## [2026-11-07 00:10] — IFOOD1-b1: Pedidos iFood + bloco Visão
+- **Autor:** Auto
+- **Objetivo:** Tela Pedidos iFood (gestor+) e bloco WhatsApp × iFood na Visão de vendas.
+- **Arquivos alterados:**
+ - `src/lib/ifood-pedidos.ts` + `.test.ts` — criado — status PT, filtros, bloco ifood
+ - `src/lib/gateway-ifood.functions.ts` — lista/detalhe/atualizar pedidos
+ - `src/lib/gateway/modulo.server.ts` + `.test.ts` — GEST em ifood/pedidos*
+ - `src/lib/pedidos-visao-vendas.ts` — tipo `ifood` em IndicadoresPedidos
+ - `IfoodPedidos.tsx` + rota `/ia/pedidos-ifood` — UI lista/detalhe
+ - `VisaoVendas.tsx` — bloco WhatsApp × iFood
+ - `nav.ts`, `routeTree.gen.ts`, `instrucoes.md`, `README.md` — menu/docs
+- **Resumo das mudanças:** Lista com refresh 15 s; detalhe com itens/pagamentos/eventos; pendente→Atualizar; texto de só acompanhamento; bloco some se ifood=null.
+- **Decisões e justificativas:** Rota irmã `/ia/pedidos-ifood` (não filha de pedidos) para o menu não marcar Pedidos; filtro teste/piloto já manda `origem=…,teste` ao gateway.
+- **Comandos executados:** (em andamento)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh como gestor; conferir lista e bloco na Visão.
+
 ## [2026-11-06 21:49] — IFOOD1-a: credenciais do iFood pelo painel
 - **Autor:** Auto
 - **Objetivo:** Bloco Credenciais do aplicativo em /ia/ifood; PUT exige chave de plataforma.

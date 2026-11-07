@@ -1,4 +1,4 @@
-/** IFOOD1-a: lojas do iFood no gateway (plataforma liga; gestor confere). */
+/** IFOOD1-a/b1: lojas e pedidos do iFood no gateway (plataforma liga; gestor vê). */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -10,6 +10,12 @@ import type {
   LojaEmpresaIfood,
 } from "./ifood-lojas";
 import { mensagemErroIfood } from "./ifood-lojas";
+import type {
+  ListaPedidosIfood,
+  PedidoIfoodDetalhe,
+  ResultadoAtualizarIfood,
+} from "./ifood-pedidos";
+import { filtrosListaIfood } from "./ifood-pedidos";
 
 const merchant = z.string().regex(/^[A-Za-z0-9-]{1,64}$/);
 
@@ -195,6 +201,90 @@ export const conferirLojaIfood = createServerFn({ method: "POST" })
         const { dados } = await t.chamar<LojaEmpresaIfood>(
           "POST",
           ["ifood", "lojas", data.merchant_id, "conferir"],
+        );
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const orderId = z.string().regex(/^[A-Za-z0-9-]{8,80}$/);
+
+/** IFOOD1-b1: lista de pedidos do iFood (gestor+). */
+export const listarPedidosIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        de: dia.optional(),
+        ate: dia.optional(),
+        status: z.array(z.string().min(1).max(40)).max(12).optional(),
+        loja: z.string().max(80).optional(),
+        teste: z.boolean().nullable().optional(),
+        limite: z.number().int().min(1).max(100).optional(),
+        antes: z.string().min(1).max(40).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ListaPedidosIfood | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<ListaPedidosIfood>("GET", ["ifood", "pedidos"], {
+          query: filtrosListaIfood({
+            de: data.de,
+            ate: data.ate,
+            status: data.status,
+            loja: data.loja,
+            teste: data.teste,
+            limite: data.limite,
+            antes: data.antes,
+          }),
+        });
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/** IFOOD1-b1: detalhe de um pedido do iFood. */
+export const lerPedidoIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa, order_id: orderId }).parse(d))
+  .handler(async ({ data, context }): Promise<PedidoIfoodDetalhe | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<PedidoIfoodDetalhe>("GET", [
+          "ifood",
+          "pedidos",
+          data.order_id,
+        ]);
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/** IFOOD1-b1: busca detalhes pendentes (até 20). */
+export const atualizarPedidosIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }): Promise<ResultadoAtualizarIfood | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<ResultadoAtualizarIfood>(
+          "POST",
+          ["ifood", "pedidos", "atualizar"],
         );
         return dados;
       } catch (e) {

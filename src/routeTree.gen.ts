@@ -31,6 +31,7 @@ import { Route as AuthenticatedIaDocumentosRouteImport } from './routes/_authent
 import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authenticated/ia/modelos'
 import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
+import { Route as AuthenticatedIaPedidosIfoodRouteImport } from './routes/_authenticated/ia/pedidos-ifood'
 import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authenticated/ia/visao-vendas'
 import { Route as AuthenticatedIaConfiguracoesIfoodRouteImport } from './routes/_authenticated/ia/configuracoes.ifood'
 import { Route as AuthenticatedIaIfoodRouteImport } from './routes/_authenticated/ia/ifood'
@@ -164,6 +165,12 @@ const AuthenticatedIaPedidosRoute = AuthenticatedIaPedidosRouteImport.update({
   path: '/ia/pedidos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaPedidosIfoodRoute =
+  AuthenticatedIaPedidosIfoodRouteImport.update({
+    id: '/ia/pedidos-ifood',
+    path: '/ia/pedidos-ifood',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaVisaoVendasRoute =
   AuthenticatedIaVisaoVendasRouteImport.update({
     id: '/ia/visao-vendas',
@@ -279,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
   '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/ia/ifood': typeof AuthenticatedIaIfoodRoute
   '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
@@ -317,6 +325,7 @@ export interface FileRoutesByTo {
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
   '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/ia/ifood': typeof AuthenticatedIaIfoodRoute
   '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
@@ -358,6 +367,7 @@ export interface FileRoutesById {
   '/_authenticated/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
+  '/_authenticated/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
   '/_authenticated/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/_authenticated/ia/ifood': typeof AuthenticatedIaIfoodRoute
   '/_authenticated/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
+    | '/ia/pedidos-ifood'
     | '/ia/visao-vendas'
     | '/ia/ifood'
     | '/ia/configuracoes/ifood'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
+    | '/ia/pedidos-ifood'
     | '/ia/visao-vendas'
     | '/ia/ifood'
     | '/ia/configuracoes/ifood'
@@ -477,6 +489,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/modelos'
     | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
+    | '/_authenticated/ia/pedidos-ifood'
     | '/_authenticated/ia/visao-vendas'
     | '/_authenticated/ia/ifood'
     | '/_authenticated/ia/configuracoes/ifood'
@@ -660,6 +673,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaPedidosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/pedidos-ifood': {
+      id: '/_authenticated/ia/pedidos-ifood'
+      path: '/ia/pedidos-ifood'
+      fullPath: '/ia/pedidos-ifood'
+      preLoaderRoute: typeof AuthenticatedIaPedidosIfoodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/visao-vendas': {
       id: '/_authenticated/ia/visao-vendas'
       path: '/ia/visao-vendas'
@@ -810,6 +830,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaModelosRoute: typeof AuthenticatedIaModelosRoute
   AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
+  AuthenticatedIaPedidosIfoodRoute: typeof AuthenticatedIaPedidosIfoodRoute
   AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
   AuthenticatedIaIfoodRoute: typeof AuthenticatedIaIfoodRoute
   AuthenticatedIaConfiguracoesIfoodRoute: typeof AuthenticatedIaConfiguracoesIfoodRoute
@@ -843,6 +864,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaModelosRoute: AuthenticatedIaModelosRoute,
   AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
+  AuthenticatedIaPedidosIfoodRoute: AuthenticatedIaPedidosIfoodRoute,
   AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,
   AuthenticatedIaIfoodRoute: AuthenticatedIaIfoodRoute,
   AuthenticatedIaConfiguracoesIfoodRoute: AuthenticatedIaConfiguracoesIfoodRoute,

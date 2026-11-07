@@ -598,6 +598,10 @@ const REGRAS: Regra[] = [
   // IFOOD1-a: gestor vê e confere; ligar/desligar fica só com a plataforma (bypass em autorizar).
   { metodo: "GET", caminho: ["ifood", "lojas"], papeis: GEST },
   { metodo: "POST", caminho: ["ifood", "lojas", "*", "conferir"], papeis: GEST },
+  // IFOOD1-b1: pedidos só leitura + atualizar detalhe pendente (gestor+).
+  { metodo: "GET", caminho: ["ifood", "pedidos"], papeis: GEST },
+  { metodo: "POST", caminho: ["ifood", "pedidos", "atualizar"], papeis: GEST, corpo: semCorpo },
+  { metodo: "GET", caminho: ["ifood", "pedidos", "*"], papeis: GEST },
   // Desfazer o último passo (clique errado): o gateway confere a janela e o status visto.
   {
     metodo: "POST",

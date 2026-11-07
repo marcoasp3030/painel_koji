@@ -43,6 +43,10 @@ import {
   type IndicadoresPedidos,
   type ProdutoVendido,
 } from "@/lib/pedidos-visao-vendas";
+import {
+  deveMostrarBlocoIfood,
+  type BlocoIfoodIndicadores,
+} from "@/lib/ifood-pedidos";
 import { telefoneExibicao } from "@/lib/gateway/conversas";
 import { useGestao } from "./gestao-base";
 import type { ContextoGateway } from "./Gateway";
@@ -92,6 +96,83 @@ function CartaoMetrica({
         {detalhe ?? " "}
       </span>
     </div>
+  );
+}
+
+/** IFOOD1-b1: comparação WhatsApp (canal próprio) × iFood. */
+function BlocoWhatsAppXiFood({
+  whatsapp,
+  ifood,
+  variacaoWa,
+}: {
+  whatsapp: IndicadoresPedidos["resumo"];
+  ifood: BlocoIfoodIndicadores;
+  variacaoWa: IndicadoresPedidos["variacao_pct"];
+}) {
+  return (
+    <section className="rounded-lg border border-base-200 bg-card p-3">
+      <h3 className="mb-1 text-xs font-semibold text-ink-700">WhatsApp × iFood</h3>
+      <p className="mb-3 text-xs text-ink-500">
+        Comparação do canal próprio com o iFood no mesmo período. Pedidos de teste do iFood só entram
+        com &quot;Incluir teste/piloto&quot;.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-md border border-base-200 bg-base-100/60 px-3 py-2">
+          <span className="text-xs font-semibold text-ink-700">WhatsApp</span>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <CartaoMetrica
+              rotulo="Faturamento"
+              valor={reais(whatsapp.faturamento)}
+              variacao={variacaoWa.faturamento}
+            />
+            <CartaoMetrica rotulo="Pedidos" valor={whatsapp.pedidos} variacao={variacaoWa.pedidos} />
+            <CartaoMetrica
+              rotulo="Ticket"
+              valor={reais(whatsapp.ticket_medio)}
+              variacao={variacaoWa.ticket_medio}
+            />
+          </div>
+        </div>
+        <div className="rounded-md border border-base-200 bg-base-100/60 px-3 py-2">
+          <span className="text-xs font-semibold text-ink-700">iFood</span>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <CartaoMetrica
+              rotulo="Faturamento"
+              valor={reais(ifood.resumo.faturamento)}
+              variacao={ifood.variacao_pct.faturamento}
+              detalhe={
+                ifood.resumo.cancelados
+                  ? `${ifood.resumo.cancelados} cancelados`
+                  : `${ifood.resumo.aguardando} aguardando`
+              }
+            />
+            <CartaoMetrica
+              rotulo="Pedidos"
+              valor={ifood.resumo.pedidos}
+              variacao={ifood.variacao_pct.pedidos}
+              detalhe={`${ifood.resumo.clientes} clientes`}
+            />
+            <CartaoMetrica
+              rotulo="Ticket"
+              valor={reais(ifood.resumo.ticket_medio)}
+              variacao={ifood.variacao_pct.ticket_medio}
+            />
+          </div>
+          {ifood.produtos.length ? (
+            <ul className="mt-2 space-y-0.5 border-t border-base-200 pt-2 text-xs text-ink-700">
+              {ifood.produtos.slice(0, 5).map((p) => (
+                <li key={p.nome} className="flex justify-between gap-2">
+                  <span className="truncate">
+                    {p.quantidade}× {p.nome}
+                  </span>
+                  <span className="shrink-0 tabular-nums">{reais(p.faturamento)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -494,6 +575,7 @@ export function VisaoVendas({ ctx }: { ctx: ContextoGateway }) {
             className="size-3.5 rounded border-base-200"
           />
           Incluir teste/piloto
+          <span className="sr-only">(WhatsApp e iFood)</span>
         </label>
         <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-ink-500">
           <RefreshCw className={`size-3 ${q.isFetching ? "animate-spin" : ""}`} aria-hidden />
@@ -567,6 +649,14 @@ export function VisaoVendas({ ctx }: { ctx: ContextoGateway }) {
                 detalhe="Recusados e cancelados"
               />
             </div>
+
+            {deveMostrarBlocoIfood(d.ifood) ? (
+              <BlocoWhatsAppXiFood
+                whatsapp={d.resumo}
+                ifood={d.ifood}
+                variacaoWa={d.variacao_pct}
+              />
+            ) : null}
 
             <div className="grid gap-3 lg:grid-cols-2">
               <section className="rounded-lg border border-base-200 bg-card p-3">

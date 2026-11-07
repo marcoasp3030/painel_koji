@@ -89,9 +89,13 @@ Layout de gestão republicado em 30/10/2026 como `painel:bc6c695dbb029ffcc17c5ac
 
 Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. No mesmo lugar fica o bloco **Credenciais do aplicativo** (Client ID/Secret gravados no gateway só com `GATEWAY_PLATFORM_KEY` = `PANEL_PLATFORM_KEY`; o segredo nunca é mostrado de novo). Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a.
 
+## Pedidos iFood
+
+Para gestor e plataforma, em Atendimento → **Pedidos iFood** (`/ia/pedidos-ifood`): acompanhamento dos pedidos que chegaram pelo webhook (GET `ifood/pedidos` / detalhe / POST `atualizar`). Aceite e despacho ficam no sistema do iFood. Status em português, selo **Teste**, atualização a cada 15 s com a aba visível, e “Detalhe pendente” com botão Atualizar. Gateway IFOOD1-b1.
+
 ## Visão de vendas
 
-Para gestor e plataforma, em Pedidos → **Visão de vendas** (`/ia/visao-vendas`): indicadores do período (GET `pedidos/indicadores`, gateway PED-BI). Cartões com variação, gráficos (evolução, calor dia×hora, pagamentos e delivery×retirada), bloco fora da venda e abas de produtos (curva ABC), clientes (telefone abre a conversa), entrega, operação e unidades. Por padrão só origem real; dá para incluir teste/piloto. Supervisor e funcionário não veem o menu.
+Para gestor e plataforma, em Pedidos → **Visão de vendas** (`/ia/visao-vendas`): indicadores do período (GET `pedidos/indicadores`, gateway PED-BI). Cartões com variação, gráficos (evolução, calor dia×hora, pagamentos e delivery×retirada), bloco fora da venda e abas de produtos (curva ABC), clientes (telefone abre a conversa), entrega, operação e unidades. Quando a empresa tem loja do iFood, aparece o bloco **WhatsApp × iFood**. Por padrão só origem real; “Incluir teste/piloto” também inclui pedidos de teste do iFood. Supervisor e funcionário não veem o menu.
 
 ## Pedidos
 

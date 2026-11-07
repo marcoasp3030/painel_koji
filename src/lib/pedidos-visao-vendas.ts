@@ -1,5 +1,6 @@
 /** PED-BI: helpers da tela Visão de vendas (filtros, variação, calor, abas). */
 import { FUSO_PAINEL } from "@/lib/gateway/gestao";
+import type { BlocoIfoodIndicadores } from "@/lib/ifood-pedidos";
 
 export const MAX_DIAS_PERIODO = 366;
 export const ORIGEM_SO_REAL = "real";
@@ -134,6 +135,8 @@ export type IndicadoresPedidos = {
     ticket_medio: number;
     recebidos: number;
   }[];
+  /** IFOOD1-b1: null se a empresa não tiver loja do iFood. */
+  ifood: BlocoIfoodIndicadores | null;
 };
 
 /** Dia civil AAAA-MM-DD no fuso (padrão Brasília). */

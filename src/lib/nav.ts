@@ -63,6 +63,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     tela: "pedidos",
   },
   {
+    to: "/ia/pedidos-ifood",
+    label: "Pedidos iFood",
+    grupo: "Atendimento",
+    icone: "ifood",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/operacao",
     label: "Operação",
     grupo: "Atendimento",
@@ -216,6 +223,13 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     icone: "vendas",
     papeis: ["gestor"],
     tela: "pedidos",
+  },
+  {
+    to: "/ia/pedidos-ifood",
+    label: "Pedidos iFood",
+    grupo: "Atendimento",
+    icone: "ifood",
+    papeis: ["gestor"],
   },
   {
     to: "/ia/operacao",

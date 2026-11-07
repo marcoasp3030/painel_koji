@@ -1,3 +1,9 @@
+## IFOOD1-b1: Pedidos iFood + bloco Visão (07/11/2026)
+
+- Tela **Pedidos iFood** (`/ia/pedidos-ifood`, gestor+): lista GET `ifood/pedidos` com status em português, selo Teste, auto-refresh 15 s (aba visível), detalhe com itens/pagamentos/eventos, “Detalhe pendente” + POST `ifood/pedidos/atualizar`. Texto fixo: só acompanhamento.
+- Visão de vendas: bloco **WhatsApp × iFood** quando `indicadores.ifood` não é null; “Incluir teste/piloto” também traz pedidos de teste do iFood (`origem=real,piloto,teste`).
+- Regras GEST em `ifood/pedidos`, `ifood/pedidos/*` e `POST …/atualizar`.
+
 ## IFOOD1-a: credenciais do iFood pelo painel (06/11/2026)
 
 - Bloco **Credenciais do aplicativo** em Integrações → iFood: status (Client ID …XXXX + quem trocou) ou “Não configurado”.
