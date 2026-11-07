@@ -11,10 +11,10 @@
  - `nav.ts`, `routeTree.gen.ts`, `instrucoes.md`, `README.md` — menu/docs
 - **Resumo das mudanças:** Lista com refresh 15 s; detalhe com itens/pagamentos/eventos; pendente→Atualizar; texto de só acompanhamento; bloco some se ifood=null.
 - **Decisões e justificativas:** Rota irmã `/ia/pedidos-ifood` (não filha de pedidos) para o menu não marcar Pedidos; filtro teste/piloto já manda `origem=…,teste` ao gateway.
-- **Comandos executados:** (em andamento)
+- **Comandos executados:** `bun test` ifood-pedidos + modulo → 47 OK; commit `913d61e` + `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; home 200; imagem `painel:913d61e…` = `sha256:9b250e05…`. Volta: `painel:volta-20261107T023927Z`.
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
-- **Próximos passos:** hard refresh como gestor; conferir lista e bloco na Visão.
+- **Próximos passos:** hard refresh como gestor; Atendimento → Pedidos iFood; Visão de vendas com loja ligada.
 
 ## [2026-11-06 21:49] — IFOOD1-a: credenciais do iFood pelo painel
 - **Autor:** Auto
