@@ -1,3 +1,10 @@
+## IFOOD1-a: credenciais do iFood pelo painel (06/11/2026)
+
+- Bloco **Credenciais do aplicativo** em Integrações → iFood: status (Client ID …XXXX + quem trocou) ou “Não configurado”.
+- **Trocar credenciais**: Client ID + Client Secret (senha, campos vazios); PUT testa no iFood antes de gravar.
+- Exige `GATEWAY_PLATFORM_KEY` no `.env` do painel (= `PANEL_PLATFORM_KEY` do gateway). Só no servidor.
+- 400 `credenciais_recusadas` / 502 / 503 com textos fixos do contrato. Segredo nunca volta na resposta.
+
 ## IFOOD1-a: lojas do iFood (06/11/2026)
 
 - Plataforma: Integrações → **iFood** (`/ia/ifood`) — lojas autorizadas, ligar à empresa/unidade, desligar com nome.

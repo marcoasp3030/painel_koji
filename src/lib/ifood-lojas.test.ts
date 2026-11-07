@@ -5,9 +5,11 @@ import {
   mensagemErroIfood,
   nomeParaConfirmacaoDesligar,
   podeGerirLojasIfood,
+  podeTrocarCredenciaisIfood,
   podeVerLojasIfoodEmpresa,
   rotuloSituacaoIfood,
   textoLigadaA,
+  textoStatusCredenciaisIfood,
   TEXTO_SEM_LOJA_EMPRESA,
 } from "./ifood-lojas";
 
@@ -66,8 +68,48 @@ describe("ifood-lojas", () => {
         detalhes: { motivo: "indisponivel" },
         mensagem: "O iFood não respondeu. Tente de novo em instantes.",
       }),
-    ).toBe("O iFood não respondeu. Tente de novo em instantes.");
+    ).toBe("O iFood está indisponível. Tente de novo em instantes.");
     expect(rotuloSituacaoIfood("sem_permissao")).toBe("Sem permissão");
     expect(TEXTO_SEM_LOJA_EMPRESA).toMatch(/Portal do Parceiro/);
+  });
+
+  test("credenciais: só plataforma; status sem segredo; erros de gravação", () => {
+    expect(podeTrocarCredenciaisIfood("plataforma")).toBe(true);
+    expect(podeTrocarCredenciaisIfood("gestor")).toBe(false);
+    expect(textoStatusCredenciaisIfood({ configurado: false, origem: null, client_id_final: null, atualizado_por: null, atualizado_em: null })).toBe(
+      "Não configurado",
+    );
+    expect(
+      textoStatusCredenciaisIfood({
+        configurado: true,
+        origem: "painel",
+        client_id_final: "este",
+        atualizado_por: "marco@exemplo.test",
+        atualizado_em: "2026-11-06T21:00:00-03:00",
+      }),
+    ).toBe("Configurado (Client ID …este), trocado por marco@exemplo.test em 06/11");
+    expect(
+      textoStatusCredenciaisIfood({
+        configurado: true,
+        origem: "env",
+        client_id_final: "abcd",
+        atualizado_por: null,
+        atualizado_em: null,
+      }),
+    ).toBe("Configurado (Client ID …abcd) — pelo .env do gateway");
+    expect(
+      mensagemErroIfood({
+        status: 400,
+        detalhes: { motivo: "credenciais_recusadas" },
+        mensagem: "O iFood recusou este Client ID e Client Secret. Nada foi gravado.",
+      }),
+    ).toBe("O iFood recusou essas credenciais. Nada foi gravado.");
+    expect(
+      mensagemErroIfood({
+        status: 403,
+        detalhes: { motivo: "papel_sem_credencial" },
+        mensagem: "Trocar as credenciais do iFood exige a chave de plataforma do painel.",
+      }),
+    ).toMatch(/chave de plataforma/);
   });
 });

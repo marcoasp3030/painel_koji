@@ -3,7 +3,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { empresa } from "./gateway/esquemas";
-import type { ListaLojasEmpresaIfood, LojaAutorizadaIfood, LojaEmpresaIfood } from "./ifood-lojas";
+import type {
+  CredenciaisIfood,
+  ListaLojasEmpresaIfood,
+  LojaAutorizadaIfood,
+  LojaEmpresaIfood,
+} from "./ifood-lojas";
 import { mensagemErroIfood } from "./ifood-lojas";
 
 const merchant = z.string().regex(/^[A-Za-z0-9-]{1,64}$/);
@@ -25,6 +30,54 @@ async function erroDe(e: unknown): Promise<ErroIfoodPainel> {
   }
   throw e;
 }
+
+/** Plataforma: status das credenciais do aplicativo (nunca devolve o segredo). */
+export const lerCredenciaisIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CredenciaisIfood | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const plataforma = await sessao.plataforma();
+      try {
+        const { dados } = await plataforma.chamar<CredenciaisIfood>("GET", ["ifood", "credenciais"]);
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/**
+ * Plataforma: grava Client ID/Secret (testados no iFood antes).
+ * Exige GATEWAY_PLATFORM_KEY no servidor (= PANEL_PLATFORM_KEY do gateway).
+ */
+export const gravarCredenciaisIfood = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        client_id: z.string().trim().min(8).max(200),
+        client_secret: z.string().min(8).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<CredenciaisIfood | ErroIfoodPainel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const plataforma = await sessao.plataforma();
+      try {
+        const { dados } = await plataforma.chamar<CredenciaisIfood>("PUT", ["ifood", "credenciais"], {
+          corpo: {
+            client_id: data.client_id.trim(),
+            client_secret: data.client_secret.trim(),
+          },
+        });
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
 
 /** Plataforma: lojas que autorizaram o aplicativo e a quem estão ligadas. */
 export const listarLojasAutorizadasIfood = createServerFn({ method: "POST" })

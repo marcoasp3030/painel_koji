@@ -70,19 +70,67 @@ export function nomeParaConfirmacaoDesligar(loja: { nome: string | null; merchan
   return nome || loja.merchant_id;
 }
 
+export type CredenciaisIfood = {
+  configurado: boolean;
+  origem: "painel" | "env" | null;
+  client_id_final: string | null;
+  atualizado_por: string | null;
+  atualizado_em: string | null;
+};
+
 /**
- * Mensagem para a tela: usa erro.mensagem; 503 nao_configurado vira o texto fixo do contrato PAINEL.
+ * Mensagem para a tela: usa erro.mensagem; motivos do contrato PAINEL têm texto fixo.
  */
 export function mensagemErroIfood(erro: {
   mensagem?: string | null;
   status?: number;
   detalhes?: Record<string, unknown> | null;
 }): string {
-  if (erro.status === 503 && erro.detalhes?.["motivo"] === "nao_configurado") {
+  const motivo = erro.detalhes?.["motivo"];
+  if (erro.status === 503 && motivo === "nao_configurado") {
     return "integração não configurada no gateway";
+  }
+  if (erro.status === 400 && motivo === "credenciais_recusadas") {
+    return "O iFood recusou essas credenciais. Nada foi gravado.";
+  }
+  if (erro.status === 502) {
+    return "O iFood está indisponível. Tente de novo em instantes.";
+  }
+  if (erro.status === 403 && motivo === "papel_sem_credencial") {
+    return "Trocar as credenciais do iFood exige a chave de plataforma no servidor do painel.";
   }
   const m = erro.mensagem?.trim();
   return m || "Não foi possível concluir.";
+}
+
+/** Status do bloco Credenciais: nunca inclui o segredo. */
+export function textoStatusCredenciaisIfood(c: CredenciaisIfood): string {
+  if (!c.configurado) return "Não configurado";
+  const final = (c.client_id_final || "").trim() || "????";
+  const id = `Client ID …${final}`;
+  if (c.origem === "env" && !c.atualizado_por) {
+    return `Configurado (${id}) — pelo .env do gateway`;
+  }
+  const quem = (c.atualizado_por || "").trim() || "alguém";
+  const quando = dataCurtaCredenciais(c.atualizado_em);
+  if (quando) return `Configurado (${id}), trocado por ${quem} em ${quando}`;
+  return `Configurado (${id}), trocado por ${quem}`;
+}
+
+function dataCurtaCredenciais(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+/** Só plataforma vê e troca as credenciais do aplicativo. */
+export function podeTrocarCredenciaisIfood(papel: string | null | undefined) {
+  return papel === "plataforma";
 }
 
 export const TEXTO_SEM_LOJA_EMPRESA =

@@ -1,3 +1,18 @@
+## [2026-11-06 21:49] — IFOOD1-a: credenciais do iFood pelo painel
+- **Autor:** Auto
+- **Objetivo:** Bloco Credenciais do aplicativo em /ia/ifood; PUT exige chave de plataforma.
+- **Arquivos alterados:**
+ - `src/lib/ifood-lojas.ts` + `.test.ts` — status/erros de credenciais
+ - `src/lib/gateway-ifood.functions.ts` — GET/PUT `ifood/credenciais`
+ - `src/components/luxtia/IfoodCredenciais.tsx` — criado — UI do bloco
+ - `IfoodLojasPlataforma.tsx` — inclui o bloco
+ - `.env.example`, `instrucoes.md`, `README.md`, `docs/worklog.md` — docs
+- **Resumo das mudanças:** Status sem segredo; Trocar credenciais com campos vazios; limpa após salvar. Nome da variável no painel: `GATEWAY_PLATFORM_KEY` (= `PANEL_PLATFORM_KEY` do gateway). Já usada em todas as chamadas de papel plataforma quando preenchida.
+- **Decisões e justificativas:** Reutilizar a variável que o CHAVES1 já prevê; o Marco grava o valor só no `.env` do servidor.
+- **Comandos executados:** `bun test` ifood-lojas → 6 OK
+- **Pendências / TODO:** Marco preencher `GATEWAY_PLATFORM_KEY` no `.env` do painel; publicar
+- **Próximos passos:** `publicar-painel.sh`; Marco grava a chave; testar Trocar credenciais.
+
 ## [2026-11-06 18:20] — IFOOD1-a: lojas do iFood no painel
 - **Autor:** Auto
 - **Objetivo:** Telas de lojas iFood (plataforma liga/desliga; gestor vê e confere).

@@ -87,7 +87,7 @@ Layout de gestão republicado em 30/10/2026 como `painel:bc6c695dbb029ffcc17c5ac
 
 ## iFood (lojas)
 
-Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a (`74d8fe2`+).
+Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. No mesmo lugar fica o bloco **Credenciais do aplicativo** (Client ID/Secret gravados no gateway só com `GATEWAY_PLATFORM_KEY` = `PANEL_PLATFORM_KEY`; o segredo nunca é mostrado de novo). Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a.
 
 ## Visão de vendas
 
