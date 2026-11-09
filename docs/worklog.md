@@ -11,7 +11,7 @@
  - `instrucoes.md`, `README.md`, `docs/worklog.md` — docs
 - **Resumo das mudanças:** Campo já vem no esquema do gateway; painel só rotula, restringe papel e oferece atalho com PATCH imediato.
 - **Decisões e justificativas:** Atalho na Aparência (junto ao Link da loja); supervisor não vê o interruptor.
-- **Comandos executados:** (em andamento)
+- **Comandos executados:** `bun test` card-link + modulo → OK; commit `4e61a9e` + `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; home 200; imagem `painel:4e61a9e…`. Volta: `painel:volta-20261109T144201Z`.
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh como gestor; Comportamento → Pedidos e Aparência do cardápio.
