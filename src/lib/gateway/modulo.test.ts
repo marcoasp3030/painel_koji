@@ -333,6 +333,8 @@ describe("papéis", () => {
       ["GET", ["agentes", "ag_1", "modulos"]],
       ["PATCH", ["agentes", "ag_1"], { modulos_ligados: ["catalogo", "pedidos"] }],
       ["PATCH", ["agentes", "ag_1"], { modulos_ligados: null }],
+      ["PATCH", ["agentes", "ag_1"], { enviar_link_cardapio: "off" }],
+      ["PATCH", ["agentes", "ag_1"], { enviar_link_cardapio: "on" }],
       ["POST", ["canais", "can_1", "webhook"]],
       ["GET", ["pedidos"]],
       ["GET", ["pedidos", "contagem"]],

@@ -6,6 +6,7 @@ test("pedidosEmUso e campos de pedidos", () => {
   expect(pedidosEmUso({ em_uso: ["catalogo", "pedidos"] })).toBe(true);
   expect(pedidosEmUso({ em_uso: ["catalogo"] })).toBe(false);
   expect(campoDePedidos("carrinho_expira_h")).toBe(true);
+  expect(campoDePedidos("enviar_link_cardapio")).toBe(true);
   expect(campoDePedidos("debounce_s")).toBe(false);
 });
 

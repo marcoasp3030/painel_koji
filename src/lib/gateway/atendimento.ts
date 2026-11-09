@@ -161,6 +161,7 @@ export const ROTULO_CAMPO: Record<string, string> = {
   pause_minutes: "Pausa do bot ao assumir (min)",
   encerrar_vazia_min: "Encerrar conversa parada (min)",
   carrinho_expira_h: "Carrinho expira em (h)",
+  enviar_link_cardapio: "Enviar o link do cardápio digital na conversa",
   reacoes: "Reações",
   reacoes_emojis: "Emojis de reação",
   reacoes_max_dia: "Reações por conversa por dia",
@@ -208,6 +209,8 @@ export const AJUDA_CAMPO: Record<string, string> = {
     "Motivo desligado: o agente diz que não consegue ajudar com aquilo e oferece o que pode.",
   botoes_interativos:
     "Até 3 opções viram botões; de 4 a 10, lista. Desligado: opções numeradas em texto.",
+  enviar_link_cardapio:
+    "Ligado: o agente manda o link do cardápio quando o cliente pede. Desligado: o agente apresenta as opções na própria conversa. O Link da loja continua funcionando.",
   aviso_demora: "Vazio: sem aviso.",
   follow_up_ativo: "Ligado, o gateway anota o que enviaria. Ainda não manda mensagem ao cliente.",
   follow_up_escopo:

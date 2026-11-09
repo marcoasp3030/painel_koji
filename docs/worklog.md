@@ -1,3 +1,21 @@
+## [2026-11-09 11:20] — CARD-LINK: enviar link do cardápio
+- **Autor:** Auto
+- **Objetivo:** Interruptor enviar_link_cardapio (gestor+) em comportamentos e atalho na Aparência.
+- **Arquivos alterados:**
+ - `src/lib/card-link.ts` + `.test.ts` — criado — papel, padrão on/off, textos
+ - `src/lib/gateway/atendimento.ts` — rótulo e ajuda do campo
+ - `src/lib/gateway/modulos.ts` + `.test.ts` — campo em CAMPOS_PEDIDOS
+ - `src/lib/gateway/modulo.server.ts` + `.test.ts` — PATCH agente com on/off
+ - `ComportamentoAgente.tsx` — esconde para supervisor
+ - `EnviarLinkCardapioAtalho.tsx` + `AparenciaCardapio.tsx` — atalho por agente
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — docs
+- **Resumo das mudanças:** Campo já vem no esquema do gateway; painel só rotula, restringe papel e oferece atalho com PATCH imediato.
+- **Decisões e justificativas:** Atalho na Aparência (junto ao Link da loja); supervisor não vê o interruptor.
+- **Comandos executados:** (em andamento)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh como gestor; Comportamento → Pedidos e Aparência do cardápio.
+
 ## [2026-11-07 00:40] — IFOOD1-b2: Financeiro iFood
 - **Autor:** Auto
 - **Objetivo:** Tela Financeiro iFood (gestor+) e bloco financeiro no detalhe do pedido.

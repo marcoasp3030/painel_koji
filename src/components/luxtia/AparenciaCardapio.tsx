@@ -62,6 +62,7 @@ import { prepararImagem, problemaNaImagem } from "@/lib/imagem-cliente";
 import { Switch } from "@/components/ui/switch";
 import { RodapeRedes } from "@/components/cardapio/RedesCardapio";
 import type { ContextoGateway } from "./Gateway";
+import { EnviarLinkCardapioAtalho } from "./EnviarLinkCardapioAtalho";
 
 type Form = {
   nome_exibicao: string;
@@ -285,6 +286,7 @@ export function AparenciaCardapioTela({ ctx }: { ctx: ContextoGateway }) {
       <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_380px] lg:overflow-hidden">
         <div className="min-w-0 lg:overflow-y-auto">
           <LinkDaLoja empresa={ctx.empresa} />
+          <EnviarLinkCardapioAtalho ctx={ctx} />
 
           <Secao titulo="Identidade">
             <Linha titulo="Nome no cardápio" ajuda="Vazio: usa o nome da empresa.">

@@ -85,6 +85,8 @@ Admin e plataforma (CAT3-a, contrato `gateway/docs/ESPEC_CAT3.md` seção 13):
 
 Layout de gestão republicado em 30/10/2026 como `painel:bc6c695dbb029ffcc17c5acf75466bf8d20bb251`. A volta imediata é `painel:volta-20261030T165734Z`. O atendente consulta o cardápio e pode esgotar ou repor. Criar, preço, arquivar, lote e ligações ficam com admin e plataforma. O `PATCH` continua só com o que mudou e o `atualizado_em` lido. Preço vazio avisa que o item sai do atendimento. Conflito 409 oferece recarregar ou reaplicar. A disponibilidade tem prévia ao vivo e o histórico do item (quem, quando em Brasília, antes e depois) segue só para admin e plataforma. Prints com dados fictícios: `docs/prints-cat3-enc1/` (`tests/visual/cat3/capturar.cjs`).
 
+**Link na conversa (CARD-LINK):** gestor e plataforma ligam ou desligam `enviar_link_cardapio` no grupo Pedidos do comportamento do agente, ou pelo atalho em Aparência do cardápio (um interruptor por agente). Ligado (padrão): o agente manda o link quando o cliente pede. Desligado: apresenta as opções na conversa. O Link da loja não muda. Supervisor não vê o interruptor.
+
 ## iFood (lojas)
 
 Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. No mesmo lugar fica o bloco **Credenciais do aplicativo** (Client ID/Secret gravados no gateway só com `GATEWAY_PLATFORM_KEY` = `PANEL_PLATFORM_KEY`; o segredo nunca é mostrado de novo). Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a.

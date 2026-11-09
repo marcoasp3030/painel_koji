@@ -1,3 +1,9 @@
+## CARD-LINK: enviar link do cardápio na conversa (09/11/2026)
+
+- Comportamento `enviar_link_cardapio` (on/off, padrão on) no grupo Pedidos da tela de comportamentos; só gestor e acima veem.
+- Atalho na Aparência do cardápio (junto ao Link da loja): um interruptor por agente; PATCH grava na hora.
+- Texto de ajuda: ligado manda o link; desligado apresenta opções na conversa; Link da loja continua.
+
 ## IFOOD1-b2: Financeiro iFood (07/11/2026)
 
 - Tela **Financeiro iFood** (`/ia/ifood-financeiro`, gestor+): GET `ifood/financeiro` (padrão 30 dias); cartões créditos/débitos/repasse/direto; a receber; repasses (tipos/status em PT); gráficos por dia e por forma; tabela por tipo; rodapé de coleta + POST `atualizar`.

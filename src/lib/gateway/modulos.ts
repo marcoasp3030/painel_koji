@@ -58,7 +58,11 @@ export function telaLiberada(
 }
 
 /** Comportamentos que só existem com o módulo de pedidos. */
-export const CAMPOS_PEDIDOS = ["carrinho_expira_h", "acoes_recentes_min"] as const;
+export const CAMPOS_PEDIDOS = [
+  "carrinho_expira_h",
+  "acoes_recentes_min",
+  "enviar_link_cardapio",
+] as const;
 
 export function campoDePedidos(campo: string) {
   return (CAMPOS_PEDIDOS as readonly string[]).includes(campo);

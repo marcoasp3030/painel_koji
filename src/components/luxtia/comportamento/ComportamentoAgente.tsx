@@ -61,6 +61,7 @@ import {
   type Trecho,
   type Visao,
 } from "@/lib/gateway/atendimento";
+import { CAMPO_ENVIAR_LINK_CARDAPIO, podeVerEnviarLinkCardapio } from "@/lib/card-link";
 import { CAMPOS_PEDIDOS, pedidosEmUso } from "@/lib/gateway/modulos";
 import type { Json } from "@/lib/gateway/tipos";
 import { dataHora, Etiqueta, type ContextoGateway } from "../Gateway";
@@ -263,6 +264,8 @@ export function ComportamentoAgente({ ctx }: { ctx: ContextoGateway }) {
 
   const ocultar = new Set<string>(CAMPOS_SEM_EFEITO);
   if (!pedidosEmUso(modulos.data)) for (const campo of CAMPOS_PEDIDOS) ocultar.add(campo);
+  // CARD-LINK: só gestor e acima veem o interruptor (supervisor não altera nem vê).
+  if (!podeVerEnviarLinkCardapio(ctx.papel)) ocultar.add(CAMPO_ENVIAR_LINK_CARDAPIO);
   const gruposComp = gruposDoEsquema(v.esquema, "comportamentos", ocultar);
   const operacao = gruposComp.flatMap((g) => g.campos).filter(([, d]) => campoSoLeitura(d));
   const editaveis = gruposComp
