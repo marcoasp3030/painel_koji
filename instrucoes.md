@@ -1,3 +1,8 @@
+## Usuários da plataforma / super admin (11/11/2026)
+
+- Menu Gestão (Super Admin): **Usuários** → `/admin/usuarios` (criar/listar/remover super admin); **Usuários da empresa** → `/equipe` (equipe do cliente).
+- Só super admin: criar com e-mail/nome/senha; promover conta existente; link de nova senha; não remove a si, a emergência nem o último.
+
 ## Marca Luxbrain (11/11/2026)
 
 - Textos e meta da UI: Luxtia → Luxbrain. Logo `public/luxbrain-logo.jpeg` no wordmark, menu e favicon.

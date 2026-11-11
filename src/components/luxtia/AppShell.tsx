@@ -78,6 +78,8 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
 const CHAVE_EMPRESA = "luxbrain:gateway-empresa";
 
 function itemAtivo(caminho: string, destino: string) {
+  // /admin é a lista de clientes: não marca ativo em /admin/usuarios etc.
+  if (destino === "/admin") return caminho === "/admin" || caminho === "/admin/";
   return caminho === destino || caminho.startsWith(`${destino}/`);
 }
 

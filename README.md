@@ -183,7 +183,9 @@ A tela Clientes é só do Super Admin e lê os dados com service role depois de 
 
 ## Usuários e papéis
 
-A tela Usuários lista a equipe com busca e filtros; convite e edição abrem em painel lateral. Cada pessoa só altera quem poderia convidar: o supervisor gere funcionários das suas unidades, e a regra `podeGerirUsuario` vale no servidor para papel, unidades, convite e desativação. Ninguém altera o próprio acesso.
+No Super Admin, **Usuários** (`/admin/usuarios`) cria e gerencia contas com perfil de plataforma (super admin). **Usuários da empresa** (`/equipe`) continua sendo a equipe do cliente (gestor/supervisor/funcionário).
+
+A tela da empresa lista a equipe com busca e filtros; convite e edição abrem em painel lateral. Cada pessoa só altera quem poderia convidar: o supervisor gere funcionários das suas unidades, e a regra `podeGerirUsuario` vale no servidor para papel, unidades, convite e desativação. Ninguém altera o próprio acesso.
 
 USUARIOS1 está no ar (`docs/ESPEC_USUARIOS1.md`). Sem SMTP, quem convida vê o link uma vez, por 24 horas, de uso único e revogável. Com `GATEWAY_PLATFORM_KEY` vazia, a plataforma usa a chave da empresa e o log avisa uma vez por dia. `admin@luxbrain.local` é conta de emergência: segunda etapa obrigatória no primeiro login desta versão, sem os 7 dias, e cada entrada dela gera alerta na auditoria. O servidor manda `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades`. Prints em `docs/prints-usuarios/`.
 

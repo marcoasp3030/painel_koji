@@ -357,8 +357,15 @@ const primeiroGestao = (itens: ItemMenu[]) => [
 export const ADMIN_NAV: ItemMenu[] = primeiroGestao([
   { to: "/admin", label: "Clientes", grupo: "Gestão", icone: "clientes" },
   {
-    to: "/equipe",
+    to: "/admin/usuarios",
     label: "Usuários",
+    grupo: "Gestão",
+    icone: "equipe",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/equipe",
+    label: "Usuários da empresa",
     grupo: "Gestão",
     icone: "equipe",
     papeis: ["plataforma"],

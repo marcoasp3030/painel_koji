@@ -1,3 +1,20 @@
+## [2026-11-11 12:05] — Usuários da plataforma (super admin)
+- **Autor:** Auto
+- **Objetivo:** Opção organizada no menu para criar/gerenciar perfil super admin.
+- **Arquivos alterados:**
+ - `src/routes/_authenticated/admin/usuarios.tsx` — criado — tela `/admin/usuarios`
+ - `src/components/luxtia/UsuariosPlataforma.tsx` — criado — UI
+ - `src/lib/plataforma-usuarios.ts` + `.functions.ts` + `.test.ts` — regras e API
+ - `src/lib/nav.ts` — Usuários → plataforma; Usuários da empresa → `/equipe`
+ - `routeTree.gen.ts`, `AppShell` — rota + item ativo de `/admin`
+ - `docs/worklog.md`, `instrucoes.md` — registro
+- **Resumo das mudanças:** Gestão separa super admins da equipe do cliente. Proteções: não remove a si, emergência nem o último.
+- **Decisões e justificativas:** Reusa o nome Usuários no Super Admin; equipe da empresa ganha rótulo explícito para não misturar.
+- **Comandos executados:** `bun test` plataforma-usuarios → 2 OK; publicar → (a seguir)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** abrir Gestão → Usuários e criar um super admin de teste
+
 ## [2026-11-11 11:55] — Marca Luxbrain + logo
 - **Autor:** Auto
 - **Objetivo:** Remover o nome Luxtia da UI e usar o logo anexado (Luxbrain).

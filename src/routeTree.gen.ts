@@ -22,6 +22,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authenticated/admin/$tenantId'
 import { Route as AuthenticatedAdminConfiguracoesRouteImport } from './routes/_authenticated/admin/configuracoes'
+import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin/usuarios'
 import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
 import { Route as AuthenticatedIaCardapioRouteImport } from './routes/_authenticated/ia/cardapio'
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
@@ -116,6 +117,12 @@ const AuthenticatedAdminConfiguracoesRoute =
   AuthenticatedAdminConfiguracoesRouteImport.update({
     id: '/configuracoes',
     path: '/configuracoes',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminUsuariosRoute =
+  AuthenticatedAdminUsuariosRouteImport.update({
+    id: '/usuarios',
+    path: '/usuarios',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedIaCanaisRoute = AuthenticatedIaCanaisRouteImport.update({
@@ -284,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
+  '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
@@ -324,6 +332,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
+  '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
@@ -367,6 +376,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/_authenticated/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
+  '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/_authenticated/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/admin/$tenantId'
     | '/admin/configuracoes'
+    | '/admin/usuarios'
     | '/ia/canais'
     | '/ia/cardapio'
     | '/ia/chaves'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/admin/$tenantId'
     | '/admin/configuracoes'
+    | '/admin/usuarios'
     | '/ia/canais'
     | '/ia/cardapio'
     | '/ia/chaves'
@@ -492,6 +504,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/admin/$tenantId'
     | '/_authenticated/admin/configuracoes'
+    | '/_authenticated/admin/usuarios'
     | '/_authenticated/ia/canais'
     | '/_authenticated/ia/cardapio'
     | '/_authenticated/ia/chaves'
@@ -621,6 +634,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/admin/configuracoes'
       preLoaderRoute: typeof AuthenticatedAdminConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/usuarios': {
+      id: '/_authenticated/admin/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/ia/canais': {
@@ -818,6 +838,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminTenantIdRoute: typeof AuthenticatedAdminTenantIdRoute
   AuthenticatedAdminConfiguracoesRoute: typeof AuthenticatedAdminConfiguracoesRoute
+  AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -825,6 +846,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
   {
     AuthenticatedAdminTenantIdRoute: AuthenticatedAdminTenantIdRoute,
     AuthenticatedAdminConfiguracoesRoute: AuthenticatedAdminConfiguracoesRoute,
+    AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   }
 
