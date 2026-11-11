@@ -11,10 +11,10 @@
  - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
 - **Resumo das mudanças:** Lista/cria/detalhe de lotes; upload um-a-um com barra; poll 3 s; Notas/Arquivos; fechar/apagar; supervisor bloqueado.
 - **Decisões e justificativas:** Mesmo padrão Documentos (serverFn + módulo GEST); agentes do “Novo lote” filtrados por `documentos.ativo`.
-- **Comandos executados:** `bun test` lotes + modulo → 46 OK
+- **Comandos executados:** `bun test` lotes + modulo → 46 OK; commit `59e52bf` + `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` + caddy reload → OK; home 200; imagem `painel:59e52bf…`
 - **Erros e resoluções:** —
-- **Pendências / TODO:** publicar-painel + smoke na UI
-- **Próximos passos:** publicar e testar envio ZIP/fechar/apagar com gestor
+- **Pendências / TODO:** smoke manual (supervisor oculto; ZIP/fechar/apagar)
+- **Próximos passos:** abrir `/ia/documentos/lotes` com gestor e validar envio
 
 ## [2026-11-11 15:10] — Botão Confirmar e liberar acesso
 - **Autor:** Auto
