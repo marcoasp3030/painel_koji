@@ -9,7 +9,7 @@
  - `docs/worklog.md`, `instrucoes.md` — registro
 - **Resumo das mudanças:** Marca visível e títulos passam a Luxbrain com o JPEG. Pasta interna `components/luxtia` e slug de tenant `luxtia` não renomeados.
 - **Decisões e justificativas:** Branding do produto; e-mails reais `@luxtia.ia.br` e slug de cliente no banco ficam (não são marca da UI).
-- **Comandos executados:** busca Luxtia em src → limpo; rename GoTrue → OK; publicar → (a seguir)
+- **Comandos executados:** busca Luxtia em src → limpo; rename GoTrue → OK; commit `a3fa576` + publicar → OK; logo 200; título “Entrar | Luxbrain”
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh; MFA novo fator mostrará “Luxbrain”
