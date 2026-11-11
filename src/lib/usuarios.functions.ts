@@ -452,8 +452,10 @@ export const definirSenhaUsuario = createServerFn({ method: "POST" })
       throw new Error("A senha da conta de emergência não se altera por aqui.");
     }
     await conferirAlvo(supabaseAdmin, t, row.id);
+    // Convites nascem sem e-mail confirmado; sem isso o login falha com “senha inválida”.
     const upd = await supabaseAdmin.auth.admin.updateUserById(row.user_id, {
       password: data.senha,
+      email_confirm: true,
     });
     if (upd.error) throw new Error("Não foi possível gravar a nova senha.");
     await supabaseAdmin.rpc("derrubar_sessoes", { uid: row.user_id });

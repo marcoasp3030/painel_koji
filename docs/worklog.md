@@ -1,3 +1,17 @@
+## [2026-11-11 15:06] — Login empresa: e-mail sem confirmação
+- **Autor:** Auto
+- **Objetivo:** Corrigir login de usuário de empresa com erro de senha.
+- **Arquivos alterados:**
+ - `src/lib/usuarios.functions.ts` — modificado — `definirSenhaUsuario` confirma o e-mail
+ - GoTrue `demo@demo.com` — modificado — e-mail confirmado; limpeza de `entrada_tentativas`
+ - `docs/worklog.md`, `instrucoes.md` — registro
+- **Resumo das mudanças:** Contas criadas por convite vinham sem `email_confirmed_at`; ao trocar senha o GoTrue ainda recusava o login. Agora a definição de senha confirma o e-mail.
+- **Decisões e justificativas:** Mesmo padrão do aceite de convite e da criação com senha.
+- **Comandos executados:** diagnóstico auth → `demo@demo.com` confirmado=false; PUT email_confirm → OK; publicar → (a seguir)
+- **Erros e resoluções:** `entrada.login_falhou` demo@demo.com → causa e-mail não confirmado
+- **Pendências / TODO:** —
+- **Próximos passos:** usuário demo entrar de novo com a senha definida
+
 ## [2026-11-11 13:50] — Usuários da empresa: senha e ativação
 - **Autor:** Auto
 - **Objetivo:** Criar/gerenciar usuários da empresa com senha, ativar/desativar e trocar senha.

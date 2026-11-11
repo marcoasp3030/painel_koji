@@ -1,3 +1,7 @@
+## Login empresa e e-mail confirmado (11/11/2026)
+
+- Contas só de convite nascem sem e-mail confirmado; o GoTrue responde como senha inválida. `definirSenhaUsuario` agora envia `email_confirm: true` (igual ao aceite do convite). Conta `demo@demo.com` confirmada na hora.
+
 ## Usuários da empresa: senha e ativação (11/11/2026)
 
 - Em `/equipe` (**Usuários da empresa**): **Novo usuário** com “Definir agora” (senha) ou “Convite”; no detalhe: Desativar/Reativar, Trocar senha, Link de nova senha, convite.
