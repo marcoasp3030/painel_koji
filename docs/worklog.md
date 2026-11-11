@@ -7,10 +7,10 @@
  - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
 - **Resumo das mudanças:** Clipe vira menu; lote cria `POST /agentes/{a}/lotes` e manda arquivos um a um; FTP aparece como “Em breve” (SFTP pós LOTE1-b).
 - **Decisões e justificativas:** FTP sem backend ainda — opção visível e desabilitada; lote só gestor+.
-- **Comandos executados:** `bun test` lotes → 4 OK
+- **Comandos executados:** `bun test` lotes → 4 OK; commit `6fbe378` + publicar → OK; home 200; imagem `painel:6fbe378…`
 - **Erros e resoluções:** —
-- **Pendências / TODO:** publicar-painel
-- **Próximos passos:** smoke no Simular com agente de documentos
+- **Pendências / TODO:** smoke no Simular com agente de documentos
+- **Próximos passos:** SFTP real quando o bloco do gateway existir
 
 ## [2026-11-11 19:40] — LOTE1-a: envio de notas em lote
 - **Autor:** Auto
