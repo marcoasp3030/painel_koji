@@ -8,7 +8,7 @@
  - `tests/visual/usuarios/main.tsx`, `instrucoes.md`, `docs/worklog.md`
 - **Resumo das mudanças:** Quem ainda não confirma o e-mail ou está inativo ganha ação explícita para já conseguir entrar.
 - **Decisões e justificativas:** Senha obrigatória na liberação se a pessoa nunca entrou.
-- **Comandos executados:** publicar → (a seguir)
+- **Comandos executados:** commit + publicar → OK
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
 - **Próximos passos:** abrir usuário pendente e usar Confirmar e liberar
