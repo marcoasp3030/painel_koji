@@ -9,8 +9,8 @@
  - `docs/worklog.md`, `instrucoes.md` — registro
 - **Resumo das mudanças:** Troca de “n8n” por “integração”/“API” em UI e docs. Gateway: docs/comentários/teste alinhados.
 - **Decisões e justificativas:** Sem referência a ferramenta de terceiros no produto; significado (servidor/API) preservado.
-- **Comandos executados:** busca `n8n` painel+gateway → limpo; publicar-painel → (a seguir)
-- **Erros e resoluções:** —
+- **Comandos executados:** busca `n8n` painel+gateway → limpo; commit `65285fe` + `publicar-painel.sh` → OK; imagem `painel:65285fe…`; home 200 após restart
+- **Erros e resoluções:** home 502 momentâneo no recreate → OK em seguida
 - **Pendências / TODO:** —
 - **Próximos passos:** hard refresh em Documentos / Chaves de API
 
