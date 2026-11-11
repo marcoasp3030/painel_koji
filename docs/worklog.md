@@ -8,7 +8,7 @@
  - `tests/visual/usuarios/main.tsx`, `instrucoes.md`, `docs/worklog.md`
 - **Resumo das mudanças:** Gestor/plataforma cria com senha ou convite; no detalhe troca senha, gera link, desativa/reativa.
 - **Decisões e justificativas:** Supervisor mantém só convite; senha direta exige gestor+.
-- **Comandos executados:** testes acesso/senha → OK; publicar → (a seguir)
+- **Comandos executados:** testes acesso/senha → OK; commit `776bf98` + publicar → OK; imagem `painel:776bf98…`
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
 - **Próximos passos:** testar em Usuários da empresa com uma empresa selecionada
