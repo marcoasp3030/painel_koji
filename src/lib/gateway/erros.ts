@@ -171,14 +171,25 @@ export function mensagemParaUsuario(erro: GatewayErro): string {
   }
   const motivo = typeof erro.detalhes["motivo"] === "string" ? erro.detalhes["motivo"] : null;
   if (motivo === "tamanho" || erro.status === 413) return "O arquivo é grande demais.";
-  if (motivo === "xml_nao_nfe") return AVISO_XML_FORA_DA_NOTA;
+  if (motivo === "xml_nao_nfe" || motivo === "xml_nao_e_nfe") return AVISO_XML_FORA_DA_NOTA;
   if (motivo === "tipo_nao_aceito") {
     const nome = typeof erro.detalhes["nome"] === "string" ? erro.detalhes["nome"] : "";
     if (nome.toLowerCase().endsWith(".xml")) return AVISO_XML_FORA_DA_NOTA;
+    // Lote aceita ZIP; o simulador e Documentos não — a frase genérica cobre os dois.
+    if (nome.toLowerCase().endsWith(".zip")) return "Formato não aceito. Use PDF, XML ou ZIP.";
     return "Formato não aceito. Use PDF, XML, JPG, PNG ou WEBP.";
   }
   if (motivo === "capacidade_desligada")
     return "A capacidade de documentos está desligada neste agente.";
+  if (motivo === "lote_vazio") return "Inclua ao menos um arquivo válido antes de fechar.";
+  if (motivo === "lote_fechado") return "Este lote não aceita mais arquivos.";
+  if (motivo === "limite_do_lote") return "O limite do lote foi atingido.";
+  if (motivo === "arquivo_repetido") return "Este arquivo já está no lote.";
+  if (motivo === "zip_invalido") return "ZIP inválido.";
+  if (motivo === "zip_vazio") return "O ZIP está vazio.";
+  if (motivo === "zip_protegido") return "ZIP com senha.";
+  if (motivo === "zip_entradas_demais") return "O ZIP tem entradas demais.";
+  if (motivo === "zip_grande_demais") return "O ZIP descompactado é grande demais.";
   if (motivo === "vazio") return "O arquivo está vazio.";
   const campo = typeof erro.detalhes["campo"] === "string" ? erro.detalhes["campo"] : null;
   // Só substitui a mensagem genérica do gateway; mensagens do próprio painel já explicam.

@@ -29,27 +29,30 @@ import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedIaChavesFormularioRouteImport } from './routes/_authenticated/ia/chaves-formulario'
 import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenticated/ia/conversas'
 import { Route as AuthenticatedIaDocumentosRouteImport } from './routes/_authenticated/ia/documentos'
+import { Route as AuthenticatedIaIfoodRouteImport } from './routes/_authenticated/ia/ifood'
+import { Route as AuthenticatedIaIfoodFinanceiroRouteImport } from './routes/_authenticated/ia/ifood-financeiro'
 import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authenticated/ia/modelos'
 import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
 import { Route as AuthenticatedIaPedidosIfoodRouteImport } from './routes/_authenticated/ia/pedidos-ifood'
-import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authenticated/ia/visao-vendas'
-import { Route as AuthenticatedIaConfiguracoesIfoodRouteImport } from './routes/_authenticated/ia/configuracoes.ifood'
-import { Route as AuthenticatedIaIfoodRouteImport } from './routes/_authenticated/ia/ifood'
-import { Route as AuthenticatedIaIfoodFinanceiroRouteImport } from './routes/_authenticated/ia/ifood-financeiro'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
+import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authenticated/ia/visao-vendas'
 import { Route as AuthenticatedIaWebhooksSaidaRouteImport } from './routes/_authenticated/ia/webhooks-saida'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
 import { Route as AuthenticatedIaConfiguracoesAparenciaRouteImport } from './routes/_authenticated/ia/configuracoes.aparencia'
 import { Route as AuthenticatedIaConfiguracoesAvisosRouteImport } from './routes/_authenticated/ia/configuracoes.avisos'
 import { Route as AuthenticatedIaConfiguracoesComportamentoRouteImport } from './routes/_authenticated/ia/configuracoes.comportamento'
+import { Route as AuthenticatedIaConfiguracoesIfoodRouteImport } from './routes/_authenticated/ia/configuracoes.ifood'
+import { Route as AuthenticatedIaDocumentosLotesRouteImport } from './routes/_authenticated/ia/documentos.lotes'
 import { Route as AuthenticatedIaEmpresasIndexRouteImport } from './routes/_authenticated/ia/empresas.index'
 import { Route as AuthenticatedIaEmpresasNovaRouteImport } from './routes/_authenticated/ia/empresas.nova'
 import { Route as AuthenticatedIaGestaoAlteracoesRouteImport } from './routes/_authenticated/ia/gestao.alteracoes'
 import { Route as ApiPublicCardapioImagemIdRouteImport } from './routes/api/public/cardapio-imagem.$id'
 import { Route as ApiPublicFood99WebhookRouteImport } from './routes/api/public/food99/webhook'
+import { Route as AuthenticatedIaDocumentosLotesIndexRouteImport } from './routes/_authenticated/ia/documentos.lotes.index'
+import { Route as AuthenticatedIaDocumentosLotesLoteIdRouteImport } from './routes/_authenticated/ia/documentos.lotes.$loteId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -158,6 +161,17 @@ const AuthenticatedIaDocumentosRoute =
     path: '/ia/documentos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaIfoodRoute = AuthenticatedIaIfoodRouteImport.update({
+  id: '/ia/ifood',
+  path: '/ia/ifood',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIaIfoodFinanceiroRoute =
+  AuthenticatedIaIfoodFinanceiroRouteImport.update({
+    id: '/ia/ifood-financeiro',
+    path: '/ia/ifood-financeiro',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaModelosRoute = AuthenticatedIaModelosRouteImport.update({
   id: '/ia/modelos',
   path: '/ia/modelos',
@@ -179,30 +193,6 @@ const AuthenticatedIaPedidosIfoodRoute =
     path: '/ia/pedidos-ifood',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedIaVisaoVendasRoute =
-  AuthenticatedIaVisaoVendasRouteImport.update({
-    id: '/ia/visao-vendas',
-    path: '/ia/visao-vendas',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedIaConfiguracoesIfoodRoute = AuthenticatedIaConfiguracoesIfoodRouteImport.update({
-  id: '/ia/configuracoes/ifood',
-  path: '/ia/configuracoes/ifood',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-
-const AuthenticatedIaIfoodRoute = AuthenticatedIaIfoodRouteImport.update({
-  id: '/ia/ifood',
-  path: '/ia/ifood',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedIaIfoodFinanceiroRoute =
-  AuthenticatedIaIfoodFinanceiroRouteImport.update({
-    id: '/ia/ifood-financeiro',
-    path: '/ia/ifood-financeiro',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-
 const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   id: '/ia/simular',
   path: '/ia/simular',
@@ -213,6 +203,12 @@ const AuthenticatedIaUnidadesRoute = AuthenticatedIaUnidadesRouteImport.update({
   path: '/ia/unidades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIaVisaoVendasRoute =
+  AuthenticatedIaVisaoVendasRouteImport.update({
+    id: '/ia/visao-vendas',
+    path: '/ia/visao-vendas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaWebhooksSaidaRoute =
   AuthenticatedIaWebhooksSaidaRouteImport.update({
     id: '/ia/webhooks-saida',
@@ -249,6 +245,18 @@ const AuthenticatedIaConfiguracoesComportamentoRoute =
     path: '/ia/configuracoes/comportamento',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaConfiguracoesIfoodRoute =
+  AuthenticatedIaConfiguracoesIfoodRouteImport.update({
+    id: '/ia/configuracoes/ifood',
+    path: '/ia/configuracoes/ifood',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIaDocumentosLotesRoute =
+  AuthenticatedIaDocumentosLotesRouteImport.update({
+    id: '/lotes',
+    path: '/lotes',
+    getParentRoute: () => AuthenticatedIaDocumentosRoute,
+  } as any)
 const AuthenticatedIaEmpresasIndexRoute =
   AuthenticatedIaEmpresasIndexRouteImport.update({
     id: '/ia/empresas/',
@@ -278,6 +286,18 @@ const ApiPublicFood99WebhookRoute = ApiPublicFood99WebhookRouteImport.update({
   path: '/api/public/food99/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedIaDocumentosLotesIndexRoute =
+  AuthenticatedIaDocumentosLotesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedIaDocumentosLotesRoute,
+  } as any)
+const AuthenticatedIaDocumentosLotesLoteIdRoute =
+  AuthenticatedIaDocumentosLotesLoteIdRouteImport.update({
+    id: '/$loteId',
+    path: '/$loteId',
+    getParentRoute: () => AuthenticatedIaDocumentosLotesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -297,29 +317,32 @@ export interface FileRoutesByFullPath {
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/chaves-formulario': typeof AuthenticatedIaChavesFormularioRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
-  '/ia/documentos': typeof AuthenticatedIaDocumentosRoute
+  '/ia/documentos': typeof AuthenticatedIaDocumentosRouteWithChildren
+  '/ia/ifood': typeof AuthenticatedIaIfoodRoute
+  '/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
-  '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
-  '/ia/ifood': typeof AuthenticatedIaIfoodRoute
-  '/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
-  '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
+  '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
+  '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
+  '/ia/documentos/lotes': typeof AuthenticatedIaDocumentosLotesRouteWithChildren
   '/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
   '/api/public/cardapio-imagem/$id': typeof ApiPublicCardapioImagemIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
   '/ia/agentes/': typeof AuthenticatedIaAgentesIndexRoute
   '/ia/empresas/': typeof AuthenticatedIaEmpresasIndexRoute
+  '/ia/documentos/lotes/$loteId': typeof AuthenticatedIaDocumentosLotesLoteIdRoute
+  '/ia/documentos/lotes/': typeof AuthenticatedIaDocumentosLotesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -338,29 +361,31 @@ export interface FileRoutesByTo {
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/ia/chaves-formulario': typeof AuthenticatedIaChavesFormularioRoute
   '/ia/conversas': typeof AuthenticatedIaConversasRoute
-  '/ia/documentos': typeof AuthenticatedIaDocumentosRoute
+  '/ia/documentos': typeof AuthenticatedIaDocumentosRouteWithChildren
+  '/ia/ifood': typeof AuthenticatedIaIfoodRoute
+  '/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
-  '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
-  '/ia/ifood': typeof AuthenticatedIaIfoodRoute
-  '/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
-  '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
+  '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
+  '/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
   '/api/public/cardapio-imagem/$id': typeof ApiPublicCardapioImagemIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
   '/ia/agentes': typeof AuthenticatedIaAgentesIndexRoute
   '/ia/empresas': typeof AuthenticatedIaEmpresasIndexRoute
+  '/ia/documentos/lotes/$loteId': typeof AuthenticatedIaDocumentosLotesLoteIdRoute
+  '/ia/documentos/lotes': typeof AuthenticatedIaDocumentosLotesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -382,29 +407,32 @@ export interface FileRoutesById {
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
   '/_authenticated/ia/chaves-formulario': typeof AuthenticatedIaChavesFormularioRoute
   '/_authenticated/ia/conversas': typeof AuthenticatedIaConversasRoute
-  '/_authenticated/ia/documentos': typeof AuthenticatedIaDocumentosRoute
+  '/_authenticated/ia/documentos': typeof AuthenticatedIaDocumentosRouteWithChildren
+  '/_authenticated/ia/ifood': typeof AuthenticatedIaIfoodRoute
+  '/_authenticated/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
   '/_authenticated/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/_authenticated/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
-  '/_authenticated/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
-  '/_authenticated/ia/ifood': typeof AuthenticatedIaIfoodRoute
-  '/_authenticated/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
-  '/_authenticated/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
+  '/_authenticated/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
   '/_authenticated/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
   '/_authenticated/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/_authenticated/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/_authenticated/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
+  '/_authenticated/ia/configuracoes/ifood': typeof AuthenticatedIaConfiguracoesIfoodRoute
+  '/_authenticated/ia/documentos/lotes': typeof AuthenticatedIaDocumentosLotesRouteWithChildren
   '/_authenticated/ia/empresas/nova': typeof AuthenticatedIaEmpresasNovaRoute
   '/_authenticated/ia/gestao/alteracoes': typeof AuthenticatedIaGestaoAlteracoesRoute
   '/api/public/cardapio-imagem/$id': typeof ApiPublicCardapioImagemIdRoute
   '/api/public/food99/webhook': typeof ApiPublicFood99WebhookRoute
   '/_authenticated/ia/agentes/': typeof AuthenticatedIaAgentesIndexRoute
   '/_authenticated/ia/empresas/': typeof AuthenticatedIaEmpresasIndexRoute
+  '/_authenticated/ia/documentos/lotes/$loteId': typeof AuthenticatedIaDocumentosLotesLoteIdRoute
+  '/_authenticated/ia/documentos/lotes/': typeof AuthenticatedIaDocumentosLotesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -427,28 +455,31 @@ export interface FileRouteTypes {
     | '/ia/chaves-formulario'
     | '/ia/conversas'
     | '/ia/documentos'
+    | '/ia/ifood'
+    | '/ia/ifood-financeiro'
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/pedidos-ifood'
-    | '/ia/visao-vendas'
-    | '/ia/ifood'
-    | '/ia/ifood-financeiro'
-    | '/ia/configuracoes/ifood'
     | '/ia/simular'
     | '/ia/unidades'
+    | '/ia/visao-vendas'
     | '/ia/webhooks-saida'
     | '/admin/'
     | '/ia/agentes/$agenteId'
     | '/ia/configuracoes/aparencia'
     | '/ia/configuracoes/avisos'
     | '/ia/configuracoes/comportamento'
+    | '/ia/configuracoes/ifood'
+    | '/ia/documentos/lotes'
     | '/ia/empresas/nova'
     | '/ia/gestao/alteracoes'
     | '/api/public/cardapio-imagem/$id'
     | '/api/public/food99/webhook'
     | '/ia/agentes/'
     | '/ia/empresas/'
+    | '/ia/documentos/lotes/$loteId'
+    | '/ia/documentos/lotes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -468,28 +499,30 @@ export interface FileRouteTypes {
     | '/ia/chaves-formulario'
     | '/ia/conversas'
     | '/ia/documentos'
+    | '/ia/ifood'
+    | '/ia/ifood-financeiro'
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/pedidos-ifood'
-    | '/ia/visao-vendas'
-    | '/ia/ifood'
-    | '/ia/ifood-financeiro'
-    | '/ia/configuracoes/ifood'
     | '/ia/simular'
     | '/ia/unidades'
+    | '/ia/visao-vendas'
     | '/ia/webhooks-saida'
     | '/admin'
     | '/ia/agentes/$agenteId'
     | '/ia/configuracoes/aparencia'
     | '/ia/configuracoes/avisos'
     | '/ia/configuracoes/comportamento'
+    | '/ia/configuracoes/ifood'
     | '/ia/empresas/nova'
     | '/ia/gestao/alteracoes'
     | '/api/public/cardapio-imagem/$id'
     | '/api/public/food99/webhook'
     | '/ia/agentes'
     | '/ia/empresas'
+    | '/ia/documentos/lotes/$loteId'
+    | '/ia/documentos/lotes'
   id:
     | '__root__'
     | '/'
@@ -511,28 +544,31 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/chaves-formulario'
     | '/_authenticated/ia/conversas'
     | '/_authenticated/ia/documentos'
+    | '/_authenticated/ia/ifood'
+    | '/_authenticated/ia/ifood-financeiro'
     | '/_authenticated/ia/modelos'
     | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
     | '/_authenticated/ia/pedidos-ifood'
-    | '/_authenticated/ia/visao-vendas'
-    | '/_authenticated/ia/ifood'
-    | '/_authenticated/ia/ifood-financeiro'
-    | '/_authenticated/ia/configuracoes/ifood'
     | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
+    | '/_authenticated/ia/visao-vendas'
     | '/_authenticated/ia/webhooks-saida'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
     | '/_authenticated/ia/configuracoes/aparencia'
     | '/_authenticated/ia/configuracoes/avisos'
     | '/_authenticated/ia/configuracoes/comportamento'
+    | '/_authenticated/ia/configuracoes/ifood'
+    | '/_authenticated/ia/documentos/lotes'
     | '/_authenticated/ia/empresas/nova'
     | '/_authenticated/ia/gestao/alteracoes'
     | '/api/public/cardapio-imagem/$id'
     | '/api/public/food99/webhook'
     | '/_authenticated/ia/agentes/'
     | '/_authenticated/ia/empresas/'
+    | '/_authenticated/ia/documentos/lotes/$loteId'
+    | '/_authenticated/ia/documentos/lotes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -685,6 +721,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/ifood': {
+      id: '/_authenticated/ia/ifood'
+      path: '/ia/ifood'
+      fullPath: '/ia/ifood'
+      preLoaderRoute: typeof AuthenticatedIaIfoodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/ifood-financeiro': {
+      id: '/_authenticated/ia/ifood-financeiro'
+      path: '/ia/ifood-financeiro'
+      fullPath: '/ia/ifood-financeiro'
+      preLoaderRoute: typeof AuthenticatedIaIfoodFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/modelos': {
       id: '/_authenticated/ia/modelos'
       path: '/ia/modelos'
@@ -713,34 +763,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaPedidosIfoodRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/ia/visao-vendas': {
-      id: '/_authenticated/ia/visao-vendas'
-      path: '/ia/visao-vendas'
-      fullPath: '/ia/visao-vendas'
-      preLoaderRoute: typeof AuthenticatedIaVisaoVendasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/ia/ifood': {
-      id: '/_authenticated/ia/ifood'
-      path: '/ia/ifood'
-      fullPath: '/ia/ifood'
-      preLoaderRoute: typeof AuthenticatedIaIfoodRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/ia/ifood-financeiro': {
-      id: '/_authenticated/ia/ifood-financeiro'
-      path: '/ia/ifood-financeiro'
-      fullPath: '/ia/ifood-financeiro'
-      preLoaderRoute: typeof AuthenticatedIaIfoodFinanceiroRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/ia/configuracoes/ifood': {
-      id: '/_authenticated/ia/configuracoes/ifood'
-      path: '/ia/configuracoes/ifood'
-      fullPath: '/ia/configuracoes/ifood'
-      preLoaderRoute: typeof AuthenticatedIaConfiguracoesIfoodRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/ia/simular': {
       id: '/_authenticated/ia/simular'
       path: '/ia/simular'
@@ -753,6 +775,13 @@ declare module '@tanstack/react-router' {
       path: '/ia/unidades'
       fullPath: '/ia/unidades'
       preLoaderRoute: typeof AuthenticatedIaUnidadesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/visao-vendas': {
+      id: '/_authenticated/ia/visao-vendas'
+      path: '/ia/visao-vendas'
+      fullPath: '/ia/visao-vendas'
+      preLoaderRoute: typeof AuthenticatedIaVisaoVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/webhooks-saida': {
@@ -797,6 +826,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaConfiguracoesComportamentoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/configuracoes/ifood': {
+      id: '/_authenticated/ia/configuracoes/ifood'
+      path: '/ia/configuracoes/ifood'
+      fullPath: '/ia/configuracoes/ifood'
+      preLoaderRoute: typeof AuthenticatedIaConfiguracoesIfoodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/documentos/lotes': {
+      id: '/_authenticated/ia/documentos/lotes'
+      path: '/lotes'
+      fullPath: '/ia/documentos/lotes'
+      preLoaderRoute: typeof AuthenticatedIaDocumentosLotesRouteImport
+      parentRoute: typeof AuthenticatedIaDocumentosRoute
+    }
     '/_authenticated/ia/empresas/': {
       id: '/_authenticated/ia/empresas/'
       path: '/ia/empresas'
@@ -832,6 +875,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFood99WebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/ia/documentos/lotes/': {
+      id: '/_authenticated/ia/documentos/lotes/'
+      path: '/'
+      fullPath: '/ia/documentos/lotes/'
+      preLoaderRoute: typeof AuthenticatedIaDocumentosLotesIndexRouteImport
+      parentRoute: typeof AuthenticatedIaDocumentosLotesRoute
+    }
+    '/_authenticated/ia/documentos/lotes/$loteId': {
+      id: '/_authenticated/ia/documentos/lotes/$loteId'
+      path: '/$loteId'
+      fullPath: '/ia/documentos/lotes/$loteId'
+      preLoaderRoute: typeof AuthenticatedIaDocumentosLotesLoteIdRouteImport
+      parentRoute: typeof AuthenticatedIaDocumentosLotesRoute
+    }
   }
 }
 
@@ -855,6 +912,39 @@ const AuthenticatedAdminRouteRouteWithChildren =
     AuthenticatedAdminRouteRouteChildren,
   )
 
+interface AuthenticatedIaDocumentosLotesRouteChildren {
+  AuthenticatedIaDocumentosLotesLoteIdRoute: typeof AuthenticatedIaDocumentosLotesLoteIdRoute
+  AuthenticatedIaDocumentosLotesIndexRoute: typeof AuthenticatedIaDocumentosLotesIndexRoute
+}
+
+const AuthenticatedIaDocumentosLotesRouteChildren: AuthenticatedIaDocumentosLotesRouteChildren =
+  {
+    AuthenticatedIaDocumentosLotesLoteIdRoute:
+      AuthenticatedIaDocumentosLotesLoteIdRoute,
+    AuthenticatedIaDocumentosLotesIndexRoute:
+      AuthenticatedIaDocumentosLotesIndexRoute,
+  }
+
+const AuthenticatedIaDocumentosLotesRouteWithChildren =
+  AuthenticatedIaDocumentosLotesRoute._addFileChildren(
+    AuthenticatedIaDocumentosLotesRouteChildren,
+  )
+
+interface AuthenticatedIaDocumentosRouteChildren {
+  AuthenticatedIaDocumentosLotesRoute: typeof AuthenticatedIaDocumentosLotesRouteWithChildren
+}
+
+const AuthenticatedIaDocumentosRouteChildren: AuthenticatedIaDocumentosRouteChildren =
+  {
+    AuthenticatedIaDocumentosLotesRoute:
+      AuthenticatedIaDocumentosLotesRouteWithChildren,
+  }
+
+const AuthenticatedIaDocumentosRouteWithChildren =
+  AuthenticatedIaDocumentosRoute._addFileChildren(
+    AuthenticatedIaDocumentosRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   Authenticated99foodDebugRoute: typeof Authenticated99foodDebugRoute
@@ -868,22 +958,22 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
   AuthenticatedIaChavesFormularioRoute: typeof AuthenticatedIaChavesFormularioRoute
   AuthenticatedIaConversasRoute: typeof AuthenticatedIaConversasRoute
-  AuthenticatedIaDocumentosRoute: typeof AuthenticatedIaDocumentosRoute
+  AuthenticatedIaDocumentosRoute: typeof AuthenticatedIaDocumentosRouteWithChildren
+  AuthenticatedIaIfoodRoute: typeof AuthenticatedIaIfoodRoute
+  AuthenticatedIaIfoodFinanceiroRoute: typeof AuthenticatedIaIfoodFinanceiroRoute
   AuthenticatedIaModelosRoute: typeof AuthenticatedIaModelosRoute
   AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
   AuthenticatedIaPedidosIfoodRoute: typeof AuthenticatedIaPedidosIfoodRoute
-  AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
-  AuthenticatedIaIfoodRoute: typeof AuthenticatedIaIfoodRoute
-  AuthenticatedIaIfoodFinanceiroRoute: typeof AuthenticatedIaIfoodFinanceiroRoute
-  AuthenticatedIaConfiguracoesIfoodRoute: typeof AuthenticatedIaConfiguracoesIfoodRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
+  AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
   AuthenticatedIaWebhooksSaidaRoute: typeof AuthenticatedIaWebhooksSaidaRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
   AuthenticatedIaConfiguracoesAparenciaRoute: typeof AuthenticatedIaConfiguracoesAparenciaRoute
   AuthenticatedIaConfiguracoesAvisosRoute: typeof AuthenticatedIaConfiguracoesAvisosRoute
   AuthenticatedIaConfiguracoesComportamentoRoute: typeof AuthenticatedIaConfiguracoesComportamentoRoute
+  AuthenticatedIaConfiguracoesIfoodRoute: typeof AuthenticatedIaConfiguracoesIfoodRoute
   AuthenticatedIaEmpresasNovaRoute: typeof AuthenticatedIaEmpresasNovaRoute
   AuthenticatedIaGestaoAlteracoesRoute: typeof AuthenticatedIaGestaoAlteracoesRoute
   AuthenticatedIaAgentesIndexRoute: typeof AuthenticatedIaAgentesIndexRoute
@@ -903,17 +993,16 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
   AuthenticatedIaChavesFormularioRoute: AuthenticatedIaChavesFormularioRoute,
   AuthenticatedIaConversasRoute: AuthenticatedIaConversasRoute,
-  AuthenticatedIaDocumentosRoute: AuthenticatedIaDocumentosRoute,
+  AuthenticatedIaDocumentosRoute: AuthenticatedIaDocumentosRouteWithChildren,
+  AuthenticatedIaIfoodRoute: AuthenticatedIaIfoodRoute,
+  AuthenticatedIaIfoodFinanceiroRoute: AuthenticatedIaIfoodFinanceiroRoute,
   AuthenticatedIaModelosRoute: AuthenticatedIaModelosRoute,
   AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
   AuthenticatedIaPedidosIfoodRoute: AuthenticatedIaPedidosIfoodRoute,
-  AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,
-  AuthenticatedIaIfoodRoute: AuthenticatedIaIfoodRoute,
-  AuthenticatedIaIfoodFinanceiroRoute: AuthenticatedIaIfoodFinanceiroRoute,
-  AuthenticatedIaConfiguracoesIfoodRoute: AuthenticatedIaConfiguracoesIfoodRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
+  AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,
   AuthenticatedIaWebhooksSaidaRoute: AuthenticatedIaWebhooksSaidaRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
   AuthenticatedIaConfiguracoesAparenciaRoute:
@@ -922,6 +1011,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedIaConfiguracoesAvisosRoute,
   AuthenticatedIaConfiguracoesComportamentoRoute:
     AuthenticatedIaConfiguracoesComportamentoRoute,
+  AuthenticatedIaConfiguracoesIfoodRoute:
+    AuthenticatedIaConfiguracoesIfoodRoute,
   AuthenticatedIaEmpresasNovaRoute: AuthenticatedIaEmpresasNovaRoute,
   AuthenticatedIaGestaoAlteracoesRoute: AuthenticatedIaGestaoAlteracoesRoute,
   AuthenticatedIaAgentesIndexRoute: AuthenticatedIaAgentesIndexRoute,
@@ -941,13 +1032,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -15,8 +15,8 @@
 	}
 }
 
-# Proxy do gateway. O corpo de 11MiB vale só no envio de documentos;
-# o restante de /gateway/api/* continua em 2MiB.
+# Proxy do gateway. O corpo de 11MiB vale no envio de documentos (API) e
+# no envio de arquivos de lote (admin); o restante de /gateway/api/* continua em 2MiB.
 (proxy_gateway) {
 	uri strip_prefix /gateway
 	reverse_proxy luxbrain-gateway:8000 {
@@ -37,6 +37,14 @@
 			redir @inicio /gateway/health 308
 			@documentos path /gateway/api/v1/documentos /gateway/api/v1/documentos/*
 			handle @documentos {
+				request_body {
+					max_size 11MiB
+				}
+				import proxy_gateway
+			}
+			# LOTE1-a: um arquivo por requisição (PDF/XML/ZIP), até 11 MiB.
+			@lotesArquivos path_regexp ^/gateway/admin/v1/tenants/[^/]+/lotes/[^/]+/arquivos/?$
+			handle @lotesArquivos {
 				request_body {
 					max_size 11MiB
 				}

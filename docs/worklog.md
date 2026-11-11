@@ -1,3 +1,21 @@
+## [2026-11-11 19:40] — LOTE1-a: envio de notas em lote
+- **Autor:** Auto
+- **Objetivo:** Tela Lotes em Documentos (gestor+), contrato LOTE1-a do gateway.
+- **Arquivos alterados:**
+ - `src/lib/gateway/lotes.ts` + `lotes.server.ts` + `lotes.test.ts` — criado — tipos, rótulos, envio
+ - `src/lib/gateway-lotes.functions.ts` — criado — serverFns
+ - `src/lib/gateway/modulo.server.ts` + `modulo.test.ts` + `erros.ts` — modificado — GEST + motivos PT
+ - `src/components/luxtia/documentos/{AbasDocumentos,Lotes}.tsx` — criado — abas e UI
+ - `src/routes/.../documentos.lotes*.tsx` + `documentos.tsx` — criado/modificado — rotas
+ - `docker/Caddyfile` — modificado — 11 MiB em lotes/arquivos
+ - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
+- **Resumo das mudanças:** Lista/cria/detalhe de lotes; upload um-a-um com barra; poll 3 s; Notas/Arquivos; fechar/apagar; supervisor bloqueado.
+- **Decisões e justificativas:** Mesmo padrão Documentos (serverFn + módulo GEST); agentes do “Novo lote” filtrados por `documentos.ativo`.
+- **Comandos executados:** `bun test` lotes + modulo → 46 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** publicar-painel + smoke na UI
+- **Próximos passos:** publicar e testar envio ZIP/fechar/apagar com gestor
+
 ## [2026-11-11 15:10] — Botão Confirmar e liberar acesso
 - **Autor:** Auto
 - **Objetivo:** Super admin/gestor liberar usuário da empresa (confirmar e-mail + ativar + senha).

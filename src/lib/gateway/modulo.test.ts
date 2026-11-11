@@ -97,6 +97,14 @@ const ROTAS_DO_TENANT: Op[] = [
   ["GET", ["anexos", "anx_1", "texto"]],
   ["GET", ["anexos", "anx_1", "original"]],
   ["DELETE", ["anexos", "anx_1"]],
+  ["GET", ["lotes"]],
+  ["POST", ["agentes", "ag_1", "lotes"], { nome: "Fretes" }],
+  ["GET", ["lotes", "lot_1"]],
+  ["POST", ["lotes", "lot_1", "arquivos"]],
+  ["GET", ["lotes", "lot_1", "arquivos"]],
+  ["GET", ["lotes", "lot_1", "notas"]],
+  ["POST", ["lotes", "lot_1", "fechar"]],
+  ["DELETE", ["lotes", "lot_1"]],
   ["GET", ["chaves-formulario"]],
   ["POST", ["chaves-formulario"], { nome: "Site", agente_id: "ag_1" }],
   ["DELETE", ["chaves-formulario", "key_1"]],
@@ -350,6 +358,14 @@ describe("papéis", () => {
       ["POST", ["ifood", "financeiro", "atualizar"]],
       ["GET", ["anexos"]],
       ["DELETE", ["anexos", "anx_1"]],
+      ["GET", ["lotes"]],
+      ["POST", ["agentes", "ag_1", "lotes"], { nome: "Fretes" }],
+      ["GET", ["lotes", "lot_abc"]],
+      ["POST", ["lotes", "lot_abc", "arquivos"]],
+      ["GET", ["lotes", "lot_abc", "arquivos"]],
+      ["GET", ["lotes", "lot_abc", "notas"]],
+      ["POST", ["lotes", "lot_abc", "fechar"]],
+      ["DELETE", ["lotes", "lot_abc"]],
       [
         "POST",
         ["chaves-formulario"],
@@ -856,6 +872,19 @@ describe("rotas do atendimento alcançam quem atende", () => {
       AcessoNegado,
     );
   });
+  test("lotes de notas: gestor cria e envia; supervisor não vê", () => {
+    autorizar("gestor", "GET", ["lotes"]);
+    autorizar("gestor", "POST", ["agentes", "ag_1", "lotes"], { nome: "Fretes" });
+    autorizar("gestor", "POST", ["lotes", "lot_1", "arquivos"]);
+    autorizar("gestor", "POST", ["lotes", "lot_1", "fechar"]);
+    autorizar("gestor", "DELETE", ["lotes", "lot_1"]);
+    expect(() => autorizar("supervisor", "GET", ["lotes"])).toThrow(AcessoNegado);
+    expect(() => autorizar("supervisor", "POST", ["agentes", "ag_1", "lotes"], {})).toThrow(
+      AcessoNegado,
+    );
+    expect(() => autorizar("funcionario", "GET", ["lotes"])).toThrow(AcessoNegado);
+  });
+
   test("financeiro do iFood: gestor lê e atualiza; supervisor não", () => {
     autorizar("gestor", "GET", ["ifood", "financeiro"]);
     autorizar("gestor", "POST", ["ifood", "financeiro", "atualizar"]);

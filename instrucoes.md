@@ -1,3 +1,11 @@
+## LOTE1-a: lotes de notas no painel (11/11/2026)
+
+- Aba **Lotes** em Documentos (`/ia/documentos/lotes` e `/ia/documentos/lotes/$loteId`), gestor+.
+- API: `src/lib/gateway/lotes.ts` + `.server.ts` + `gateway-lotes.functions.ts`; regras GEST em `modulo.server.ts`.
+- UI: lista, novo lote (agentes com `documentos.ativo`), drop/envio sequencial, poll 3 s, abas Notas/Arquivos, fechar, apagar.
+- Proxy Caddy: 11 MiB também em `/gateway/admin/v1/tenants/*/lotes/*/arquivos`.
+- Supervisor não autoriza rotas de lote (teste em `modulo.test.ts`).
+
 ## Liberar acesso (confirmar + ativar) (11/11/2026)
 
 - Em Usuários da empresa, gestor/plataforma vê **Confirmar e liberar acesso** quando o e-mail não está confirmado ou a conta está inativa. Confirma o e-mail, ativa o vínculo, encerra convite pendente e pode definir a senha na hora.

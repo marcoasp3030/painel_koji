@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { peloMenos } from "@/lib/acesso/papeis";
 import { PaginaGateway, type ContextoGateway } from "@/components/luxtia/Gateway";
+import { AbasDocumentos } from "@/components/luxtia/documentos/AbasDocumentos";
 import { DocumentosTela } from "@/components/luxtia/documentos/Documentos";
 import {
   apagarDocumento,
@@ -124,7 +125,9 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
   });
   const itens = [...(lista.data ?? []), ...extras];
   return (
-    <DocumentosTela
+    <>
+      <AbasDocumentos ativa="recebidos" />
+      <DocumentosTela
       itens={itens}
       filtro={filtro}
       onFiltro={(f) => {
@@ -156,5 +159,6 @@ function Tela({ ctx }: { ctx: ContextoGateway }) {
       onBaixar={(id) => baixar.mutate(id)}
       onApagar={(id) => apagar.mutate(id)}
     />
+    </>
   );
 }

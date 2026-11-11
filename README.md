@@ -151,7 +151,11 @@ Admin e plataforma conversam com o agente por um canal API, sem enviar nada ao c
 
 ## Documentos
 
-`/ia/documentos` lista os arquivos recebidos. Estado, tipo e período (de/até, dia de Brasília, dd/mm/aaaa) vão ao gateway em `GET /anexos`. O detalhe mostra os campos com rótulo, valor em R$ e data em dd/mm/aaaa, Copiar na linha digitável, no código de barras, na chave de acesso e no ID da transação, os itens da NF-e em tabela e “Apagado automaticamente em” quando há validade. Comprovante PIX traz o aviso de que o pagamento não foi verificado. Admin e plataforma apagam, com o botão em estilo de perigo; o membro só consulta. `/ia/chaves-formulario` cria a chave presa a um agente, com sites permitidos e limite por minuto. O valor aparece uma vez, com Copiar. Revogar pede confirmação e fica com admin e plataforma.
+`/ia/documentos` lista os arquivos recebidos (aba **Recebidos**). Estado, tipo e período (de/até, dia de Brasília, dd/mm/aaaa) vão ao gateway em `GET /anexos`. O detalhe mostra os campos com rótulo, valor em R$ e data em dd/mm/aaaa, Copiar na linha digitável, no código de barras, na chave de acesso e no ID da transação, os itens da NF-e em tabela e “Apagado automaticamente em” quando há validade. Comprovante PIX traz o aviso de que o pagamento não foi verificado. Admin e plataforma apagam, com o botão em estilo de perigo; o membro só consulta. `/ia/chaves-formulario` cria a chave presa a um agente, com sites permitidos e limite por minuto. O valor aparece uma vez, com Copiar. Revogar pede confirmação e fica com admin e plataforma.
+
+### Lotes (LOTE1-a)
+
+Aba **Lotes** em `/ia/documentos/lotes` (gestor e plataforma; supervisor não vê). Cria lote por agente com documentos ligados, envia PDF/XML/ZIP **um por requisição** (barra por arquivo), consulta progresso a cada 3 s enquanto houver fila, abas Notas e Arquivos, fechar e apagar. Motivos de recusa (ZIP, XML, limite, lote fechado…) em português. Ajuda na tela: leitura sem atrasar atendimentos; PDF escaneado = sem texto; XML NFS-e nacional ainda não — envie o PDF.
 
 Na chave de API da empresa, nenhum escopo vem marcado. “Resposta assíncrona (em breve)” aparece desabilitada. “Enviar documentos” pode ser marcado na criação e vale em servidor ou integração.
 
@@ -159,7 +163,7 @@ Na chave de API da empresa, nenhum escopo vem marcado. “Resposta assíncrona (
 
 `/ia/webhooks-saida`, para admin e plataforma, cria a URL e os eventos. Entram documento pronto, documento falhou, documento apagado, resposta do agente, follow-up agendado, follow-up cancelado e follow-up em ensaio, além dos eventos de pedido que já existiam. O webhook novo nasce ativo. O segredo HMAC aparece uma vez, no mesmo aviso da chave de formulário. “Gerar novo segredo” aparece para admin e plataforma, com confirmação de que o segredo antigo vale mais 24 horas. O novo aparece uma vez. Enquanto o anterior ainda assina, a lista mostra até quando. A tela testa o envio e mostra as últimas entregas.
 
-O proxy aceita até 11 MiB só em `/gateway/api/v1/documentos` e subcaminhos. O restante de `/gateway/api/*` continua em 2 MiB.
+O proxy aceita até 11 MiB em `/gateway/api/v1/documentos` e em `/gateway/admin/v1/tenants/*/lotes/*/arquivos`. O restante de `/gateway/api/*` continua em 2 MiB.
 
 Prints com dados fictícios: `docs/prints-arq-fup/` (`tests/visual/arq-fup/capturar.cjs`). Publicado em 22/10/2026 como `painel:arq-fup-20261022`. A volta é `painel:pedidos-20261020`.
 

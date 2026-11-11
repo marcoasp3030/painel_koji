@@ -330,6 +330,21 @@ const REGRAS: Regra[] = [
   { metodo: "GET", caminho: ["anexos", "*", "texto"], papeis: GEST },
   { metodo: "GET", caminho: ["anexos", "*", "original"], papeis: GEST },
   { metodo: "DELETE", caminho: ["anexos", "*"], papeis: GEST },
+  // LOTE1-a: envio de notas em lote (gestor e acima, como os documentos).
+  { metodo: "GET", caminho: ["lotes"], papeis: GEST },
+  {
+    metodo: "POST",
+    caminho: ["agentes", "*", "lotes"],
+    papeis: GEST,
+    corpo: soChaves(["nome"], "Campos do lote inválidos."),
+  },
+  { metodo: "GET", caminho: ["lotes", "*"], papeis: GEST },
+  // Multipart: o arquivo vai em formulario; corpo JSON fica vazio.
+  { metodo: "POST", caminho: ["lotes", "*", "arquivos"], papeis: GEST },
+  { metodo: "GET", caminho: ["lotes", "*", "arquivos"], papeis: GEST },
+  { metodo: "GET", caminho: ["lotes", "*", "notas"], papeis: GEST },
+  { metodo: "POST", caminho: ["lotes", "*", "fechar"], papeis: GEST, corpo: semCorpo },
+  { metodo: "DELETE", caminho: ["lotes", "*"], papeis: GEST },
   { metodo: "GET", caminho: ["chaves-formulario"], papeis: GEST },
   {
     metodo: "POST",
