@@ -63,14 +63,19 @@ function Tela({
   return (
     <div className="mx-auto max-w-5xl p-6">
       <UsuariosTela
-        empresa="Luxbrain Testes"
         concediveis={concediveis}
+        podeRedefinirSenha
+        podeDefinirSenha
         unidades={unidadesTela}
         usuarios={lista}
         onConvidar={noop}
+        onCriarComSenha={noop}
         onAlterar={noop}
         onReenviar={noop}
         onRevogar={noop}
+        onRedefinirSenha={noop}
+        onDefinirSenha={noop}
+        onFecharLink={noop}
         linkConvite={link}
         convitePorEmail={false}
       />

@@ -10,6 +10,8 @@ import { gerarLinkRedefinicao } from "@/lib/entrada.functions";
 import {
   alterarUsuario,
   convidarUsuario,
+  criarUsuarioComSenha,
+  definirSenhaUsuario,
   listarUsuarios,
   reenviarConvite,
   revogarConvite,
@@ -18,8 +20,11 @@ import {
 export const Route = createFileRoute("/_authenticated/equipe")({
   head: () => ({
     meta: [
-      { title: "Usuários | Luxbrain" },
-      { name: "description", content: "Convide pessoas e defina papel e unidades." },
+      { title: "Usuários da empresa | Luxbrain" },
+      {
+        name: "description",
+        content: "Crie e gerencie pessoas da empresa: papel, unidades, senha e ativação.",
+      },
     ],
   }),
   component: Pagina,
@@ -27,7 +32,11 @@ export const Route = createFileRoute("/_authenticated/equipe")({
 
 function Pagina() {
   return (
-    <PaginaGateway titulo="Usuários" telaCheia papeis={["plataforma", "gestor", "supervisor"]}>
+    <PaginaGateway
+      titulo="Usuários da empresa"
+      telaCheia
+      papeis={["plataforma", "gestor", "supervisor"]}
+    >
       {(ctx) => <Equipe ctx={ctx} />}
     </PaginaGateway>
   );
@@ -37,6 +46,8 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
   const cache = useQueryClient();
   const listar = useServerFn(listarUsuarios);
   const convidar = useServerFn(convidarUsuario);
+  const criarSenha = useServerFn(criarUsuarioComSenha);
+  const definirSenha = useServerFn(definirSenhaUsuario);
   const alterar = useServerFn(alterarUsuario);
   const reenviar = useServerFn(reenviarConvite);
   const revogar = useServerFn(revogarConvite);
@@ -48,6 +59,8 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
     queryFn: () => listar({ data: { empresa: ctx.empresa } }),
   });
   const invalida = () => cache.invalidateQueries({ queryKey: ["usuarios", ctx.empresa] });
+  const podeSenha = peloMenos(q.data?.papel, "gestor");
+
   const criar = useMutation({
     mutationFn: (d: {
       email: string;
@@ -59,6 +72,20 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
       setLink(r.link);
       setAviso(r.link ? null : r.aviso);
       toast.success(r.link ? "Link gerado." : r.aviso ? "Acesso gravado." : "Convite enviado.");
+      void invalida();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const criarComSenha = useMutation({
+    mutationFn: (d: {
+      email: string;
+      nome: string;
+      papel: "gestor" | "supervisor" | "funcionario";
+      unidades: string[];
+      senha: string;
+    }) => criarSenha({ data: { ...d, empresa: ctx.empresa } }),
+    onSuccess: () => {
+      toast.success("Usuário criado com senha.");
       void invalida();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -107,6 +134,15 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const senhaDireta = useMutation({
+    mutationFn: (d: { id: string; senha: string }) =>
+      definirSenha({ data: { ...d, empresa: ctx.empresa } }),
+    onSuccess: () => {
+      toast.success("Senha atualizada.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (q.isPending) return <p className="p-4 text-sm text-ink-500">Carregando usuários…</p>;
   if (q.isError)
     return (
@@ -117,24 +153,29 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
   return (
     <UsuariosTela
       concediveis={q.data.concediveis}
-      podeRedefinirSenha={peloMenos(q.data.papel, "gestor")}
+      podeRedefinirSenha={podeSenha}
+      podeDefinirSenha={podeSenha}
       unidades={q.data.unidades}
       usuarios={q.data.usuarios}
       ocupado={
         criar.isPending ||
+        criarComSenha.isPending ||
         mudar.isPending ||
         deNovo.isPending ||
         revogarUm.isPending ||
-        novaSenha.isPending
+        novaSenha.isPending ||
+        senhaDireta.isPending
       }
       aviso={aviso}
       linkConvite={link}
       convitePorEmail={q.data.convitePorEmail}
       onConvidar={(d, pronto) => criar.mutate(d, { onSuccess: pronto })}
+      onCriarComSenha={(d, pronto) => criarComSenha.mutate(d, { onSuccess: pronto })}
       onAlterar={(d, pronto) => mudar.mutate(d, { onSuccess: pronto })}
       onReenviar={(id) => deNovo.mutate(id)}
       onRevogar={(id) => revogarUm.mutate(id)}
       onRedefinirSenha={(userId) => novaSenha.mutate(userId)}
+      onDefinirSenha={(d, pronto) => senhaDireta.mutate(d, { onSuccess: pronto })}
       onFecharLink={() => {
         setLink(null);
         setAviso(null);

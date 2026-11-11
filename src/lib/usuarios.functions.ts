@@ -303,6 +303,169 @@ export const convidarUsuario = createServerFn({ method: "POST" })
     return { ok: true as const, aviso, link };
   });
 
+/** Cria ou vincula a pessoa já com senha definida — entra sem passar pelo convite. */
+export const criarUsuarioComSenha = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    convite
+      .extend({
+        senha: z.string().min(SENHA_MIN).max(SENHA_MAX),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { t, tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
+    if (!podeConceder(t.papel, data.papel)) throw new Error("Você não pode conceder este papel.");
+    if (!peloMenos(t.papel, "gestor")) {
+      throw new Error("Só gestor ou plataforma define a senha na criação.");
+    }
+    if (data.papel !== "gestor" && data.unidades.length === 0) {
+      throw new Error("Escolha ao menos uma unidade.");
+    }
+    const erroSenha = validarSenhaNova(data.senha);
+    if (erroSenha) throw new Error(erroSenha);
+    const existentes = await unidadesDaEmpresa(t);
+    conferirUnidades(t.unidades, data.unidades, existentes);
+    const email = data.email.trim().toLowerCase();
+    if (email === EMAIL_CONTA_EMERGENCIA) {
+      throw new Error("A conta de emergência não se cria por aqui.");
+    }
+
+    const { data: existenteId } = await supabaseAdmin.rpc("usuario_id_por_email", { alvo: email });
+    let usuarioId = (existenteId as string | null) ?? null;
+    let criadoAgora = false;
+
+    if (!usuarioId) {
+      const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: data.senha,
+        email_confirm: true,
+        user_metadata: { full_name: data.nome ?? null },
+      });
+      if (error || !created?.user) {
+        throw new Error(error?.message ?? "Não foi possível criar a conta.");
+      }
+      usuarioId = created.user.id;
+      criadoAgora = true;
+    } else {
+      const upd = await supabaseAdmin.auth.admin.updateUserById(usuarioId, {
+        password: data.senha,
+        email_confirm: true,
+        ...(data.nome ? { user_metadata: { full_name: data.nome } } : {}),
+      });
+      if (upd.error) throw new Error("Não foi possível gravar a senha desta conta.");
+    }
+
+    const { data: ja } = await supabaseAdmin
+      .from("tenant_users")
+      .select("id")
+      .eq("tenant_id", tenant.id)
+      .eq("user_id", usuarioId)
+      .maybeSingle();
+    if (ja) {
+      if (criadoAgora) await supabaseAdmin.auth.admin.deleteUser(usuarioId);
+      throw new Error("Esta pessoa já tem acesso nesta empresa. Use Trocar senha no detalhe.");
+    }
+
+    const papelId = await papelSistema(supabaseAdmin, data.papel);
+    const { data: criado, error } = await supabaseAdmin
+      .from("tenant_users")
+      .insert({
+        tenant_id: tenant.id,
+        user_id: usuarioId,
+        email,
+        full_name: data.nome ?? null,
+        is_tenant_admin: data.papel === "gestor",
+        papel_id: papelId,
+        ativo: true,
+        convidado_em: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (error || !criado) {
+      if (criadoAgora) await supabaseAdmin.auth.admin.deleteUser(usuarioId);
+      throw new Error(error?.message ?? "Não foi possível gravar o acesso.");
+    }
+    await supabaseAdmin.from("user_roles").upsert(
+      {
+        user_id: usuarioId,
+        role: data.papel === "gestor" ? "tenant_admin" : "tenant_user",
+      },
+      { onConflict: "user_id,role" },
+    );
+    if (data.papel !== "gestor") {
+      await supabaseAdmin
+        .from("usuario_unidades")
+        .insert(
+          data.unidades.map((unidade_codigo) => ({
+            tenant_user_id: criado.id,
+            unidade_codigo,
+          })),
+        );
+    }
+    await supabaseAdmin
+      .from("convites")
+      .update({ revogado_em: new Date().toISOString() })
+      .eq("tenant_user_id", criado.id)
+      .is("usado_em", null)
+      .is("revogado_em", null);
+
+    const { auditarPainel } = await import("./gateway/painel.server");
+    await auditarPainel(sessao, {
+      tenantId: tenant.id,
+      action: "Criação de usuário com senha",
+      target: email,
+      detail: data.papel,
+    });
+    return { ok: true as const, user_id: usuarioId, criado: criadoAgora };
+  });
+
+/** Gestor/plataforma define ou troca a senha de alguém da empresa. */
+export const definirSenhaUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        id: z.string().uuid(),
+        senha: z.string().min(SENHA_MIN).max(SENHA_MAX),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { t, tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
+    if (!peloMenos(t.papel, "gestor")) {
+      throw new Error("Só gestor ou plataforma redefine a senha.");
+    }
+    const erroSenha = validarSenhaNova(data.senha);
+    if (erroSenha) throw new Error(erroSenha);
+    const { data: row, error } = await supabaseAdmin
+      .from("tenant_users")
+      .select("id, user_id, email, tenant_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !row || row.tenant_id !== tenant.id) throw new Error("Usuário não encontrado.");
+    if (row.user_id === sessao.perfil.userId) {
+      throw new Error("Para a sua senha, use Esqueci a senha na entrada.");
+    }
+    if (row.email.trim().toLowerCase() === EMAIL_CONTA_EMERGENCIA) {
+      throw new Error("A senha da conta de emergência não se altera por aqui.");
+    }
+    await conferirAlvo(supabaseAdmin, t, row.id);
+    const upd = await supabaseAdmin.auth.admin.updateUserById(row.user_id, {
+      password: data.senha,
+    });
+    if (upd.error) throw new Error("Não foi possível gravar a nova senha.");
+    await supabaseAdmin.rpc("derrubar_sessoes", { uid: row.user_id });
+    const { auditarPainel } = await import("./gateway/painel.server");
+    await auditarPainel(sessao, {
+      tenantId: tenant.id,
+      action: "Definição de senha",
+      target: row.email,
+    });
+    return { ok: true as const };
+  });
+
 export const alterarUsuario = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

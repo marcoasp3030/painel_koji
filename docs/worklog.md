@@ -1,3 +1,18 @@
+## [2026-11-11 13:50] — Usuários da empresa: senha e ativação
+- **Autor:** Auto
+- **Objetivo:** Criar/gerenciar usuários da empresa com senha, ativar/desativar e trocar senha.
+- **Arquivos alterados:**
+ - `src/lib/usuarios.functions.ts` — criado — `criarUsuarioComSenha`, `definirSenhaUsuario`
+ - `src/components/luxtia/Usuarios.tsx` — modificado — Novo usuário, modo senha/convite, Trocar senha
+ - `src/routes/_authenticated/equipe.tsx` — modificado — liga as novas ações
+ - `tests/visual/usuarios/main.tsx`, `instrucoes.md`, `docs/worklog.md`
+- **Resumo das mudanças:** Gestor/plataforma cria com senha ou convite; no detalhe troca senha, gera link, desativa/reativa.
+- **Decisões e justificativas:** Supervisor mantém só convite; senha direta exige gestor+.
+- **Comandos executados:** testes acesso/senha → OK; publicar → (a seguir)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** testar em Usuários da empresa com uma empresa selecionada
+
 ## [2026-11-11 12:05] — Usuários da plataforma (super admin)
 - **Autor:** Auto
 - **Objetivo:** Opção organizada no menu para criar/gerenciar perfil super admin.

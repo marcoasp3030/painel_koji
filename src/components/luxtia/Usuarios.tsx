@@ -3,6 +3,8 @@ import { useState } from "react";
 import { ChevronRight, Copy, Search, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Etiqueta } from "@/components/luxtia/Gateway";
+import { CampoSenha } from "@/components/luxtia/entrada/CampoSenha";
+import { MedidorSenha } from "@/components/luxtia/entrada/MedidorSenha";
 import { ChipFiltro } from "@/components/luxtia/Superficie";
 import {
   AlertDialog,
@@ -87,6 +89,7 @@ function textoUnidades(u: UsuarioLinha, unidades: Unidade[]) {
 export function UsuariosTela({
   concediveis,
   podeRedefinirSenha,
+  podeDefinirSenha = false,
   unidades,
   usuarios,
   ocupado,
@@ -94,14 +97,18 @@ export function UsuariosTela({
   linkConvite,
   convitePorEmail = false,
   onConvidar,
+  onCriarComSenha,
   onAlterar,
   onReenviar,
   onRevogar,
   onRedefinirSenha,
+  onDefinirSenha,
   onFecharLink,
 }: {
   concediveis: PapelAcesso[];
   podeRedefinirSenha: boolean;
+  /** Gestor/plataforma: cria e troca senha direto. */
+  podeDefinirSenha?: boolean;
   unidades: Unidade[];
   usuarios: UsuarioLinha[];
   ocupado?: boolean;
@@ -112,6 +119,10 @@ export function UsuariosTela({
     d: { email: string; nome: string; papel: Papel; unidades: string[] },
     pronto: () => void,
   ) => void;
+  onCriarComSenha: (
+    d: { email: string; nome: string; papel: Papel; unidades: string[]; senha: string },
+    pronto: () => void,
+  ) => void;
   onAlterar: (
     d: { id: string; papel?: Papel; unidades?: string[]; ativo?: boolean },
     pronto: () => void,
@@ -119,6 +130,7 @@ export function UsuariosTela({
   onReenviar: (id: string) => void;
   onRevogar: (id: string) => void;
   onRedefinirSenha: (userId: string) => void;
+  onDefinirSenha: (d: { id: string; senha: string }, pronto: () => void) => void;
   onFecharLink: () => void;
 }) {
   const [busca, setBusca] = useState("");
@@ -206,7 +218,7 @@ export function UsuariosTela({
           onClick={() => setConvidando(true)}
         >
           <UserPlus className="size-4" aria-hidden />
-          Convidar
+          Novo usuário
         </Button>
       </div>
 
@@ -236,7 +248,7 @@ export function UsuariosTela({
           <p className="p-4 text-sm text-ink-500">
             {filtrando
               ? "Ninguém com esses filtros."
-              : "Ninguém nesta empresa. O primeiro convite aparece aqui."}
+              : "Ninguém nesta empresa. Crie o primeiro usuário acima."}
           </p>
         )}
       </div>
@@ -244,19 +256,21 @@ export function UsuariosTela({
       <Sheet open={convidando} onOpenChange={setConvidando}>
         <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
           <SheetHeader className="border-b border-base-200 px-4 py-3 text-left">
-            <SheetTitle>Convidar pessoa</SheetTitle>
+            <SheetTitle>Novo usuário</SheetTitle>
             <SheetDescription>
-              {convitePorEmail
-                ? "O convite chega por e-mail. A senha não é definida aqui."
-                : "O e-mail não está configurado. O link do convite aparece uma vez, vale 24 horas e pode ser revogado."}
+              Defina papel e unidades. Com senha, a pessoa já entra; sem senha, ela recebe um
+              convite.
             </SheetDescription>
           </SheetHeader>
           {convidando ? (
-            <FormConvite
+            <FormNovoUsuario
               papeis={papeis}
               unidades={unidades}
               ocupado={ocupado}
+              podeDefinirSenha={podeDefinirSenha}
+              convitePorEmail={convitePorEmail}
               convidar={(d) => onConvidar(d, () => setConvidando(false))}
+              criarComSenha={(d) => onCriarComSenha(d, () => setConvidando(false))}
             />
           ) : null}
         </SheetContent>
@@ -273,11 +287,13 @@ export function UsuariosTela({
               ocupado={ocupado}
               convitePorEmail={convitePorEmail}
               podeRedefinirSenha={podeRedefinirSenha}
+              podeDefinirSenha={podeDefinirSenha}
               aviso={aviso_}
               onAlterar={onAlterar}
               onReenviar={onReenviar}
               onRevogar={onRevogar}
               onRedefinirSenha={onRedefinirSenha}
+              onDefinirSenha={onDefinirSenha}
               fechar={() => setAbertoId(null)}
             />
           ) : null}
@@ -471,30 +487,47 @@ function EscolhaUnidades({
   );
 }
 
-function FormConvite({
+function FormNovoUsuario({
   papeis,
   unidades,
   ocupado,
+  podeDefinirSenha,
+  convitePorEmail,
   convidar,
+  criarComSenha,
 }: {
   papeis: Papel[];
   unidades: Unidade[];
   ocupado?: boolean | undefined;
+  podeDefinirSenha: boolean;
+  convitePorEmail: boolean;
   convidar: (d: { email: string; nome: string; papel: Papel; unidades: string[] }) => void;
+  criarComSenha: (d: {
+    email: string;
+    nome: string;
+    papel: Papel;
+    unidades: string[];
+    senha: string;
+  }) => void;
 }) {
   const [email, setEmail] = useState("");
   const [nome, setNome] = useState("");
-  // Começa pelo menor acesso: dar mais poder precisa ser uma escolha.
   const [papel, setPapel] = useState<Papel>(papeis[papeis.length - 1] ?? "funcionario");
   const [escolhidas, setEscolhidas] = useState<string[]>([]);
+  const [modo, setModo] = useState<"senha" | "convite">(podeDefinirSenha ? "senha" : "convite");
+  const [senha, setSenha] = useState("");
   const gestor = papel === "gestor";
   const faltaUnidade = !gestor && escolhidas.length === 0;
+  const comSenha = podeDefinirSenha && modo === "senha";
   return (
     <form
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!faltaUnidade) convidar({ email, nome, papel, unidades: gestor ? [] : escolhidas });
+        if (faltaUnidade) return;
+        const base = { email, nome, papel, unidades: gestor ? [] : escolhidas };
+        if (comSenha) criarComSenha({ ...base, senha });
+        else convidar(base);
       }}
     >
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -523,13 +556,72 @@ function FormConvite({
         ) : (
           <EscolhaUnidades unidades={unidades} valor={escolhidas} mudar={setEscolhidas} />
         )}
+        {podeDefinirSenha ? (
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-ink-900">Senha de acesso</legend>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={modo === "senha"}
+                onClick={() => setModo("senha")}
+                className={`h-8 rounded-md border px-3 text-sm ${
+                  modo === "senha"
+                    ? "border-purple-700 bg-purple-50 font-medium text-purple-800"
+                    : "border-base-200 bg-card text-ink-700"
+                }`}
+              >
+                Definir agora
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={modo === "convite"}
+                onClick={() => setModo("convite")}
+                className={`h-8 rounded-md border px-3 text-sm ${
+                  modo === "convite"
+                    ? "border-purple-700 bg-purple-50 font-medium text-purple-800"
+                    : "border-base-200 bg-card text-ink-700"
+                }`}
+              >
+                Convite (pessoa define)
+              </button>
+            </div>
+            {modo === "senha" ? (
+              <>
+                <CampoSenha
+                  id="novo-usuario-senha"
+                  label="Senha inicial"
+                  value={senha}
+                  onChange={setSenha}
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
+                />
+                <MedidorSenha senha={senha} />
+              </>
+            ) : (
+              <p className="text-xs text-ink-500">
+                {convitePorEmail
+                  ? "O convite chega por e-mail; a senha não é definida aqui."
+                  : "O link do convite aparece uma vez, vale 24 horas e pode ser revogado."}
+              </p>
+            )}
+          </fieldset>
+        ) : (
+          <p className="text-xs text-ink-500">
+            {convitePorEmail
+              ? "O convite chega por e-mail; a senha não é definida aqui."
+              : "O link do convite aparece uma vez, vale 24 horas e pode ser revogado."}
+          </p>
+        )}
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-base-200 p-3">
         {faltaUnidade ? (
           <p className="mr-auto text-xs text-ink-500">Escolha ao menos uma unidade.</p>
         ) : null}
-        <Button type="submit" disabled={ocupado || faltaUnidade}>
-          Enviar convite
+        <Button type="submit" disabled={ocupado || faltaUnidade || (comSenha && !senha)}>
+          {comSenha ? "Criar usuário" : "Enviar convite"}
         </Button>
       </div>
     </form>
@@ -543,11 +635,13 @@ function PainelUsuario({
   ocupado,
   convitePorEmail,
   podeRedefinirSenha,
+  podeDefinirSenha,
   aviso,
   onAlterar,
   onReenviar,
   onRevogar,
   onRedefinirSenha,
+  onDefinirSenha,
   fechar,
 }: {
   usuario: UsuarioLinha;
@@ -556,6 +650,7 @@ function PainelUsuario({
   ocupado?: boolean | undefined;
   convitePorEmail: boolean;
   podeRedefinirSenha: boolean;
+  podeDefinirSenha: boolean;
   aviso: React.ReactNode;
   onAlterar: (
     d: { id: string; papel?: Papel; unidades?: string[]; ativo?: boolean },
@@ -564,12 +659,15 @@ function PainelUsuario({
   onReenviar: (id: string) => void;
   onRevogar: (id: string) => void;
   onRedefinirSenha: (userId: string) => void;
+  onDefinirSenha: (d: { id: string; senha: string }, pronto: () => void) => void;
   fechar: () => void;
 }) {
   const visiveis = new Set(unidades.map((x) => x.codigo));
   const [papel, setPapel] = useState<Papel>(u.papel === "plataforma" ? "gestor" : u.papel);
   const [escolhidas, setEscolhidas] = useState(u.unidades.filter((c) => visiveis.has(c)));
   const [confirmar, setConfirmar] = useState<"desativar" | "revogar" | null>(null);
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
+  const [senhaNova, setSenhaNova] = useState("");
   const foraDoAlcance = u.unidades.filter((c) => !visiveis.has(c)).length;
   const gestor = papel === "gestor";
   const original = u.unidades.filter((c) => visiveis.has(c));
@@ -642,39 +740,9 @@ function PainelUsuario({
         )}
 
         {u.podeGerir ? (
-          <section className="space-y-1.5 border-t border-base-200 pt-3" aria-label="Acesso">
-            <h3 className="text-sm font-medium text-ink-900">Acesso</h3>
+          <section className="space-y-2 border-t border-base-200 pt-3" aria-label="Acesso">
+            <h3 className="text-sm font-medium text-ink-900">Acesso e senha</h3>
             <div className="flex flex-wrap gap-1.5">
-              {!u.ultimo_acesso ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={ocupado}
-                  onClick={() => onReenviar(u.id)}
-                >
-                  {convitePorEmail ? "Reenviar convite" : "Gerar novo link"}
-                </Button>
-              ) : null}
-              {u.ultimo_acesso && podeRedefinirSenha ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={ocupado}
-                  onClick={() => onRedefinirSenha(u.user_id)}
-                >
-                  Link de nova senha
-                </Button>
-              ) : null}
-              {u.convitePendente ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={ocupado}
-                  onClick={() => setConfirmar("revogar")}
-                >
-                  Revogar convite
-                </Button>
-              ) : null}
               {u.ativo ? (
                 <Button
                   variant="outline"
@@ -695,7 +763,79 @@ function PainelUsuario({
                   Reativar
                 </Button>
               )}
+              {podeDefinirSenha ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ocupado}
+                  onClick={() => {
+                    setTrocandoSenha((v) => !v);
+                    setSenhaNova("");
+                  }}
+                >
+                  {trocandoSenha ? "Cancelar senha" : "Trocar senha"}
+                </Button>
+              ) : null}
+              {podeRedefinirSenha ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ocupado}
+                  onClick={() => onRedefinirSenha(u.user_id)}
+                >
+                  Link de nova senha
+                </Button>
+              ) : null}
+              {!u.ultimo_acesso || u.convitePendente ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ocupado}
+                  onClick={() => onReenviar(u.id)}
+                >
+                  {convitePorEmail ? "Reenviar convite" : "Gerar novo link"}
+                </Button>
+              ) : null}
+              {u.convitePendente ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ocupado}
+                  onClick={() => setConfirmar("revogar")}
+                >
+                  Revogar convite
+                </Button>
+              ) : null}
             </div>
+            {trocandoSenha && podeDefinirSenha ? (
+              <form
+                className="space-y-2 rounded-md border border-base-200 bg-base-50 p-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onDefinirSenha({ id: u.id, senha: senhaNova }, () => {
+                    setTrocandoSenha(false);
+                    setSenhaNova("");
+                  });
+                }}
+              >
+                <CampoSenha
+                  id={`senha-${u.id}`}
+                  label="Nova senha"
+                  value={senhaNova}
+                  onChange={setSenhaNova}
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
+                />
+                <MedidorSenha senha={senhaNova} />
+                <p className="text-xs text-ink-500">
+                  As sessões abertas desta pessoa são encerradas ao salvar.
+                </p>
+                <Button type="submit" size="sm" disabled={ocupado || !senhaNova}>
+                  Salvar senha
+                </Button>
+              </form>
+            ) : null}
           </section>
         ) : null}
       </div>

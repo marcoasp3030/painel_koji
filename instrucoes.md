@@ -1,3 +1,8 @@
+## Usuários da empresa: senha e ativação (11/11/2026)
+
+- Em `/equipe` (**Usuários da empresa**): **Novo usuário** com “Definir agora” (senha) ou “Convite”; no detalhe: Desativar/Reativar, Trocar senha, Link de nova senha, convite.
+- API: `criarUsuarioComSenha`, `definirSenhaUsuario` (gestor+). Supervisor continua só com convite.
+
 ## Usuários da plataforma / super admin (11/11/2026)
 
 - Menu Gestão (Super Admin): **Usuários** → `/admin/usuarios` (criar/listar/remover super admin); **Usuários da empresa** → `/equipe` (equipe do cliente).
