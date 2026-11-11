@@ -7,7 +7,7 @@
  - `docs/worklog.md`, `instrucoes.md` — registro
 - **Resumo das mudanças:** Contas criadas por convite vinham sem `email_confirmed_at`; ao trocar senha o GoTrue ainda recusava o login. Agora a definição de senha confirma o e-mail.
 - **Decisões e justificativas:** Mesmo padrão do aceite de convite e da criação com senha.
-- **Comandos executados:** diagnóstico auth → `demo@demo.com` confirmado=false; PUT email_confirm → OK; publicar → (a seguir)
+- **Comandos executados:** diagnóstico auth → `demo@demo.com` confirmado=false; PUT email_confirm → OK; publicar → OK
 - **Erros e resoluções:** `entrada.login_falhou` demo@demo.com → causa e-mail não confirmado
 - **Pendências / TODO:** —
 - **Próximos passos:** usuário demo entrar de novo com a senha definida
