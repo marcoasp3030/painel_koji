@@ -1,3 +1,8 @@
+## Simular: lote e FTP no clipe (11/11/2026)
+
+- No Simular conversa, com documentos ligados, o clipe abre menu: **Anexar na conversa**, **Enviar em lote** (gestor+; cria lote e manda PDF/XML/ZIP em sequência) e **Pasta FTP** (em breve — SFTP após LOTE1-b).
+- Barra mostra progresso do lote; toast com atalho para abrir o lote.
+
 ## LOTE1-a: lotes de notas no painel (11/11/2026)
 
 - Aba **Lotes** em Documentos (`/ia/documentos/lotes` e `/ia/documentos/lotes/$loteId`), gestor+.

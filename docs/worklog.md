@@ -1,3 +1,17 @@
+## [2026-11-11 19:49] — Simular: opções lote e FTP no clipe
+- **Autor:** Auto
+- **Objetivo:** No Simular conversa, opções de enviar em lote e pasta FTP.
+- **Arquivos alterados:**
+ - `src/components/luxtia/BarraEnvioSimulador.tsx` — modificado — menu Anexar / Lote / FTP
+ - `src/components/luxtia/Simulador.tsx` — modificado — cria lote e envia em sequência (gestor+)
+ - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
+- **Resumo das mudanças:** Clipe vira menu; lote cria `POST /agentes/{a}/lotes` e manda arquivos um a um; FTP aparece como “Em breve” (SFTP pós LOTE1-b).
+- **Decisões e justificativas:** FTP sem backend ainda — opção visível e desabilitada; lote só gestor+.
+- **Comandos executados:** `bun test` lotes → 4 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** publicar-painel
+- **Próximos passos:** smoke no Simular com agente de documentos
+
 ## [2026-11-11 19:40] — LOTE1-a: envio de notas em lote
 - **Autor:** Auto
 - **Objetivo:** Tela Lotes em Documentos (gestor+), contrato LOTE1-a do gateway.

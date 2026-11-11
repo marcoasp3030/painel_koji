@@ -3,13 +3,16 @@
  * teste). Funciona em Simulação e com a IA real do Skyone; só bloqueia se o
  * envio aos clientes do agente for real. Usada no Simular e no assistente.
  */
-import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { RotateCcw, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
-import { BarraEnvioSimulador } from "@/components/luxtia/BarraEnvioSimulador";
+import {
+  BarraEnvioSimulador,
+  type ProgressoEnvioLote,
+} from "@/components/luxtia/BarraEnvioSimulador";
 import { CartaoDocumentoSimulado } from "@/components/luxtia/documentos/CartaoDocumentoSimulado";
 import { dataHora, type ContextoGateway } from "@/components/luxtia/Gateway";
 import { Button } from "@/components/ui/button";
@@ -21,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { peloMenos } from "@/lib/acesso/papeis";
 import { listarAgentes, obterAgente } from "@/lib/gateway-agentes.functions";
 import { foraDoPiloto } from "@/lib/gateway/agentes";
 import { listarCanais } from "@/lib/gateway-canais.functions";
@@ -31,6 +35,7 @@ import {
   simularDocumento,
   simularMensagem,
 } from "@/lib/gateway-simular.functions";
+import { criarLote, enviarArquivoLote } from "@/lib/gateway-lotes.functions";
 import { temposDeResposta } from "@/lib/gateway/conversa";
 import {
   associarDocumentosDaConversa,
@@ -38,6 +43,7 @@ import {
   lerAnexoDaMensagem,
   mensagemArquivoInvalido,
 } from "@/lib/gateway/documentos";
+import { mensagemArquivoLoteInvalido } from "@/lib/gateway/lotes";
 import { ORIGEM_MENSAGEM, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
 const SUGESTOES = [
@@ -77,6 +83,7 @@ export function Simulador({
   /** Assistente: o agente já vem escolhido e não muda. */
   agenteFixo?: boolean;
 }) {
+  const navegar = useNavigate();
   const listarAg = useServerFn(listarAgentes);
   const obterAg = useServerFn(obterAgente);
   const listarCn = useServerFn(listarCanais);
@@ -85,6 +92,8 @@ export function Simulador({
   const historico = useServerFn(historicoConversa);
   const capacidade = useServerFn(capacidadeDocumentos);
   const listarAnexos = useServerFn(anexosDaConversa);
+  const criarLoteFn = useServerFn(criarLote);
+  const enviarLoteFn = useServerFn(enviarArquivoLote);
 
   const [agente, setAgente] = useState(agenteInicial ?? "");
   const [canal, setCanal] = useState("");
@@ -96,6 +105,9 @@ export function Simulador({
   const [recemEnviados, setRecemEnviados] = useState<
     { id: string; nome: string; estado: string }[]
   >([]);
+  const [enviosLote, setEnviosLote] = useState<ProgressoEnvioLote[]>([]);
+  const [enviandoLote, setEnviandoLote] = useState(false);
+  const [ultimoLoteId, setUltimoLoteId] = useState<string | null>(null);
   const escolhaArquivo = useRef(0);
   const [agora, setAgora] = useState(() => Date.now());
   const fim = useRef<HTMLDivElement>(null);
@@ -141,6 +153,8 @@ export function Simulador({
     enabled: Boolean(agente),
   });
   const podeAnexar = docsLigados.data?.ativo === true;
+  // Lote: mesma capacidade de documentos; só gestor+ (supervisor simula, mas não cria lote).
+  const podeLote = podeAnexar && peloMenos(ctx.papel, "gestor");
 
   const anexos = useQuery({
     queryKey: ["gateway", "anexos-conversa", ctx.empresa, conversa],
@@ -307,10 +321,12 @@ export function Simulador({
     setTexto("");
     setArquivo(null);
     setAviso(null);
+    setEnviosLote([]);
+    setUltimoLoteId(null);
   }
 
   function enviar() {
-    if (bloqueado || envio.isPending || envioDocumento.isPending) return;
+    if (bloqueado || envio.isPending || envioDocumento.isPending || enviandoLote) return;
     if (arquivo) {
       if (texto.trim().length > 2000) {
         setAviso("A mensagem junto do arquivo pode ter até 2000 caracteres.");
@@ -324,11 +340,107 @@ export function Simulador({
     envio.mutate(mensagem);
   }
 
+  const atualizarEnvioLote = useCallback((chave: string, patch: Partial<ProgressoEnvioLote>) => {
+    setEnviosLote((atual) => atual.map((e) => (e.chave === chave ? { ...e, ...patch } : e)));
+  }, []);
+
+  async function enviarEmLote(files: File[]) {
+    if (!agente || !podeLote || enviandoLote || bloqueado) return;
+    setArquivo(null);
+    setAviso(null);
+    setEnviandoLote(true);
+    const base = Date.now();
+    const itensLote: ProgressoEnvioLote[] = files.map((f, i) => ({
+      chave: `${base}-${i}-${f.name}`,
+      nome: f.name,
+      estado: "aguardando",
+      progresso: 0,
+    }));
+    setEnviosLote(itensLote);
+
+    let loteId: string | null = null;
+    try {
+      const lote = await criarLoteFn({
+        data: {
+          empresa: ctx.empresa,
+          acao: "criar",
+          agente_id: agente,
+          nome: `Simular ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`,
+        },
+      });
+      loteId = lote.lote_id;
+      setUltimoLoteId(loteId);
+    } catch (e) {
+      const mensagem = e instanceof Error ? e.message : "Não foi possível criar o lote.";
+      setAviso(mensagem);
+      toast.error(mensagem);
+      setEnviosLote((atual) =>
+        atual.map((item) => ({
+          ...item,
+          estado: "erro",
+          progresso: 100,
+          mensagem,
+        })),
+      );
+      setEnviandoLote(false);
+      return;
+    }
+
+    let ok = 0;
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i]!;
+      const chave = itensLote[i]!.chave;
+      const local = mensagemArquivoLoteInvalido(file.name, file.size);
+      if (local) {
+        atualizarEnvioLote(chave, { estado: "erro", progresso: 100, mensagem: local });
+        continue;
+      }
+      atualizarEnvioLote(chave, { estado: "enviando", progresso: 20 });
+      try {
+        const base64 = await arquivoEmBase64(file);
+        atualizarEnvioLote(chave, { progresso: 55 });
+        await enviarLoteFn({
+          data: {
+            empresa: ctx.empresa,
+            acao: "enviar",
+            lote_id: loteId,
+            nome: file.name,
+            tipo: file.type || "application/octet-stream",
+            base64,
+          },
+        });
+        atualizarEnvioLote(chave, { estado: "ok", progresso: 100 });
+        ok += 1;
+      } catch (e) {
+        const mensagem = e instanceof Error ? e.message : "Não foi possível enviar.";
+        atualizarEnvioLote(chave, { estado: "erro", progresso: 100, mensagem });
+      }
+    }
+
+    setEnviandoLote(false);
+    if (ok > 0 && loteId) {
+      toast.success(
+        `${ok} ${ok === 1 ? "arquivo enviado" : "arquivos enviados"} ao lote.`,
+        {
+          action: {
+            label: "Abrir lote",
+            onClick: () => {
+              void navegar({
+                to: "/ia/documentos/lotes/$loteId",
+                params: { loteId },
+              });
+            },
+          },
+        },
+      );
+    }
+  }
+
   const documentosDaConversa = associarDocumentosDaConversa(itens, anexos.data?.itens ?? []);
   const idsNaLista = new Set(documentosDaConversa.flatMap((d) => (d?.id ? [d.id] : [])));
   const sobrando = recemEnviados.filter((p) => !idsNaLista.has(p.id));
   let cursorPendente = 0;
-  const enviando = envio.isPending || envioDocumento.isPending;
+  const enviando = envio.isPending || envioDocumento.isPending || enviandoLote;
 
   const linkAgente = agente ? (
     <Link
@@ -522,13 +634,16 @@ export function Simulador({
             bloqueado={bloqueado}
             enviando={enviando}
             podeAnexar={podeAnexar}
+            podeLote={podeLote}
             arquivo={arquivo?.name ?? null}
             aviso={aviso}
+            enviosLote={enviosLote}
             onArquivo={escolherArquivo}
             onTirarArquivo={() => {
               setArquivo(null);
               setAviso(null);
             }}
+            onLote={(files) => void enviarEmLote(files)}
             onEnviar={enviar}
           />
         </div>
@@ -550,6 +665,34 @@ export function Simulador({
               {listaTempos.length ? segundos(listaTempos.at(-1)!) : "—"}
             </dd>
           </dl>
+          {podeLote ? (
+            <div className="space-y-1 border-t border-base-200 pt-3 text-xs">
+              <p className="font-medium text-ink-700">Documentos</p>
+              <p>
+                No clipe: anexar na conversa, enviar em lote ou pasta FTP (em breve).
+              </p>
+              {ultimoLoteId ? (
+                <p>
+                  <Link
+                    to="/ia/documentos/lotes/$loteId"
+                    params={{ loteId: ultimoLoteId }}
+                    className="font-medium underline underline-offset-2"
+                  >
+                    Abrir último lote
+                  </Link>
+                </p>
+              ) : (
+                <p>
+                  <Link
+                    to="/ia/documentos/lotes"
+                    className="font-medium underline underline-offset-2"
+                  >
+                    Ver lotes
+                  </Link>
+                </p>
+              )}
+            </div>
+          ) : null}
           {agente ? (
             <div className="space-y-1 border-t border-base-200 pt-3 text-xs">
               <p>{linkAgente}</p>
