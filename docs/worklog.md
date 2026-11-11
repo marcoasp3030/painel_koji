@@ -10,7 +10,7 @@
  - `docs/worklog.md`, `instrucoes.md` — registro
 - **Resumo das mudanças:** Gestão separa super admins da equipe do cliente. Proteções: não remove a si, emergência nem o último.
 - **Decisões e justificativas:** Reusa o nome Usuários no Super Admin; equipe da empresa ganha rótulo explícito para não misturar.
-- **Comandos executados:** `bun test` plataforma-usuarios → 2 OK; publicar → (a seguir)
+- **Comandos executados:** `bun test` plataforma-usuarios → 2 OK; commit `bae244f` + publicar → OK; imagem `painel:bae244f…`
 - **Erros e resoluções:** —
 - **Pendências / TODO:** —
 - **Próximos passos:** abrir Gestão → Usuários e criar um super admin de teste
