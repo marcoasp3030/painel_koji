@@ -1,3 +1,47 @@
+## [2026-11-11 11:44] — Remover menções a n8n
+- **Autor:** Auto
+- **Objetivo:** Eliminar qualquer texto/informação com o nome n8n no painel (e espelho no gateway).
+- **Arquivos alterados:**
+ - `src/lib/gateway/vocabulario.ts` — modificado — ajuda do escopo documentos
+ - `src/routes/_authenticated/ia/documentos.tsx` — modificado — descrição da página
+ - `src/components/luxtia/documentos/Documentos.tsx` — modificado — estado vazio
+ - `tests/visual/arq-fup/main.tsx`, `README.md` — modificado — textos
+ - `docs/worklog.md`, `instrucoes.md` — registro
+- **Resumo das mudanças:** Troca de “n8n” por “integração”/“API” em UI e docs. Gateway: docs/comentários/teste alinhados.
+- **Decisões e justificativas:** Sem referência a ferramenta de terceiros no produto; significado (servidor/API) preservado.
+- **Comandos executados:** busca `n8n` painel+gateway → limpo; publicar-painel → (a seguir)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh em Documentos / Chaves de API
+
+## [2026-11-11 11:41] — Login admin bloqueado por tentativas
+- **Autor:** Auto
+- **Objetivo:** Diagnosticar erro de login de `admin@luxbrain.luxtia.ia.br`.
+- **Arquivos alterados:**
+ - `entrada_tentativas` — removido — 2 chaves do e-mail (bloqueio 15 min)
+ - GoTrue — modificado — senha reconfirmada / e-mail confirmado
+ - `docs/worklog.md`, `instrucoes.md` — registro
+- **Resumo das mudanças:** Falhas de ~09:02–09:06 (antes da conta existir) geraram bloqueio. Conta ok (`super_admin`); login UI → `/admin` OK.
+- **Decisões e justificativas:** Limpar só as chaves desse e-mail; não registrar senha.
+- **Comandos executados:** token password → 200; UI painel.luxbrain.com.br → Super Admin; DELETE entrada_tentativas → OK
+- **Erros e resoluções:** `entrada.bloqueado` / “Muitas tentativas…” → limpeza do bloqueio + reteste
+- **Pendências / TODO:** —
+- **Próximos passos:** usuário entrar em https://painel.luxbrain.com.br/
+
+## [2026-11-11 09:12] — Super admin admin@luxbrain.luxtia.ia.br
+- **Autor:** Auto
+- **Objetivo:** Criar super admin no painel Luxtia, mesmo padrão de marco.santos@ticway.com.br.
+- **Arquivos alterados:**
+ - GoTrue — criado — usuário `admin@luxbrain.luxtia.ia.br` (e-mail confirmado)
+ - `user_roles` — criado — papel `super_admin`
+ - `docs/worklog.md`, `instrucoes.md` — registro
+- **Resumo das mudanças:** Conta de plataforma sem vínculo de cliente; login na API de autenticação OK. Senha não registrada aqui.
+- **Decisões e justificativas:** Igual ao Marco: `super_admin` para acesso de plataforma.
+- **Comandos executados:** POST `/auth/v1/admin/users` → OK (id `761b5ddf-…`); INSERT `user_roles` → 201; login token → 200.
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** entrar em https://painel.luxbrain.com.br/
+
 ## [2026-11-09 11:20] — CARD-LINK: enviar link do cardápio
 - **Autor:** Auto
 - **Objetivo:** Interruptor enviar_link_cardapio (gestor+) em comportamentos e atalho na Aparência.

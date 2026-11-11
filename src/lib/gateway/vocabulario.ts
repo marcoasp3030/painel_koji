@@ -56,7 +56,7 @@ export const ESCOPO: Record<string, { rotulo: string; ajuda: string }> = {
   "documentos:enviar": {
     rotulo: "Enviar documentos",
     ajuda:
-      "O sistema manda boleto, nota ou comprovante para leitura. Vale em servidor ou n8n — o navegador é recusado.",
+      "O sistema manda boleto, nota ou comprovante para leitura. Vale em servidor ou integração — o navegador é recusado.",
   },
 };
 

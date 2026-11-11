@@ -1,3 +1,14 @@
+## Remoção do nome n8n (11/11/2026)
+
+- Textos de UI/docs/teste visual sem “n8n”: Documentos, escopo “Enviar documentos”, README e preview arq-fup usam “integração” ou “API”.
+- Gateway alinhado (ESPEC_ARQ1, ESPEC_NFSE1, comentários, teste ARQ1-a).
+
+## Super admin admin@luxbrain.luxtia.ia.br (11/11/2026)
+
+- Conta criada no GoTrue (e-mail confirmado) com papel `super_admin`, mesmo padrão de `marco.santos@ticway.com.br`.
+- Sem vínculo de cliente (acesso de plataforma). Login na API OK. Senha não fica neste arquivo.
+- Correção: tentativas antes da conta existir geraram bloqueio em `entrada_tentativas` (“Muitas tentativas…”). Bloqueio limpo; login em https://painel.luxbrain.com.br/ → `/admin` (Super Admin) OK.
+
 ## CARD-LINK: enviar link do cardápio na conversa (09/11/2026)
 
 - Comportamento `enviar_link_cardapio` (on/off, padrão on) no grupo Pedidos da tela de comportamentos; só gestor e acima veem.

@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/ia/documentos")({
   component: () => (
     <PaginaGateway
       titulo="Documentos"
-      descricao="Arquivos recebidos pelo formulário ou pelo n8n, com a leitura e a confiança de cada campo."
+      descricao="Arquivos recebidos pelo formulário ou pela API, com a leitura e a confiança de cada campo."
       papeis={["plataforma", "gestor"]}
     >
       {(ctx) => <Tela key={ctx.empresa ?? "empresa"} ctx={ctx} />}

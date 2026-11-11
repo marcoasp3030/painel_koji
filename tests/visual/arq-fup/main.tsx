@@ -223,7 +223,7 @@ function Escopos() {
   return (
     <Moldura
       titulo="Chaves de API"
-      descricao="Marque Enviar documentos na chave da empresa. Vale em servidor ou n8n."
+      descricao="Marque Enviar documentos na chave da empresa. Vale em servidor ou integração."
     >
       <fieldset className="mt-6 max-w-xl space-y-2 rounded-xl border border-base-200 bg-card p-5">
         <legend className="px-1 text-sm font-medium">O que a chave pode fazer</legend>

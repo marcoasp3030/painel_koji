@@ -153,7 +153,7 @@ Admin e plataforma conversam com o agente por um canal API, sem enviar nada ao c
 
 `/ia/documentos` lista os arquivos recebidos. Estado, tipo e período (de/até, dia de Brasília, dd/mm/aaaa) vão ao gateway em `GET /anexos`. O detalhe mostra os campos com rótulo, valor em R$ e data em dd/mm/aaaa, Copiar na linha digitável, no código de barras, na chave de acesso e no ID da transação, os itens da NF-e em tabela e “Apagado automaticamente em” quando há validade. Comprovante PIX traz o aviso de que o pagamento não foi verificado. Admin e plataforma apagam, com o botão em estilo de perigo; o membro só consulta. `/ia/chaves-formulario` cria a chave presa a um agente, com sites permitidos e limite por minuto. O valor aparece uma vez, com Copiar. Revogar pede confirmação e fica com admin e plataforma.
 
-Na chave de API da empresa, nenhum escopo vem marcado. “Resposta assíncrona (em breve)” aparece desabilitada. “Enviar documentos” pode ser marcado na criação e vale em servidor ou n8n.
+Na chave de API da empresa, nenhum escopo vem marcado. “Resposta assíncrona (em breve)” aparece desabilitada. “Enviar documentos” pode ser marcado na criação e vale em servidor ou integração.
 
 ## Webhooks de saída
 

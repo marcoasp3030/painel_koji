@@ -157,7 +157,7 @@ export function DocumentosTela({
         ) : itens.length === 0 ? (
           <Vazio
             titulo="Nenhum documento"
-            texto="Quando um formulário ou o n8n enviar um arquivo, ele aparece aqui."
+            texto="Quando um formulário ou uma integração enviar um arquivo, ele aparece aqui."
           />
         ) : (
           <ul>
