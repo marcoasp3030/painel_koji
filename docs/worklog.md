@@ -1,3 +1,18 @@
+## [2026-11-11 15:10] — Botão Confirmar e liberar acesso
+- **Autor:** Auto
+- **Objetivo:** Super admin/gestor liberar usuário da empresa (confirmar e-mail + ativar + senha).
+- **Arquivos alterados:**
+ - `src/lib/usuarios.functions.ts` — criado — `liberarAcessoUsuario`; lista traz `email_confirmado`
+ - `src/components/luxtia/Usuarios.tsx` — modificado — bloco Confirmar e liberar
+ - `src/routes/_authenticated/equipe.tsx` — modificado — liga a ação
+ - `tests/visual/usuarios/main.tsx`, `instrucoes.md`, `docs/worklog.md`
+- **Resumo das mudanças:** Quem ainda não confirma o e-mail ou está inativo ganha ação explícita para já conseguir entrar.
+- **Decisões e justificativas:** Senha obrigatória na liberação se a pessoa nunca entrou.
+- **Comandos executados:** publicar → (a seguir)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** abrir usuário pendente e usar Confirmar e liberar
+
 ## [2026-11-11 15:06] — Login empresa: e-mail sem confirmação
 - **Autor:** Auto
 - **Objetivo:** Corrigir login de usuário de empresa com erro de senha.

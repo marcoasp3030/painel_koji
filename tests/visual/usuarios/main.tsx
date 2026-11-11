@@ -9,33 +9,45 @@ import "./preview.css";
 const pessoas: UsuarioLinha[] = [
   {
     id: "1",
+    user_id: "u1",
     email: "ana.gestora@exemplo.com",
     nome: "Ana Gestora",
     papel: "gestor",
     ativo: true,
+    email_confirmado: true,
     unidades: [],
     convidado_em: "2026-10-20T12:00:00Z",
     ultimo_acesso: "2026-10-27T14:10:00Z",
+    eu: false,
+    podeGerir: true,
   },
   {
     id: "2",
+    user_id: "u2",
     email: "bruno.salao@exemplo.com",
     nome: "Bruno Supervisor",
     papel: "supervisor",
     ativo: true,
+    email_confirmado: true,
     unidades: ["centro", "jardins"],
     convidado_em: "2026-10-21T12:00:00Z",
     ultimo_acesso: "2026-10-26T18:00:00Z",
+    eu: false,
+    podeGerir: true,
   },
   {
     id: "3",
+    user_id: "u3",
     email: "carla.caixa@exemplo.com",
     nome: "Carla Funcionária",
     papel: "funcionario",
     ativo: true,
+    email_confirmado: false,
     unidades: ["centro"],
     convidado_em: "2026-10-28T11:00:00Z",
     ultimo_acesso: null,
+    eu: false,
+    podeGerir: true,
   },
 ];
 
@@ -75,6 +87,7 @@ function Tela({
         onRevogar={noop}
         onRedefinirSenha={noop}
         onDefinirSenha={noop}
+        onLiberarAcesso={noop}
         onFecharLink={noop}
         linkConvite={link}
         convitePorEmail={false}

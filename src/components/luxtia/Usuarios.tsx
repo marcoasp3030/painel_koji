@@ -42,6 +42,8 @@ export type UsuarioLinha = {
   nome: string | null;
   papel: PapelAcesso;
   ativo: boolean;
+  /** Sem confirmação o login falha mesmo com senha. */
+  email_confirmado?: boolean;
   unidades: string[];
   convidado_em: string | null;
   ultimo_acesso: string | null;
@@ -103,6 +105,7 @@ export function UsuariosTela({
   onRevogar,
   onRedefinirSenha,
   onDefinirSenha,
+  onLiberarAcesso,
   onFecharLink,
 }: {
   concediveis: PapelAcesso[];
@@ -131,6 +134,7 @@ export function UsuariosTela({
   onRevogar: (id: string) => void;
   onRedefinirSenha: (userId: string) => void;
   onDefinirSenha: (d: { id: string; senha: string }, pronto: () => void) => void;
+  onLiberarAcesso: (d: { id: string; senha?: string }, pronto: () => void) => void;
   onFecharLink: () => void;
 }) {
   const [busca, setBusca] = useState("");
@@ -294,6 +298,7 @@ export function UsuariosTela({
               onRevogar={onRevogar}
               onRedefinirSenha={onRedefinirSenha}
               onDefinirSenha={onDefinirSenha}
+              onLiberarAcesso={onLiberarAcesso}
               fechar={() => setAbertoId(null)}
             />
           ) : null}
@@ -324,6 +329,9 @@ function LinhaUsuario({
         <span className="block truncate text-sm font-medium text-ink-900">
           {nomeDe(u)}
           {u.eu ? <span className="ml-1.5 text-xs font-normal text-ink-500">você</span> : null}
+          {u.email_confirmado === false ? (
+            <span className="ml-1.5 text-xs font-normal text-amber-800">sem confirmação</span>
+          ) : null}
         </span>
         {u.nome ? <span className="block truncate text-xs text-ink-500">{u.email}</span> : null}
       </span>
@@ -642,6 +650,7 @@ function PainelUsuario({
   onRevogar,
   onRedefinirSenha,
   onDefinirSenha,
+  onLiberarAcesso,
   fechar,
 }: {
   usuario: UsuarioLinha;
@@ -660,6 +669,7 @@ function PainelUsuario({
   onRevogar: (id: string) => void;
   onRedefinirSenha: (userId: string) => void;
   onDefinirSenha: (d: { id: string; senha: string }, pronto: () => void) => void;
+  onLiberarAcesso: (d: { id: string; senha?: string }, pronto: () => void) => void;
   fechar: () => void;
 }) {
   const visiveis = new Set(unidades.map((x) => x.codigo));
@@ -667,7 +677,9 @@ function PainelUsuario({
   const [escolhidas, setEscolhidas] = useState(u.unidades.filter((c) => visiveis.has(c)));
   const [confirmar, setConfirmar] = useState<"desativar" | "revogar" | null>(null);
   const [trocandoSenha, setTrocandoSenha] = useState(false);
+  const [liberando, setLiberando] = useState(false);
   const [senhaNova, setSenhaNova] = useState("");
+  const [senhaLiberar, setSenhaLiberar] = useState("");
   const foraDoAlcance = u.unidades.filter((c) => !visiveis.has(c)).length;
   const gestor = papel === "gestor";
   const original = u.unidades.filter((c) => visiveis.has(c));
@@ -676,6 +688,9 @@ function PainelUsuario({
     (escolhidas.length !== original.length || escolhidas.some((c) => !original.includes(c)));
   const mudouPapel = papel !== u.papel;
   const faltaUnidade = !gestor && escolhidas.length + foraDoAlcance === 0;
+  const emailOk = u.email_confirmado !== false;
+  const precisaLiberar = podeDefinirSenha && (!emailOk || !u.ativo);
+  const senhaObrigatoriaNaLiberacao = !u.ultimo_acesso;
 
   function salvar() {
     onAlterar(
@@ -699,6 +714,14 @@ function PainelUsuario({
         <dl className="grid grid-cols-[110px_1fr] gap-y-1 text-sm">
           <dt className="text-ink-500">Situação</dt>
           <dd className="text-ink-900">{ROTULO_SITUACAO[situacaoUsuario(u)]}</dd>
+          <dt className="text-ink-500">E-mail</dt>
+          <dd className="text-ink-900">
+            {emailOk ? (
+              "Confirmado"
+            ) : (
+              <span className="text-amber-800">Pendente — a pessoa ainda não consegue entrar</span>
+            )}
+          </dd>
           <dt className="text-ink-500">Último acesso</dt>
           <dd className="text-ink-900">{quando(u.ultimo_acesso)}</dd>
           {u.convitePendente ? (
@@ -708,6 +731,77 @@ function PainelUsuario({
             </>
           ) : null}
         </dl>
+
+        {precisaLiberar ? (
+          <div
+            role="status"
+            className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          >
+            <p className="font-medium">Acesso ainda não liberado</p>
+            <p className="text-xs">
+              Confirme o e-mail e ative a conta para a pessoa entrar. Se ela nunca acessou, informe
+              a senha abaixo.
+            </p>
+            {liberando ? (
+              <form
+                className="space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onLiberarAcesso(
+                    {
+                      id: u.id,
+                      ...(senhaLiberar ? { senha: senhaLiberar } : {}),
+                    },
+                    () => {
+                      setLiberando(false);
+                      setSenhaLiberar("");
+                      fechar();
+                    },
+                  );
+                }}
+              >
+                {senhaObrigatoriaNaLiberacao || senhaLiberar ? (
+                  <>
+                    <CampoSenha
+                      id={`liberar-senha-${u.id}`}
+                      label={senhaObrigatoriaNaLiberacao ? "Senha de acesso" : "Senha (opcional)"}
+                      value={senhaLiberar}
+                      onChange={setSenhaLiberar}
+                      autoComplete="new-password"
+                      required={senhaObrigatoriaNaLiberacao}
+                      minLength={12}
+                    />
+                    <MedidorSenha senha={senhaLiberar} />
+                  </>
+                ) : null}
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={ocupado || (senhaObrigatoriaNaLiberacao && !senhaLiberar)}
+                  >
+                    Confirmar e liberar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLiberando(false);
+                      setSenhaLiberar("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <Button type="button" size="sm" disabled={ocupado} onClick={() => setLiberando(true)}>
+                Confirmar e liberar acesso
+              </Button>
+            )}
+          </div>
+        ) : null}
 
         {u.podeGerir ? (
           <>

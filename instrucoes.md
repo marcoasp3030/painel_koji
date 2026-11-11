@@ -1,3 +1,7 @@
+## Liberar acesso (confirmar + ativar) (11/11/2026)
+
+- Em Usuários da empresa, gestor/plataforma vê **Confirmar e liberar acesso** quando o e-mail não está confirmado ou a conta está inativa. Confirma o e-mail, ativa o vínculo, encerra convite pendente e pode definir a senha na hora.
+
 ## Login empresa e e-mail confirmado (11/11/2026)
 
 - Contas só de convite nascem sem e-mail confirmado; o GoTrue responde como senha inválida. `definirSenhaUsuario` agora envia `email_confirm: true` (igual ao aceite do convite). Conta `demo@demo.com` confirmada na hora.

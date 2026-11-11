@@ -32,6 +32,8 @@ type LinhaUsuario = {
   nome: string | null;
   papel: PapelAcesso;
   ativo: boolean;
+  /** E-mail confirmado no GoTrue — sem isso o login falha. */
+  email_confirmado: boolean;
   unidades: string[];
   convidado_em: string | null;
   ultimo_acesso: string | null;
@@ -196,6 +198,7 @@ export const listarUsuarios = createServerFn({ method: "POST" })
           nome: m.full_name,
           papel,
           ativo: m.ativo,
+          email_confirmado: Boolean(auth.user?.email_confirmed_at),
           unidades: unidadesDele,
           convidado_em: m.convidado_em,
           ultimo_acesso: auth.user?.last_sign_in_at ?? null,
@@ -418,6 +421,88 @@ export const criarUsuarioComSenha = createServerFn({ method: "POST" })
       detail: data.papel,
     });
     return { ok: true as const, user_id: usuarioId, criado: criadoAgora };
+  });
+
+/**
+ * Confirma o e-mail, ativa o vínculo e, se informada, grava a senha —
+ * a pessoa já consegue entrar sem passar pelo link do convite.
+ */
+export const liberarAcessoUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        id: z.string().uuid(),
+        senha: z.string().min(SENHA_MIN).max(SENHA_MAX).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { t, tenant, supabaseAdmin, sessao } = await empresaDo(context, data.empresa);
+    if (!peloMenos(t.papel, "gestor")) {
+      throw new Error("Só gestor ou plataforma libera o acesso.");
+    }
+    if (data.senha) {
+      const erroSenha = validarSenhaNova(data.senha);
+      if (erroSenha) throw new Error(erroSenha);
+    }
+    const { data: row, error } = await supabaseAdmin
+      .from("tenant_users")
+      .select("id, user_id, email, tenant_id, ativo")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !row || row.tenant_id !== tenant.id) throw new Error("Usuário não encontrado.");
+    if (row.user_id === sessao.perfil.userId) {
+      throw new Error("Você não altera o próprio acesso por aqui.");
+    }
+    if (row.email.trim().toLowerCase() === EMAIL_CONTA_EMERGENCIA) {
+      throw new Error("A conta de emergência não se altera por aqui.");
+    }
+    await conferirAlvo(supabaseAdmin, t, row.id);
+
+    const { data: auth } = await supabaseAdmin.auth.admin.getUserById(row.user_id);
+    if (!auth.user) throw new Error("Usuário não encontrado.");
+    const jaEntrou = Boolean(auth.user.last_sign_in_at);
+    if (!data.senha && !jaEntrou) {
+      // Sem entrada prévia a senha do convite é desconhecida — precisa definir uma.
+      throw new Error("Informe uma senha para a pessoa já conseguir entrar.");
+    }
+
+    const upd = await supabaseAdmin.auth.admin.updateUserById(row.user_id, {
+      email_confirm: true,
+      ...(data.senha ? { password: data.senha } : {}),
+    });
+    if (upd.error) throw new Error("Não foi possível confirmar o acesso.");
+
+    if (!row.ativo) {
+      const { error: ativar } = await supabaseAdmin
+        .from("tenant_users")
+        .update({ ativo: true })
+        .eq("id", row.id);
+      if (ativar) throw new Error("Não foi possível ativar o usuário.");
+    }
+
+    const agora = new Date().toISOString();
+    await supabaseAdmin
+      .from("convites")
+      .update({ revogado_em: agora })
+      .eq("tenant_user_id", row.id)
+      .is("usado_em", null)
+      .is("revogado_em", null);
+
+    if (data.senha) {
+      await supabaseAdmin.rpc("derrubar_sessoes", { uid: row.user_id });
+    }
+
+    const { auditarPainel } = await import("./gateway/painel.server");
+    await auditarPainel(sessao, {
+      tenantId: tenant.id,
+      action: "Liberação de acesso",
+      target: row.email,
+      detail: data.senha ? "e-mail confirmado, ativo, senha definida" : "e-mail confirmado, ativo",
+    });
+    return { ok: true as const };
   });
 
 /** Gestor/plataforma define ou troca a senha de alguém da empresa. */

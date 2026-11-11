@@ -12,6 +12,7 @@ import {
   convidarUsuario,
   criarUsuarioComSenha,
   definirSenhaUsuario,
+  liberarAcessoUsuario,
   listarUsuarios,
   reenviarConvite,
   revogarConvite,
@@ -48,6 +49,7 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
   const convidar = useServerFn(convidarUsuario);
   const criarSenha = useServerFn(criarUsuarioComSenha);
   const definirSenha = useServerFn(definirSenhaUsuario);
+  const liberar = useServerFn(liberarAcessoUsuario);
   const alterar = useServerFn(alterarUsuario);
   const reenviar = useServerFn(reenviarConvite);
   const revogar = useServerFn(revogarConvite);
@@ -139,6 +141,16 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
       definirSenha({ data: { ...d, empresa: ctx.empresa } }),
     onSuccess: () => {
       toast.success("Senha atualizada.");
+      void invalida();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const liberarAcesso = useMutation({
+    mutationFn: (d: { id: string; senha?: string }) =>
+      liberar({ data: { ...d, empresa: ctx.empresa } }),
+    onSuccess: () => {
+      toast.success("Acesso liberado. A pessoa já pode entrar.");
+      void invalida();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -164,7 +176,8 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
         deNovo.isPending ||
         revogarUm.isPending ||
         novaSenha.isPending ||
-        senhaDireta.isPending
+        senhaDireta.isPending ||
+        liberarAcesso.isPending
       }
       aviso={aviso}
       linkConvite={link}
@@ -176,6 +189,7 @@ function Equipe({ ctx }: { ctx: ContextoGateway }) {
       onRevogar={(id) => revogarUm.mutate(id)}
       onRedefinirSenha={(userId) => novaSenha.mutate(userId)}
       onDefinirSenha={(d, pronto) => senhaDireta.mutate(d, { onSuccess: pronto })}
+      onLiberarAcesso={(d, pronto) => liberarAcesso.mutate(d, { onSuccess: pronto })}
       onFecharLink={() => {
         setLink(null);
         setAviso(null);
