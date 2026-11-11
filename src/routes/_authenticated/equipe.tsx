@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/_authenticated/equipe")({
   head: () => ({
     meta: [
-      { title: "Usuários | Luxtia" },
+      { title: "Usuários | Luxbrain" },
       { name: "description", content: "Convide pessoas e defina papel e unidades." },
     ],
   }),

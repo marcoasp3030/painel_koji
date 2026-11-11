@@ -155,7 +155,7 @@ export function ConexaoIA({ ctx, agente }: { ctx: ContextoGateway; agente: Agent
               inputMode="url"
               value={url}
               spellCheck={false}
-              placeholder="https://luxtia.api.integrasky.cloud/…"
+              placeholder="https://luxbrain.api.integrasky.cloud/…"
               onChange={(e) => setUrl(e.target.value)}
             />
           </div>
@@ -171,7 +171,7 @@ export function ConexaoIA({ ctx, agente }: { ctx: ContextoGateway; agente: Agent
                 value={usuario}
                 autoComplete="off"
                 spellCheck={false}
-                placeholder={usuarioSalvo ? "Deixe em branco para manter" : "flow-<id>@luxtia"}
+                placeholder={usuarioSalvo ? "Deixe em branco para manter" : "flow-<id>@luxbrain"}
                 onChange={(e) => setUsuario(e.target.value)}
               />
             </div>

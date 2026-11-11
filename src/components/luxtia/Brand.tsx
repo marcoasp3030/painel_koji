@@ -1,11 +1,42 @@
-export function LuxtiaWordmark({ tone = "light" }: { tone?: "light" | "dark" }) {
+/** Marca Luxbrain: logo + wordmark. */
+
+const LOGO = "/luxbrain-logo.jpeg";
+
+export function LuxbrainLogo({
+  className = "size-8",
+  alt = "Luxbrain",
+}: {
+  className?: string;
+  alt?: string;
+}) {
   return (
-    <span
-      className={`font-display text-xl tracking-[0.22em] ${
-        tone === "light" ? "text-base-50" : "text-purple-800"
-      }`}
-    >
-      LUX<span className={tone === "light" ? "text-gold-500" : "text-gold-700"}>TIA</span>
+    <img
+      src={LOGO}
+      alt={alt}
+      width={128}
+      height={128}
+      className={`rounded-lg object-cover ${className}`}
+      decoding="async"
+    />
+  );
+}
+
+export function LuxbrainWordmark({
+  tone = "light",
+  comLogo = true,
+}: {
+  tone?: "light" | "dark";
+  /** Inclui o símbolo ao lado do nome (padrão). */
+  comLogo?: boolean;
+}) {
+  const texto = tone === "light" ? "text-base-50" : "text-purple-800";
+  const destaque = tone === "light" ? "text-gold-500" : "text-gold-700";
+  return (
+    <span className={`inline-flex items-center gap-2.5 ${texto}`}>
+      {comLogo ? <LuxbrainLogo className="size-8 shrink-0" /> : null}
+      <span className="font-display text-xl tracking-[0.18em]">
+        LUX<span className={destaque}>BRAIN</span>
+      </span>
     </span>
   );
 }

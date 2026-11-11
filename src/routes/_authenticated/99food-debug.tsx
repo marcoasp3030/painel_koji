@@ -24,13 +24,13 @@ export const Route = createFileRoute("/_authenticated/99food-debug")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Debug do 99Food · histórico de chamadas | Luxtia" },
+      { title: "Debug do 99Food · histórico de chamadas | Luxbrain" },
       {
         name: "description",
         content:
           "Acompanhe as chamadas feitas ao 99Food: endereço, dados enviados, resposta, código HTTP e tempo de resposta por cliente.",
       },
-      { property: "og:title", content: "Debug do 99Food · Luxtia" },
+      { property: "og:title", content: "Debug do 99Food · Luxbrain" },
       {
         property: "og:description",
         content: "Histórico técnico das chamadas do 99Food para diagnóstico rápido.",

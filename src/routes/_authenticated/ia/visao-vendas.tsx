@@ -3,7 +3,7 @@ import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { VisaoVendas } from "@/components/luxtia/VisaoVendas";
 
 export const Route = createFileRoute("/_authenticated/ia/visao-vendas")({
-  head: () => ({ meta: [{ title: "Visão de vendas | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Visão de vendas | Luxbrain" }] }),
   component: PaginaVisaoVendas,
 });
 

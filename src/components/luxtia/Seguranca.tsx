@@ -112,7 +112,7 @@ export function AtivarSegundaEtapa({
       setErro("Esta conta já tem 2 aplicativos. Remova um antes de adicionar outro.");
       return;
     }
-    const nome = verificado === 0 ? "Luxtia" : `Luxtia ${verificado + 1}`;
+    const nome = verificado === 0 ? "Luxbrain" : `Luxbrain ${verificado + 1}`;
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: "totp",
       friendlyName: nome,

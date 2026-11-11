@@ -49,7 +49,7 @@ import type { ChaveGateway } from "@/lib/gateway/tipos";
 import { CAMPO_CHAVE, ESCOPO } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/chaves")({
-  head: () => ({ meta: [{ title: "Chaves de API | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Chaves de API | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       titulo="Chaves de API"

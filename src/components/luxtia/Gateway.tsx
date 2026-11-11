@@ -41,7 +41,7 @@ export function useAcessoGateway() {
   });
 }
 
-const CHAVE_EMPRESA = "luxtia:gateway-empresa";
+const CHAVE_EMPRESA = "luxbrain:gateway-empresa";
 
 /** Empresa escolhida pelo admin da plataforma, lembrada entre as telas. */
 function useEmpresaEscolhida(ativo: boolean) {
@@ -75,7 +75,7 @@ function useEmpresaEscolhida(ativo: boolean) {
     setEmpresa(id);
     try {
       localStorage.setItem(CHAVE_EMPRESA, id);
-      window.dispatchEvent(new Event("luxtia:empresa"));
+      window.dispatchEvent(new Event("luxbrain:empresa"));
     } catch {
       /* A escolha vale enquanto a tela estiver aberta. */
     }
@@ -143,7 +143,7 @@ export function PaginaGateway({
     if (!plataforma || !empresaFixa) return;
     try {
       localStorage.setItem(CHAVE_EMPRESA, empresaFixa);
-      window.dispatchEvent(new Event("luxtia:empresa"));
+      window.dispatchEvent(new Event("luxbrain:empresa"));
     } catch {
       /* Sem armazenamento local, a lista volta para a primeira empresa. */
     }

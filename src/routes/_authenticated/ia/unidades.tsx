@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/ia/unidades")({
       : {}),
     ...(SECOES.includes(s["secao"] as SecaoUnidade) ? { secao: s["secao"] as SecaoUnidade } : {}),
   }),
-  head: () => ({ meta: [{ title: "Unidades e horários | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Unidades e horários | Luxbrain" }] }),
   component: PaginaUnidades,
 });
 

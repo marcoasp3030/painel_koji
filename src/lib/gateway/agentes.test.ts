@@ -20,7 +20,7 @@ const MOCK: EstadoAgente = {
   skyone_auth_configurado: false,
   skyone_auth_usuario_configurado: false,
 };
-const URL_FLUXO = "https://luxtia.api.integrasky.cloud/FLUXO";
+const URL_FLUXO = "https://luxbrain.api.integrasky.cloud/FLUXO";
 
 const mensagem = (f: () => unknown) => {
   try {
@@ -50,7 +50,7 @@ describe("ativar IA real", () => {
           agente_mode: "live",
           skyone_webhook_url: URL_FLUXO,
           skyone_auth_tipo: "basic",
-          skyone_auth_usuario: "flow-1@luxtia",
+          skyone_auth_usuario: "flow-1@luxbrain",
         },
         false,
       ),
@@ -64,7 +64,7 @@ describe("ativar IA real", () => {
       agente_mode: "live",
       skyone_webhook_url: URL_FLUXO,
       skyone_auth_tipo: "basic",
-      skyone_auth_usuario: "flow-1@luxtia",
+      skyone_auth_usuario: "flow-1@luxbrain",
       skyone_auth: "segredo",
     };
     expect(mensagem(() => conferirIaReal(MOCK, dados, false))).toBeNull();

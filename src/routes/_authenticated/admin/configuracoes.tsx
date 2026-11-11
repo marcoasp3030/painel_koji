@@ -23,10 +23,10 @@ import { definirMfaDesativado, lerConfigPlataforma } from "@/lib/plataforma-conf
 export const Route = createFileRoute("/_authenticated/admin/configuracoes")({
   head: () => ({
     meta: [
-      { title: "Configurações | Luxtia" },
+      { title: "Configurações | Luxbrain" },
       {
         name: "description",
-        content: "Ajustes globais da plataforma Luxtia (Super Admin).",
+        content: "Ajustes globais da plataforma Luxbrain (Super Admin).",
       },
     ],
   }),

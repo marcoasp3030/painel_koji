@@ -1,3 +1,19 @@
+## [2026-11-11 11:55] — Marca Luxbrain + logo
+- **Autor:** Auto
+- **Objetivo:** Remover o nome Luxtia da UI e usar o logo anexado (Luxbrain).
+- **Arquivos alterados:**
+ - `public/luxbrain-logo.jpeg` — criado — logo oficial
+ - `src/components/luxtia/Brand.tsx` — modificado — logo + LUXBRAIN
+ - `AppShell`, `PainelMarca`, rotas/meta, MFA, README — modificado — textos Luxbrain
+ - eventos/chaves `luxbrain:*`; emergência `admin@luxbrain.local` no GoTrue
+ - `docs/worklog.md`, `instrucoes.md` — registro
+- **Resumo das mudanças:** Marca visível e títulos passam a Luxbrain com o JPEG. Pasta interna `components/luxtia` e slug de tenant `luxtia` não renomeados.
+- **Decisões e justificativas:** Branding do produto; e-mails reais `@luxtia.ia.br` e slug de cliente no banco ficam (não são marca da UI).
+- **Comandos executados:** busca Luxtia em src → limpo; rename GoTrue → OK; publicar → (a seguir)
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** hard refresh; MFA novo fator mostrará “Luxbrain”
+
 ## [2026-11-11 11:44] — Remover menções a n8n
 - **Autor:** Auto
 - **Objetivo:** Eliminar qualquer texto/informação com o nome n8n no painel (e espelho no gateway).

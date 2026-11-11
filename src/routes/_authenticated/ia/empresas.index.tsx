@@ -44,7 +44,7 @@ import type { EmpresaGateway, EmpresaPainel } from "@/lib/gateway/tipos";
 import { CAMPO_EMPRESA } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/empresas/")({
-  head: () => ({ meta: [{ title: "Empresas · Agentes | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Empresas · Agentes | Luxbrain" }] }),
   component: () => (
     <PaginaGateway titulo="Empresas do gateway" papeis={["plataforma"]} semEmpresa telaCheia>
       {() => <Empresas />}

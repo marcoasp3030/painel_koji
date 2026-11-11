@@ -191,8 +191,8 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
       setSom(somPedidoLigado(id));
     });
     const syncSom = () => setSom(somPedidoLigado(usuario));
-    window.addEventListener("luxtia:pedidos-som", syncSom);
-    return () => window.removeEventListener("luxtia:pedidos-som", syncSom);
+    window.addEventListener("luxbrain:pedidos-som", syncSom);
+    return () => window.removeEventListener("luxbrain:pedidos-som", syncSom);
   }, [usuario]);
   const fuso = useQuery({
     queryKey: ["gestao", ctx.empresa, "fuso"],
@@ -342,7 +342,7 @@ export function Pedidos({ ctx, abrir }: { ctx: ContextoGateway; abrir?: string |
     function restaurarTitulo() {
       if (!avisoTitulo.current) return;
       if (document.visibilityState !== "visible") return;
-      document.title = tituloBase.current || document.title.replace(/^\(1\) Novo pedido\s*—?\s*/, "") || "Pedidos | Luxtia";
+      document.title = tituloBase.current || document.title.replace(/^\(1\) Novo pedido\s*—?\s*/, "") || "Pedidos | Luxbrain";
       avisoTitulo.current = false;
     }
     document.addEventListener("visibilitychange", restaurarTitulo);

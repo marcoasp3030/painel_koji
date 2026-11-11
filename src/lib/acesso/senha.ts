@@ -51,6 +51,8 @@ const COMUNS = new Set(
     "senha@123",
     "brasil",
     "brasil123",
+    "luxbrain",
+    "luxbrain123",
     "luxtia",
     "luxtia123",
     "empresa",

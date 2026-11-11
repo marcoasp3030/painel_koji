@@ -5,7 +5,7 @@ import { Cardapio } from "@/components/luxtia/Cardapio";
 
 export const Route = createFileRoute("/_authenticated/ia/cardapio")({
   validateSearch: buscaCardapio,
-  head: () => ({ meta: [{ title: "Cardápio | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Cardápio | Luxbrain" }] }),
   component: PaginaCardapio,
 });
 

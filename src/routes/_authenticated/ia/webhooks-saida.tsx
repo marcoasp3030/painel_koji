@@ -18,7 +18,7 @@ import {
 import type { EntregaWebhook, WebhookSaida } from "@/lib/gateway/webhooks";
 
 export const Route = createFileRoute("/_authenticated/ia/webhooks-saida")({
-  head: () => ({ meta: [{ title: "Webhooks de saída | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Webhooks de saída | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       titulo="Webhooks de saída"

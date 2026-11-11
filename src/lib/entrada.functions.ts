@@ -106,7 +106,7 @@ export const checarBloqueioEntrada = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const email = data.email.includes("@")
       ? data.email.trim().toLowerCase()
-      : `${data.email.trim().toLowerCase()}@luxtia.local`;
+      : `${data.email.trim().toLowerCase()}@luxbrain.local`;
     const chave = chaveTentativa(email, await ipDaRequisicao());
     const row = await lerTentativa(chave);
     const agora = new Date();
@@ -129,7 +129,7 @@ export const registrarFalhaLogin = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const email = data.email.includes("@")
       ? data.email.trim().toLowerCase()
-      : `${data.email.trim().toLowerCase()}@luxtia.local`;
+      : `${data.email.trim().toLowerCase()}@luxbrain.local`;
     const chave = chaveTentativa(email, await ipDaRequisicao());
     const row = await lerTentativa(chave);
     const agora = new Date();
@@ -170,7 +170,7 @@ export const registrarLoginOk = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const email = data.email.includes("@")
       ? data.email.trim().toLowerCase()
-      : `${data.email.trim().toLowerCase()}@luxtia.local`;
+      : `${data.email.trim().toLowerCase()}@luxbrain.local`;
     const chave = chaveTentativa(email, await ipDaRequisicao());
     await gravarTentativa(chave, { falhas: 0, falha_em: null, bloqueado_ate: null });
     await auditar("entrada.login_ok", { email, status: "success" });

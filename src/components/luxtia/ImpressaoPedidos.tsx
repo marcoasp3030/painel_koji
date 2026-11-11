@@ -54,7 +54,7 @@ function useLider(ativo: boolean) {
     const controle = new AbortController();
     let soltar: (() => void) | undefined;
     navigator.locks
-      .request("luxtia:impressao-pedidos", { signal: controle.signal }, () => {
+      .request("luxbrain:impressao-pedidos", { signal: controle.signal }, () => {
         setLider(true);
         return new Promise<void>((r) => {
           soltar = r;

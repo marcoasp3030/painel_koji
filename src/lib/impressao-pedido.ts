@@ -31,12 +31,12 @@ export const STATUS_DA_IMPRESSAO: Record<QuandoImprimir, ("aguardando_loja" | "c
   chegar: ["aguardando_loja"],
   confirmar: ["confirmado"],
 };
-export const EVENTO_IMPRESSAO = "luxtia:pedidos-impressao";
+export const EVENTO_IMPRESSAO = "luxbrain:pedidos-impressao";
 const MAX_LEMBRADOS = 300;
 
-const chavePref = (empresa: string) => `luxtia:pedidos-impressao:${empresa}`;
+const chavePref = (empresa: string) => `luxbrain:pedidos-impressao:${empresa}`;
 const chaveImpressos = (empresa: string, quando: QuandoImprimir) =>
-  `luxtia:pedidos-impressos:${empresa}:${quando}`;
+  `luxbrain:pedidos-impressos:${empresa}:${quando}`;
 
 export function lerPrefImpressao(empresa: string): PrefImpressao {
   try {

@@ -3,7 +3,7 @@ import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { ModelosAgente } from "@/components/luxtia/ModelosAgente";
 
 export const Route = createFileRoute("/_authenticated/ia/modelos")({
-  head: () => ({ meta: [{ title: "Modelos de agente | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Modelos de agente | Luxbrain" }] }),
   component: () => (
     <PaginaGateway titulo="Modelos de agente" papeis={["plataforma"]} semEmpresa telaCheia>
       {() => <ModelosAgente />}

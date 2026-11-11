@@ -54,7 +54,7 @@ export const Route = createFileRoute("/_authenticated/ia/empresas/nova")({
       ...(Number.isInteger(passo) && passo >= 1 && passo <= 6 ? { passo } : {}),
     };
   },
-  head: () => ({ meta: [{ title: "Nova empresa | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Nova empresa | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       sobretitulo="Empresas"

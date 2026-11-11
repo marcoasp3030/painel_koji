@@ -3,7 +3,7 @@ import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { Operacao } from "@/components/luxtia/Operacao";
 
 export const Route = createFileRoute("/_authenticated/ia/operacao")({
-  head: () => ({ meta: [{ title: "Operação | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Operação | Luxbrain" }] }),
   component: PaginaOperacao,
 });
 

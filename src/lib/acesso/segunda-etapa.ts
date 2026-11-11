@@ -1,6 +1,6 @@
 /** Segunda etapa. Plataforma tem 7 dias. A conta de emergência não tem prazo. */
 
-export const EMAIL_CONTA_EMERGENCIA = "admin@luxtia.local";
+export const EMAIL_CONTA_EMERGENCIA = "admin@luxbrain.local";
 export const PRAZO_SEGUNDA_ETAPA_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function contaEmergencia(email: string | null | undefined, marcada: boolean) {

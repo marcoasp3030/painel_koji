@@ -22,13 +22,13 @@ export const Route = createFileRoute("/_authenticated/ifood-debug")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Debug do iFood · histórico de chamadas | Luxtia" },
+      { title: "Debug do iFood · histórico de chamadas | Luxbrain" },
       {
         name: "description",
         content:
           "Acompanhe as chamadas feitas ao iFood: endereço, dados enviados, resposta, código HTTP e tempo de resposta por cliente.",
       },
-      { property: "og:title", content: "Debug do iFood · Luxtia" },
+      { property: "og:title", content: "Debug do iFood · Luxbrain" },
       {
         property: "og:description",
         content: "Histórico técnico das chamadas do iFood para diagnóstico rápido.",

@@ -8,7 +8,7 @@ import type { ItemCardapio } from "@/lib/gateway/cardapio";
 import type { ServicosCat2 } from "@/lib/gateway/cardapio-cat2";
 import type { CategoriaCat3, ExecutarCat3 } from "@/lib/gateway/cat3";
 import type { AtendimentoConversa } from "@/lib/gateway/enc1";
-import { LuxtiaWordmark } from "@/components/luxtia/Brand";
+import { LuxbrainWordmark } from "@/components/luxtia/Brand";
 import "./preview.css";
 const unidades = [
   { codigo: "jardins", nome: "Jardins", fuso: "America/Sao_Paulo" },
@@ -260,7 +260,7 @@ function Preview() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-52 flex-col bg-purple-950 p-6 text-white lg:flex">
-        <LuxtiaWordmark />
+        <LuxbrainWordmark />
         <div className="mt-12 space-y-5 text-sm text-purple-200">
           <p>Visão geral</p>
           <p>Conversas</p>

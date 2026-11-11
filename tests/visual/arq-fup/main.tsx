@@ -318,7 +318,7 @@ function Webhooks() {
         itens={[
           {
             id: "wh_1",
-            url: "https://sistema.exemplo.com.br/luxtia",
+            url: "https://sistema.exemplo.com.br/luxbrain",
             eventos: ["documento.pronto", "conversa.resposta", "follow_up.agendado"],
             ativo: true,
             segredo_anterior_ate: "2026-10-23T17:32:00Z",

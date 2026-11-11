@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { AvisosPedido } from "@/components/luxtia/AvisosPedido";
 export const Route = createFileRoute("/_authenticated/ia/configuracoes/avisos")({
-  head: () => ({ meta: [{ title: "Avisos de pedido | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Avisos de pedido | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       sobretitulo="Configurações"

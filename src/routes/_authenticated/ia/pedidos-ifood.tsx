@@ -3,7 +3,7 @@ import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { IfoodPedidos } from "@/components/luxtia/IfoodPedidos";
 
 export const Route = createFileRoute("/_authenticated/ia/pedidos-ifood")({
-  head: () => ({ meta: [{ title: "Pedidos iFood | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Pedidos iFood | Luxbrain" }] }),
   component: PaginaPedidosIfood,
 });
 

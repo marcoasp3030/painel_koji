@@ -18,7 +18,7 @@ import { usarCodigoRecuperacao } from "@/lib/seguranca.functions";
 import { aceitarConvite, verConvite } from "@/lib/usuarios.functions";
 import { bootstrapSuperAdmin } from "@/lib/platform.functions";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { LuxtiaWordmark } from "@/components/luxtia/Brand";
+import { LuxbrainWordmark } from "@/components/luxtia/Brand";
 import { CampoSenha } from "@/components/luxtia/entrada/CampoSenha";
 import { CodigoOtp } from "@/components/luxtia/entrada/CodigoOtp";
 import { MedidorSenha } from "@/components/luxtia/entrada/MedidorSenha";
@@ -30,13 +30,13 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Entrar | Luxtia" },
+      { title: "Entrar | Luxbrain" },
       {
         name: "description",
         content:
-          "Entre na Luxtia para acompanhar conversas, pedidos e cardápio da sua empresa em um só lugar.",
+          "Entre na Luxbrain para acompanhar conversas, pedidos e cardápio da sua empresa em um só lugar.",
       },
-      { property: "og:title", content: "Luxtia" },
+      { property: "og:title", content: "Luxbrain" },
       {
         property: "og:description",
         content: "Atendimento pelo WhatsApp, pedidos e cardápio em um só lugar.",
@@ -66,7 +66,7 @@ function destinoAposLogin() {
 function emailNormalizado(identifier: string) {
   return identifier.includes("@")
     ? identifier.trim().toLowerCase()
-    : `${identifier.trim().toLowerCase()}@luxtia.local`;
+    : `${identifier.trim().toLowerCase()}@luxbrain.local`;
 }
 
 const CAMPO =
@@ -256,7 +256,7 @@ function Login() {
     try {
       const email = identifier.includes("@")
         ? identifier.trim().toLowerCase()
-        : `${identifier.trim().toLowerCase()}@luxtia.local`;
+        : `${identifier.trim().toLowerCase()}@luxbrain.local`;
       const r = await pedirRedef({ data: { email } });
       setAviso(r.mensagem);
     } catch {
@@ -306,7 +306,7 @@ function Login() {
 
       <main className="flex flex-col bg-base-50 px-6 py-8 sm:px-10">
         <div className="lg:hidden">
-          <LuxtiaWordmark tone="dark" />
+          <LuxbrainWordmark tone="dark" />
         </div>
         <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center py-10">
           <h2 className="font-display text-4xl leading-tight text-purple-800">{titulo}</h2>

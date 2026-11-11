@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/ia/documentos")({
     typeof s["documento"] === "string" && /^anx_[0-9a-f]{24}$/.test(s["documento"])
       ? { documento: s["documento"] }
       : {},
-  head: () => ({ meta: [{ title: "Documentos | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Documentos | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       titulo="Documentos"

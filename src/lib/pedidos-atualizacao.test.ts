@@ -52,6 +52,6 @@ describe("pedidos-atualizacao", () => {
   });
 
   test("evento do contador tem nome estável para a tela Pedidos escutar", () => {
-    expect(EVENTO_PEDIDO_NOVO).toBe("luxtia:pedido-novo");
+    expect(EVENTO_PEDIDO_NOVO).toBe("luxbrain:pedido-novo");
   });
 });

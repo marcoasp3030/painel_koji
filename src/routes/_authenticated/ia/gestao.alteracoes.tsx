@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/ia/gestao/alteracoes")({
       ? { unidade: s["unidade"] }
       : {}),
   }),
-  head: () => ({ meta: [{ title: "Histórico de gestão | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Histórico de gestão | Luxbrain" }] }),
   component: PaginaHistorico,
 });
 

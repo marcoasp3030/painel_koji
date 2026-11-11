@@ -7,9 +7,9 @@ import { getMe } from "@/lib/platform.functions";
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
     meta: [
-      { title: "Luxtia · Redirecionando para o seu painel" },
-      { name: "description", content: "Encaminhando o acesso para o painel correto da Luxtia." },
-      { property: "og:title", content: "Luxtia · Painel" },
+      { title: "Luxbrain · Redirecionando para o seu painel" },
+      { name: "description", content: "Encaminhando o acesso para o painel correto da Luxbrain." },
+      { property: "og:title", content: "Luxbrain · Painel" },
       { property: "og:description", content: "Encaminhando o acesso para o painel correto." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

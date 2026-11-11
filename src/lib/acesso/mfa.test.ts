@@ -106,7 +106,7 @@ describe("MFA1 regras", () => {
   test("mfa desativado na plataforma zera obrigação e aal2", () => {
     const d = decidirMfa1({
       papel: "plataforma",
-      email: "admin@luxtia.local",
+      email: "admin@luxbrain.local",
       emergenciaMarcada: true,
       fatores: 1,
       mfaEmpresa: true,

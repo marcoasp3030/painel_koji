@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { decidirBootstrap, VARIAVEL_SENHA_BOOTSTRAP } from "./bootstrap-super-admin";
 import { PROVIDER_BY_KEY, PROVIDERS, type ProviderKey } from "./providers";
 
-const SUPER_ADMIN_EMAIL = "admin@luxtia.local";
+const SUPER_ADMIN_EMAIL = "admin@luxbrain.local";
 
 type Ctx = {
   supabase: any;
@@ -901,7 +901,7 @@ export const testIntegration = createServerFn({ method: "POST" })
           return {
             ok: false,
             message:
-              "O Shop ID deve ser o número da loja (ex.: 5764617677143805837). O apelido como “luxtia_sp_001” é o APP Shop ID e vai no campo próprio.",
+              "O Shop ID deve ser o número da loja (ex.: 5764617677143805837). O apelido como “luxbrain_sp_001” é o APP Shop ID e vai no campo próprio.",
           };
         }
         const authParams = { app_id: appId, app_secret: appSecret, app_shop_id: appShopId };
@@ -1822,7 +1822,7 @@ export const runFood99Test = createServerFn({ method: "POST" })
     if (needsStore && !/^\d{4,}$/.test(storeId)) {
       return finish(
         false,
-        "O Shop ID deve ser o número da loja (ex.: 5764617677143805837). O apelido como “luxtia_sp_001” é o APP Shop ID e vai no campo próprio.",
+        "O Shop ID deve ser o número da loja (ex.: 5764617677143805837). O apelido como “luxbrain_sp_001” é o APP Shop ID e vai no campo próprio.",
       );
     }
 

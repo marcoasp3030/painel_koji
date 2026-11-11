@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "sonner";
 import { ClipboardList, Menu, MessagesSquare, Store, UtensilsCrossed } from "lucide-react";
-import { LuxtiaWordmark } from "@/components/luxtia/Brand";
+import { LuxbrainWordmark } from "@/components/luxtia/Brand";
 import { CardapioVista } from "@/components/luxtia/cardapio/CardapioVista";
 import { buscaCardapio } from "@/lib/gateway/cardapio-ux";
 import { criarServicos, iniciais, unidades } from "./gateway-falso";
@@ -30,7 +30,7 @@ function Preview() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-56 flex-col bg-purple-900 p-6 text-white lg:flex">
-        <LuxtiaWordmark />
+        <LuxbrainWordmark />
         <div className="mt-12 space-y-3 text-sm">
           <p className="mb-5 text-[10px] uppercase tracking-widest text-purple-300">Operação</p>
           {[

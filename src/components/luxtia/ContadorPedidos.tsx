@@ -9,8 +9,8 @@ import type { PapelGateway } from "@/lib/gateway/tipos";
 import { EVENTO_PEDIDO_NOVO } from "@/lib/pedidos-atualizacao";
 import { somPedidoLigado, tocarPedidoNovo } from "@/lib/pedidos-som";
 
-const CHAVE_EMPRESA = "luxtia:gateway-empresa";
-export const EVENTO_PEDIDO_VOLTOU = "luxtia:pedido-voltou";
+const CHAVE_EMPRESA = "luxbrain:gateway-empresa";
+export const EVENTO_PEDIDO_VOLTOU = "luxbrain:pedido-voltou";
 
 export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefined }) {
   const fn = useServerFn(pedidos);
@@ -34,8 +34,8 @@ export function ContadorPedidos({ papel }: { papel: PapelGateway | null | undefi
   useEffect(() => {
     const ler = () => setEmpresa(papel === "plataforma" ? localStorage.getItem(CHAVE_EMPRESA) : "");
     ler();
-    window.addEventListener("luxtia:empresa", ler);
-    return () => window.removeEventListener("luxtia:empresa", ler);
+    window.addEventListener("luxbrain:empresa", ler);
+    return () => window.removeEventListener("luxbrain:empresa", ler);
   }, [papel]);
   const empresaEfetiva = papel === "plataforma" ? empresa : "vinculada";
   const q = useQuery({

@@ -23,13 +23,13 @@ import { createTenant, listTenants } from "@/lib/platform.functions";
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({
     meta: [
-      { title: "Super Admin · Clientes da plataforma Luxtia" },
+      { title: "Super Admin · Clientes da plataforma Luxbrain" },
       {
         name: "description",
-        content: "Crie e gerencie clientes, acessos e integrações da plataforma Luxtia.",
+        content: "Crie e gerencie clientes, acessos e integrações da plataforma Luxbrain.",
       },
-      { property: "og:title", content: "Super Admin · Luxtia" },
-      { property: "og:description", content: "Gestão de clientes e acessos da plataforma Luxtia." },
+      { property: "og:title", content: "Super Admin · Luxbrain" },
+      { property: "og:description", content: "Gestão de clientes e acessos da plataforma Luxbrain." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

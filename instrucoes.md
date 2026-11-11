@@ -1,3 +1,9 @@
+## Marca Luxbrain (11/11/2026)
+
+- Textos e meta da UI: Luxtia → Luxbrain. Logo `public/luxbrain-logo.jpeg` no wordmark, menu e favicon.
+- Conta de emergência renomeada no GoTrue: `admin@luxbrain.local`. Eventos/chaves locais `luxbrain:*`.
+- Pasta de código `src/components/luxtia/` mantida (só caminho interno). Tenant slug `luxtia` no banco permanece (dado).
+
 ## Remoção do nome n8n (11/11/2026)
 
 - Textos de UI/docs/teste visual sem “n8n”: Documentos, escopo “Enviar documentos”, README e preview arq-fup usam “integração” ou “API”.
@@ -51,7 +57,7 @@
 ## Pedidos: lista atualiza sozinha — correção (04/11/2026)
 
 - Bug: o tick de `setAgora` (15 s) cancelava o `setInterval` da lista no mesmo ciclo; a 1ª página quase nunca atualizava.
-- Correção: merge da 1ª página no tick de `agora`; contador do menu dispara `luxtia:pedido-novo` e a tela faz `refetch` na hora.
+- Correção: merge da 1ª página no tick de `agora`; contador do menu dispara `luxbrain:pedido-novo` e a tela faz `refetch` na hora.
 - Contagem muda (`aguardando_loja` / `em_andamento`): `refetch` da lista; pausa com diálogo de status; destaque e título mantidos.
 
 ## Pedidos: lista atualiza sozinha (04/11/2026)
@@ -148,7 +154,7 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 ## MFA1 — publicado com flag off (30/10/2026)
 
 - Especificação: `docs/ESPEC_MFA1.md`. **`MFA1_OBRIGATORIO=0`** (cutover desligado).
-- Marco: TOTP `Luxtia` verified, sessão aal2, **ainda 0 códigos** — gerar em Segurança.
+- Marco: TOTP `Luxbrain` verified, sessão aal2, **ainda 0 códigos** — gerar em Segurança.
 - Emergência: sem fator. Antes do cutover: fator + 10 códigos.
 - No ar: aal nas funções, 10 códigos, recuperação sem apagar TOTP, aviso se faltar códigos.
 
@@ -162,7 +168,7 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 ## Atalho da segunda etapa (29/10/2026, 22:22 Brasília)
 
 - O aviso "Ative a segunda etapa até …" ganhou o botão "Ativar agora". Ele abre o cadastro já no QR, no código de 6 dígitos e, depois da confirmação, nos 8 códigos de recuperação. O mesmo cadastro continua no botão "Segurança" da barra de cima, à direita do título da página. Não há item no menu lateral.
-- A obrigatoriedade da plataforma não mudou: 7 dias a partir do primeiro login desta versão. A conta de emergência (`admin@luxtia.local`) continua sem esses 7 dias. O gestor continua sem essa obrigação.
+- A obrigatoriedade da plataforma não mudou: 7 dias a partir do primeiro login desta versão. A conta de emergência (`admin@luxbrain.local`) continua sem esses 7 dias. O gestor continua sem essa obrigação.
 - Os códigos de recuperação ficam só como hash. Usar um desliga o aplicativo e pede para entrar de novo com a senha. A migração `20261029220000_codigos_recuperacao.sql` ainda não foi aplicada. Nada foi publicado.
 
 ## Telefone inválido embaixo do campo (29/10/2026)
@@ -182,14 +188,14 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 
 - Sem SMTP, o convite mostra o link uma vez para quem convidou. Vale 24 horas, é de uso único e pode ser revogado na lista. Com `SMTP_HOST`, volta a ser por e-mail.
 - Enquanto `GATEWAY_PLATFORM_KEY` estiver vazia, a sessão de plataforma usa a chave da empresa. O log avisa uma vez por dia, sem registrar a chave.
-- `admin@luxtia.local` foi marcada como conta de emergência. O papel continua `super_admin`. A senha não foi alterada: o Marco troca. A segunda etapa passa a ser obrigatória no primeiro login da versão publicada, sem os 7 dias. Cada login dela gera alerta na auditoria.
+- `admin@luxbrain.local` foi marcada como conta de emergência. O papel continua `super_admin`. A senha não foi alterada: o Marco troca. A segunda etapa passa a ser obrigatória no primeiro login da versão publicada, sem os 7 dias. Cada login dela gera alerta na auditoria.
 - A migração `20261028183000_usuarios1_ajustes.sql` foi aplicada. A imagem do painel não foi recriada. A publicação segue junto com o PAPEL1 do gateway.
 
 ## USUARIOS1 — papéis e unidades no painel, sem publicar (28/10/2026, 15:50 Brasília)
 
 - A especificação foi aprovada. O painel passou a ter papéis (`plataforma`, `gestor`, `supervisor`, `funcionario`), unidades por usuário e a tela Usuários no lugar de Equipe. A imagem em produção não foi recriada. O gateway não foi alterado.
 - O servidor monta `X-Role` e `X-Unidades` (`*` para plataforma e gestor; códigos para os outros dois). A chave `GATEWAY_PLATFORM_KEY` fica só no servidor e só entra quando o papel é plataforma. Recurso de outra unidade chega como “Não encontrado.”. Para o funcionário, a conversa usa o apelido `cv_<hash>` e o telefone mostra só os 4 últimos dígitos.
-- A migração `20261028160000_usuarios1.sql` foi aplicada. O vínculo de quem era administrador da empresa virou gestor. O `tenant_admin` órfão de `cesar.almeida@ticway.com.br` saiu, com auditoria; a conta permanece. `admin@luxtia.local` não foi alterada e não tem prazo de segunda etapa gravado.
+- A migração `20261028160000_usuarios1.sql` foi aplicada. O vínculo de quem era administrador da empresa virou gestor. O `tenant_admin` órfão de `cesar.almeida@ticway.com.br` saiu, com auditoria; a conta permanece. `admin@luxbrain.local` não foi alterada e não tem prazo de segunda etapa gravado.
 - Relatórios não entrou no menu. O convite por e-mail depende de SMTP, que o painel ainda não tem configurado.
 - Prints em `docs/prints-usuarios/`. Publicação junto com o gateway, por `sh docker/publicar-painel.sh`.
 
@@ -197,7 +203,7 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 
 - Só especificação, em `docs/ESPEC_USUARIOS1.md`. Nada implementado. Gateway intocado.
 - Hoje o `X-Role` sai no servidor: `super_admin` vira `plataforma`; `is_tenant_admin` vira `admin`; o resto vira `membro`. Não existe papel `atendente` no banco. “Atendente” na conversa é estado da sessão.
-- Contas em produção: 3 plataforma (`admin@luxtia.local`, `cesar.almeida@luxtia.ia.br`, `marco.santos@ticway.com.br`). Zero admin e zero membro no fio. O César da Ticway tem `tenant_admin` órfão, sem empresa, e não vira gestor.
+- Contas em produção: 3 plataforma (`admin@luxbrain.local`, `cesar.almeida@luxtia.ia.br`, `marco.santos@ticway.com.br`). Zero admin e zero membro no fio. O César da Ticway tem `tenant_admin` órfão, sem empresa, e não vira gestor.
 - Papéis propostos: plataforma, gestor, supervisor, funcionário, como conjunto de permissões. Gestor vê todas as unidades. Supervisor e funcionário ficam na lista usuário × unidades. Ninguém concede papel acima do próprio.
 - Cabeçalhos propostos para quando o gateway aceitar: `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades` (`*` ou códigos), junto com as chaves do CHAVES1. Até lá o painel continuaria mandando `admin`/`membro`.
 
@@ -211,7 +217,7 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 
 ## Bootstrap sem senha no código (26/10/2026, 12:52 Brasília)
 
-- A conta que o bootstrap criava é `admin@luxtia.local` (nome Super Admin, papel `super_admin`). Ela já existe no banco de produção: criada em 07/10/2026 18:30 e último acesso em 23/10/2026 09:07 (Brasília). Tem senha. O valor não foi exibido.
+- A conta que o bootstrap criava é `admin@luxbrain.local` (nome Super Admin, papel `super_admin`). Ela já existe no banco de produção: criada em 07/10/2026 18:30 e último acesso em 23/10/2026 09:07 (Brasília). Tem senha. O valor não foi exibido.
 - O código não guarda mais senha. `BOOTSTRAP_SUPER_ADMIN_SENHA` só é usada se essa conta não existir; se existir, o bootstrap recusa e não altera a senha. A variável no servidor fica vazia. O Marco troca a senha da conta. O histórico do Git não foi reescrito.
 - A imagem em produção `painel:conversas-20261026` é o commit `d91f64317e3f7fbd733c56ed7e94bac0fdabe4b9` (a mesma `sha256:7ba6a24b…`). Publicação seguinte: `sh docker/publicar-painel.sh`, que recusa árvore suja e grava `org.opencontainers.image.revision`.
 
@@ -232,7 +238,7 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 
 ## Acesso de Marco à Luxbrain Testes (23/10/2026)
 
-- Usuário do painel: `marco.santos@ticway.com.br` (já era `super_admin`, sem vínculo de empresa). O login `admin@luxtia.local` é a conta de sistema, usada por último em 23/10.
+- Usuário do painel: `marco.santos@ticway.com.br` (já era `super_admin`, sem vínculo de empresa). O login `admin@luxbrain.local` é a conta de sistema, usada por último em 23/10.
 - Cliente do painel `Luxbrain Testes` (`luxbrain-testes`), ligado ao gateway `luxbrain_testes`. Marco é administrador dessa empresa (`tenant_users.is_tenant_admin`).
 - By Koji não mudou: cliente `koji`, gateway `bykoji`, sem membro novo.
 - O papel `super_admin` foi mantido. Sem ele, o seletor some e o By Koji deixa de abrir, porque ele não tem vínculo nessa empresa.
@@ -309,7 +315,7 @@ Leitura do código, sem correção e sem teste de invasão. Os achados ficam for
 - Volta: `painel:volta-cat3-c1c1c96e2719` = `sha256:c1c1c96e2719c9182442f97dd5a2124d42881f501c7178fc2678a29548be7c1b` (a imagem do CAT2, `painel:cat2-20261013`). Nova: `painel:cat3a-20261020` = `sha256:b98f06b7596782c35dc43343869211b5639cb241018c59901252046f766cb95a`. Container `a0c967e48e50`. Só o painel foi recriado.
 - Backup `/home/twadmin/backups/painel/pre-cat3a-20261020T202828Z`, diretório 700, dump/ambiente/Compose 600. `pg_restore --list` 279 entradas. SHA-256 do dump `790526906e651e0d146f915c40b851c5ca733149d7bc07d9d9272ba6f9a35a8e`. Sem mudança de schema: não restaurar o dump numa volta.
 - Volta: `docker tag painel:volta-cat3-c1c1c96e2719 painel_koji-painel` e `docker compose up -d --no-deps --no-build painel`.
-- Conferência só de leitura: `/ia/cardapio` abre (título Cardápio | Luxtia). By Koji tem 4 unidades (Einstein, Vila Nova Conceição, Pátio Guedala, Morumbi). Nenhuma categoria tem posição própria, então a ordem na tela é a do cardápio importado que o gateway devolve. Sugestões de pratos iguais: 189 grupos (100 na primeira página). Na primeira página de conversas, as 20 trazem o atendimento atual (12 encerrados, 8 abertos). Nenhum item, categoria ou atendimento foi alterado.
+- Conferência só de leitura: `/ia/cardapio` abre (título Cardápio | Luxbrain). By Koji tem 4 unidades (Einstein, Vila Nova Conceição, Pátio Guedala, Morumbi). Nenhuma categoria tem posição própria, então a ordem na tela é a do cardápio importado que o gateway devolve. Sugestões de pratos iguais: 189 grupos (100 na primeira página). Na primeira página de conversas, as 20 trazem o atendimento atual (12 encerrados, 8 abertos). Nenhum item, categoria ou atendimento foi alterado.
 
 ## CAT3-a e ENC1-a — cardápio do dia e atendimentos (20/10/2026, desenvolvimento)
 
@@ -635,14 +641,14 @@ Sem alteração de schema: manter banco e ambiente atuais. Se precisar voltar, c
 
 ## Fase — Remoção da marca Lovable (2026-10-07 23:02)
 
-- Favicon e ícone da aba passaram a ser o monograma Luxtia (roxo e dourado).
+- Favicon e ícone da aba passaram a ser o monograma Luxbrain (roxo e dourado).
 - Saíram a dependência de build `@lovable.dev/vite-tanstack-config`, a telemetria, o armazenamento de sessão do editor e os textos que citavam essa plataforma.
 - O painel foi republicado em http://painel.luxbrain.com.br/ e a página de acesso continua no ar.
 
 ## Fase — Stack em execução (2026-10-07 18:30)
 
 - `docker compose` está no ar em `/home/twadmin/painel_koji`.
-- Nesta máquina, http://10.0.0.211 responde o painel Luxtia, com autenticação e API.
+- Nesta máquina, http://10.0.0.211 responde o painel Luxbrain, com autenticação e API.
 - O DNS `painel.luxbrain.com.br` → `177.67.71.227` está certo, mas o firewall ainda entrega as portas 80 e 443 a outro servidor (Apache/nginx). O encaminhamento precisa ir para `10.0.0.211`.
 
 ## Fase — Deploy Docker + PostgreSQL (2026-10-07)

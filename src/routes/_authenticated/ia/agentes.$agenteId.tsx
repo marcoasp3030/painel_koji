@@ -54,7 +54,7 @@ export const Route = createFileRoute("/_authenticated/ia/agentes/$agenteId")({
     ...(ABAS.includes(s["aba"] as Aba) ? { aba: s["aba"] as Aba } : {}),
     ...(typeof s["empresa"] === "string" ? { empresa: s["empresa"] } : {}),
   }),
-  head: () => ({ meta: [{ title: "Agente | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Agente | Luxbrain" }] }),
   component: PaginaAgente,
 });
 

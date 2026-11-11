@@ -26,13 +26,13 @@ export const Route = createFileRoute("/_authenticated/integracoes")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Integrações · iFood, 99Food, WhatsApp e Uazapi | Luxtia" },
+      { title: "Integrações · iFood, 99Food, WhatsApp e Uazapi | Luxbrain" },
       {
         name: "description",
         content:
-          "Configure as credenciais das integrações de delivery e mensagens do seu negócio na plataforma Luxtia.",
+          "Configure as credenciais das integrações de delivery e mensagens do seu negócio na plataforma Luxbrain.",
       },
-      { property: "og:title", content: "Integrações · Luxtia" },
+      { property: "og:title", content: "Integrações · Luxbrain" },
       {
         property: "og:description",
         content: "Configuração das integrações de delivery e mensagens do cliente.",

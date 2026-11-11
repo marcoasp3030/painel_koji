@@ -35,7 +35,7 @@ import type { AgenteGateway, PapelGateway } from "@/lib/gateway/tipos";
 import { RESPOSTAS, SITUACAO_AGENTE } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/agentes/")({
-  head: () => ({ meta: [{ title: "Agentes | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Agentes | Luxbrain" }] }),
   component: () => (
     <PaginaGateway titulo="Agentes" papeis={["plataforma", "gestor", "supervisor"]} telaCheia>
       {(ctx) => <Agentes key={ctx.empresa ?? "empresa"} ctx={ctx} />}

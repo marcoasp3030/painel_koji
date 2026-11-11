@@ -1,6 +1,6 @@
 /** Lado da marca na tela de acesso: diz o que o produto faz e mostra o caminho da conversa ao pedido. */
 import { Bot, Check, MessageCircle, ShoppingBag, UtensilsCrossed } from "lucide-react";
-import { LuxtiaWordmark } from "@/components/luxtia/Brand";
+import { LuxbrainWordmark } from "@/components/luxtia/Brand";
 
 /** Exemplo fictício, só decorativo: fica fora da leitura de tela. */
 function CenaAtendimento() {
@@ -53,7 +53,7 @@ export function PainelMarca() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_85%_10%,rgba(201,162,75,0.09),transparent_70%),radial-gradient(70%_60%_at_0%_100%,rgba(93,74,126,0.55),transparent_70%)]"
       />
       <div className="relative">
-        <LuxtiaWordmark />
+        <LuxbrainWordmark />
       </div>
       <div className="relative max-w-lg">
         <h1 className="font-display text-5xl leading-[1.08] text-base-50">

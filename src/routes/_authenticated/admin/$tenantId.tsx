@@ -41,12 +41,12 @@ import { StatusBadge } from "./index";
 export const Route = createFileRoute("/_authenticated/admin/$tenantId")({
   head: () => ({
     meta: [
-      { title: "Cliente · Acessos e integrações | Luxtia" },
+      { title: "Cliente · Acessos e integrações | Luxbrain" },
       {
         name: "description",
         content: "Gerencie os acessos e acompanhe as integrações configuradas por este cliente.",
       },
-      { property: "og:title", content: "Cliente · Luxtia" },
+      { property: "og:title", content: "Cliente · Luxbrain" },
       { property: "og:description", content: "Acessos e integrações do cliente na plataforma." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

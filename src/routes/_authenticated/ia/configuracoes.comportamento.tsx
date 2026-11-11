@@ -3,7 +3,7 @@ import { PaginaGateway } from "@/components/luxtia/Gateway";
 import { ComportamentoAgente } from "@/components/luxtia/comportamento/ComportamentoAgente";
 
 export const Route = createFileRoute("/_authenticated/ia/configuracoes/comportamento")({
-  head: () => ({ meta: [{ title: "Comportamento do agente | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Comportamento do agente | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       sobretitulo="Configurações"

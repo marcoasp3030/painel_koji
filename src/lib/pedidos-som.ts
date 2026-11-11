@@ -1,6 +1,6 @@
 /** Preferência local do som de pedido novo. Padrão desligado. */
 export function chaveSomPedido(usuario: string) {
-  return `luxtia:pedidos-som:${usuario}`;
+  return `luxbrain:pedidos-som:${usuario}`;
 }
 export function somPedidoLigado(usuario: string) {
   try {
@@ -15,7 +15,7 @@ export function definirSomPedido(usuario: string, ligado: boolean) {
   } catch {
     /* A preferência vale enquanto a aba estiver aberta. */
   }
-  window.dispatchEvent(new Event("luxtia:pedidos-som"));
+  window.dispatchEvent(new Event("luxbrain:pedidos-som"));
 }
 export function tocarPedidoNovo() {
   const audio = new AudioContext();

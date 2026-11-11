@@ -14,7 +14,7 @@ import {
 } from "@/lib/gateway-documentos.functions";
 
 export const Route = createFileRoute("/_authenticated/ia/chaves-formulario")({
-  head: () => ({ meta: [{ title: "Chaves de formulário | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Chaves de formulário | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       titulo="Chaves de formulário"

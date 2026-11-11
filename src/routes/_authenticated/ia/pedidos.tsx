@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/ia/pedidos")({
         ? { pedido: String(s["pedido"]) }
         : {}),
   }),
-  head: () => ({ meta: [{ title: "Pedidos | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Pedidos | Luxbrain" }] }),
   component: PaginaPedidos,
 });
 

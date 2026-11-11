@@ -5,7 +5,7 @@ import { Simulador } from "@/components/luxtia/Simulador";
 export const Route = createFileRoute("/_authenticated/ia/simular")({
   validateSearch: (s: Record<string, unknown>): { agente?: string } =>
     typeof s["agente"] === "string" ? { agente: s["agente"] } : {},
-  head: () => ({ meta: [{ title: "Simular conversa | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Simular conversa | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       titulo="Simular conversa"

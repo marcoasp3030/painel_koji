@@ -1,4 +1,4 @@
-/** Peças visuais compartilhadas do painel. Usam só a paleta Luxtia. */
+/** Peças visuais compartilhadas do painel. Usam só a paleta Luxbrain. */
 
 export function CabecalhoPagina({
   sobretitulo,

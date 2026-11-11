@@ -252,7 +252,7 @@ export async function avancarCursor(
   return { cursor, completo: false };
 }
 export function chaveNovidades(usuario: string, empresa: string) {
-  return `luxtia:conversas:${encodeURIComponent(usuario)}:${encodeURIComponent(empresa)}`;
+  return `luxbrain:conversas:${encodeURIComponent(usuario)}:${encodeURIComponent(empresa)}`;
 }
 export function juntarMensagens(...paginas: MensagemGateway[][]) {
   return [...new Map(paginas.flat().map((m) => [m.id, m])).values()].sort((a, b) => a.id - b.id);

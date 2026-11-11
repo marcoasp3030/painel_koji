@@ -22,16 +22,16 @@ export const Route = createFileRoute("/_authenticated/auditoria")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Auditoria · Histórico de ações da plataforma Luxtia" },
+      { title: "Auditoria · Histórico de ações da plataforma Luxbrain" },
       {
         name: "description",
         content:
-          "Acompanhe quem fez o quê na plataforma Luxtia: criação de clientes, acessos, mudanças de integração e testes de conexão.",
+          "Acompanhe quem fez o quê na plataforma Luxbrain: criação de clientes, acessos, mudanças de integração e testes de conexão.",
       },
-      { property: "og:title", content: "Auditoria · Luxtia" },
+      { property: "og:title", content: "Auditoria · Luxbrain" },
       {
         property: "og:description",
-        content: "Histórico de ações administrativas e testes de conexão da plataforma Luxtia.",
+        content: "Histórico de ações administrativas e testes de conexão da plataforma Luxbrain.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

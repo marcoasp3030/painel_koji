@@ -49,7 +49,7 @@ import type { CanalGateway, WebhookUazapi } from "@/lib/gateway/tipos";
 import { PUBLICO_CANAL, TIPO_CANAL } from "@/lib/gateway/vocabulario";
 
 export const Route = createFileRoute("/_authenticated/ia/canais")({
-  head: () => ({ meta: [{ title: "Canais | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Canais | Luxbrain" }] }),
   component: () => (
     <PaginaGateway
       titulo="Canais"

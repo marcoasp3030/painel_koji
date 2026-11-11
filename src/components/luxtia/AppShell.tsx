@@ -46,7 +46,7 @@ import {
   type ItemMenu,
 } from "@/lib/nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LuxtiaWordmark } from "./Brand";
+import { LuxbrainLogo, LuxbrainWordmark } from "./Brand";
 import { ContadorPedidos } from "./ContadorPedidos";
 
 const ICONES: Record<IconeMenu, LucideIcon> = {
@@ -75,7 +75,7 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   aparencia: Palette,
 };
 
-const CHAVE_EMPRESA = "luxtia:gateway-empresa";
+const CHAVE_EMPRESA = "luxbrain:gateway-empresa";
 
 function itemAtivo(caminho: string, destino: string) {
   return caminho === destino || caminho.startsWith(`${destino}/`);
@@ -103,7 +103,7 @@ export function AppShell({
 
   useEffect(() => {
     try {
-      setRecolhido(localStorage.getItem("luxtia:menu-recolhido") === "true");
+      setRecolhido(localStorage.getItem("luxbrain:menu-recolhido") === "true");
     } catch {
       /* O menu continua funcionando sem armazenamento local. */
     }
@@ -113,7 +113,7 @@ export function AppShell({
     const proximo = !recolhido;
     setRecolhido(proximo);
     try {
-      localStorage.setItem("luxtia:menu-recolhido", String(proximo));
+      localStorage.setItem("luxbrain:menu-recolhido", String(proximo));
     } catch {
       /* A preferência vale durante esta sessão. */
     }
@@ -154,8 +154,8 @@ export function AppShell({
       }
     }
     ler();
-    window.addEventListener("luxtia:empresa", ler);
-    return () => window.removeEventListener("luxtia:empresa", ler);
+    window.addEventListener("luxbrain:empresa", ler);
+    return () => window.removeEventListener("luxbrain:empresa", ler);
   }, []);
   const modulos = useQuery({
     queryKey: ["gateway", "modulos-menu", plataforma ? empresaMenu : "sessao"],
@@ -241,11 +241,9 @@ export function AppShell({
             className={`flex h-14 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 ${recolhido ? "lg:justify-center lg:px-0" : ""}`}
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-purple-900 font-display text-base text-gold-500">
-                L
-              </span>
+              <LuxbrainLogo className="size-8 shrink-0" />
               <div className={`min-w-0 leading-tight ${textoMenu}`}>
-                <LuxtiaWordmark />
+                <LuxbrainWordmark comLogo={false} />
                 <p className="truncate text-[10px] uppercase tracking-[0.14em] text-purple-300">
                   {context}
                 </p>

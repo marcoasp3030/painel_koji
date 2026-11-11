@@ -1,7 +1,7 @@
 /** Prévia das telas ENTRADA1 (depois), dados fictícios. */
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { LuxtiaWordmark, GoldRule } from "@/components/luxtia/Brand";
+import { LuxbrainWordmark, GoldRule } from "@/components/luxtia/Brand";
 import { CampoSenha } from "@/components/luxtia/entrada/CampoSenha";
 import { CodigoOtp } from "@/components/luxtia/entrada/CodigoOtp";
 import { MedidorSenha } from "@/components/luxtia/entrada/MedidorSenha";
@@ -24,7 +24,7 @@ function Moldura({
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
       <section className="relative hidden flex-col justify-between bg-purple-800 px-14 py-14 lg:flex">
-        <LuxtiaWordmark />
+        <LuxbrainWordmark />
         <div className="max-w-md">
           <GoldRule className="mb-8" />
           <h1 className="font-display text-5xl leading-[1.05] text-base-50">
@@ -43,7 +43,7 @@ function Moldura({
       <section className="flex items-center justify-center bg-base-100 px-6 py-16">
         <div className="w-full max-w-sm rounded-2xl border border-base-200 bg-card px-6 py-8 shadow-[0_1px_2px_rgba(26,21,32,0.04),0_16px_40px_rgba(46,35,64,0.08)] sm:px-8">
           <div className="lg:hidden">
-            <LuxtiaWordmark tone="dark" />
+            <LuxbrainWordmark tone="dark" />
           </div>
           <h2 className="mt-8 font-display text-3xl text-purple-800 lg:mt-0">{titulo}</h2>
           <p className="mt-2 text-ink-500">{subtitulo}</p>

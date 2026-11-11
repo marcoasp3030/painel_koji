@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/ia/conversas")({
       : {}),
     ...(typeof s["canal"] === "string" && s["canal"].length <= 40 ? { canal: s["canal"] } : {}),
   }),
-  head: () => ({ meta: [{ title: "Conversas | Luxtia" }] }),
+  head: () => ({ meta: [{ title: "Conversas | Luxbrain" }] }),
   component: PaginaConversas,
 });
 

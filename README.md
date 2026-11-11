@@ -1,4 +1,4 @@
-# Painel Luxtia
+# Painel Luxbrain
 
 Repositório: https://github.com/marcoasp3030/painel_koji
 
@@ -30,7 +30,7 @@ docker network create --internal luxbrain_gateway_proxy
 docker compose up -d
 ```
 
-Entre com `admin@luxtia.local` e a senha de `BOOTSTRAP_SUPER_ADMIN_SENHA`. A conta é criada ao abrir a tela de entrada pela primeira vez.
+Entre com `admin@luxbrain.local` e a senha de `BOOTSTRAP_SUPER_ADMIN_SENHA`. A conta é criada ao abrir a tela de entrada pela primeira vez.
 
 | Ação | Comando |
 | --- | --- |
@@ -65,7 +65,7 @@ sh docker/publicar-painel.sh
 docker compose up -d --no-deps --no-build painel
 ```
 
-O primeiro acesso `admin@luxtia.local` só é criado se a conta ainda não existe, e a senha vem de `BOOTSTRAP_SUPER_ADMIN_SENHA` no `.env`. Com a conta já criada, a variável fica vazia e o bootstrap não roda. O proxy escuta nas portas 80 e 443. O arquivo `.env` fica só na máquina e não entra no Git.
+O primeiro acesso `admin@luxbrain.local` só é criado se a conta ainda não existe, e a senha vem de `BOOTSTRAP_SUPER_ADMIN_SENHA` no `.env`. Com a conta já criada, a variável fica vazia e o bootstrap não roda. O proxy escuta nas portas 80 e 443. O arquivo `.env` fica só na máquina e não entra no Git.
 
 ## Unidades e histórico
 
@@ -185,7 +185,7 @@ A tela Clientes é só do Super Admin e lê os dados com service role depois de 
 
 A tela Usuários lista a equipe com busca e filtros; convite e edição abrem em painel lateral. Cada pessoa só altera quem poderia convidar: o supervisor gere funcionários das suas unidades, e a regra `podeGerirUsuario` vale no servidor para papel, unidades, convite e desativação. Ninguém altera o próprio acesso.
 
-USUARIOS1 está no ar (`docs/ESPEC_USUARIOS1.md`). Sem SMTP, quem convida vê o link uma vez, por 24 horas, de uso único e revogável. Com `GATEWAY_PLATFORM_KEY` vazia, a plataforma usa a chave da empresa e o log avisa uma vez por dia. `admin@luxtia.local` é conta de emergência: segunda etapa obrigatória no primeiro login desta versão, sem os 7 dias, e cada entrada dela gera alerta na auditoria. O servidor manda `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades`. Prints em `docs/prints-usuarios/`.
+USUARIOS1 está no ar (`docs/ESPEC_USUARIOS1.md`). Sem SMTP, quem convida vê o link uma vez, por 24 horas, de uso único e revogável. Com `GATEWAY_PLATFORM_KEY` vazia, a plataforma usa a chave da empresa e o log avisa uma vez por dia. `admin@luxbrain.local` é conta de emergência: segunda etapa obrigatória no primeiro login desta versão, sem os 7 dias, e cada entrada dela gera alerta na auditoria. O servidor manda `X-Role` (`plataforma`, `gestor`, `supervisor`, `funcionario`) e `X-Unidades`. Prints em `docs/prints-usuarios/`.
 
 ## Entrada (login)
 

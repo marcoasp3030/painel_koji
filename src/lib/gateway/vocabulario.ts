@@ -129,7 +129,7 @@ export const CAMPO_AGENTE = {
     rotulo: "URL do fluxo",
     ajuda: "Crie o fluxo do zero no Skyone e copie a URL do webhook (https://…).",
   },
-  skyone_auth_usuario: { rotulo: "Usuário", ajuda: "Gerado pelo Skyone: flow-<id>@luxtia." },
+  skyone_auth_usuario: { rotulo: "Usuário", ajuda: "Gerado pelo Skyone: flow-<id>@luxbrain." },
   skyone_auth: {
     rotulo: "Senha",
     ajuda: "Definida por você no Skyone. Fica guardada cifrada; o painel nunca a mostra.",

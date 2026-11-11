@@ -4,7 +4,7 @@ export const INTERVALO_LISTA_MS = 15_000;
 export const DESTAQUE_PEDIDO_MS = 6_000;
 export const TITULO_NOVO_PEDIDO = "(1) Novo pedido";
 /** Contador do menu avisou pedido novo — a tela Pedidos deve refetch da lista. */
-export const EVENTO_PEDIDO_NOVO = "luxtia:pedido-novo";
+export const EVENTO_PEDIDO_NOVO = "luxbrain:pedido-novo";
 
 export type SinaisContagem = { aguardando: number; andamento: number };
 

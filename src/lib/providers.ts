@@ -63,7 +63,7 @@ export const PROVIDERS: ProviderDef[] = [
         key: "app_shop_id",
         label: "APP Shop ID",
         secret: false,
-        placeholder: "Ex.: luxtia_sp_001",
+        placeholder: "Ex.: luxbrain_sp_001",
         help: "Identificador único da loja no seu sistema, vinculado à aplicação no portal da 99Food. É obrigatório para obter o Auth Token e não é o Shop ID numérico.",
       },
       {

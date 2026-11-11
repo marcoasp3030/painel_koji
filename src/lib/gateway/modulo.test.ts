@@ -29,10 +29,10 @@ function fetchFalso(respostas: Response[] = []) {
 const vinculo = (admin: boolean, ativo = true) => [{ gatewayTenantId: "bykoji", ativo, admin }];
 
 const PERFIS: Record<string, PerfilGateway> = {
-  plataforma: { userId: "u-p", email: "admin@luxtia.local", superAdmin: true, vinculos: [] },
+  plataforma: { userId: "u-p", email: "admin@luxbrain.local", superAdmin: true, vinculos: [] },
   adminA: { userId: "u-a", email: "ana@koji.com", superAdmin: false, vinculos: vinculo(true) },
   membroA: { userId: "u-m", email: "beto@koji.com", superAdmin: false, vinculos: vinculo(false) },
-  semVinculo: { userId: "u-x", email: "x@luxtia.com", superAdmin: false, vinculos: [] },
+  semVinculo: { userId: "u-x", email: "x@luxbrain.com", superAdmin: false, vinculos: [] },
   suspenso: {
     userId: "u-s",
     email: "s@koji.com",
@@ -366,7 +366,7 @@ describe("papéis", () => {
         "POST",
         ["webhooks-saida"],
         {
-          url: "https://hooks.exemplo.com.br/luxtia",
+          url: "https://hooks.exemplo.com.br/luxbrain",
           eventos: ["documento.pronto", "follow_up.agendado"],
           ativo: true,
         },
@@ -513,7 +513,7 @@ describe("cliente HTTP", () => {
     expect(cab["Authorization"]).toBe(`Bearer ${CHAVE_PLATAFORMA}`);
     expect(cab["X-Unidades"]).toBe("*");
     expect(cab["X-Role"]).toBe("plataforma");
-    expect(cab["X-Actor"]).toBe("admin@luxtia.local");
+    expect(cab["X-Actor"]).toBe("admin@luxbrain.local");
     expect(cab["X-Tenant-Scope"]).toBeUndefined();
     expect(url.pathname).toBe(
       "/admin/v1/tenants/bykoji/conversas/bykoji%3Acan_1%3Aa%2Fb/mensagens",

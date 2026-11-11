@@ -75,14 +75,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Luxtia · Plataforma de integrações" },
+      { title: "Luxbrain · Plataforma de integrações" },
       {
         name: "description",
         content:
-          "Plataforma Luxtia para integrar delivery e mensagens: iFood, 99Food, WhatsApp Oficial e Uazapi.",
+          "Plataforma Luxbrain para integrar delivery e mensagens: iFood, 99Food, WhatsApp Oficial e Uazapi.",
       },
-      { name: "author", content: "Luxtia" },
-      { property: "og:title", content: "Luxtia · Plataforma de integrações" },
+      { name: "author", content: "Luxbrain" },
+      { property: "og:title", content: "Luxbrain · Plataforma de integrações" },
       {
         property: "og:description",
         content: "Integrações de delivery e mensagens com curadoria e governança.",
@@ -101,7 +101,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap",
       },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/luxbrain-logo.jpeg", type: "image/jpeg" },
+      { rel: "apple-touch-icon", href: "/luxbrain-logo.jpeg" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
