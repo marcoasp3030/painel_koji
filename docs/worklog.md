@@ -10,10 +10,10 @@
  - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
 - **Resumo das mudanças:** Plataforma configura o app e copia o webhook; gestor cadastra número Meta; conversas mostram entrega da Cloud API.
 - **Decisões e justificativas:** Segredos só no PUT; UI do gestor só tipo meta; webhook único da plataforma (não por canal).
-- **Comandos executados:** `bun test` meta + modulo → 51 OK
+- **Comandos executados:** `bun test` meta + modulo → 51 OK; commit `44263dd` + `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; home 200; imagem `painel:44263dd…`
 - **Erros e resoluções:** teste ainda listava POST canais como proibido ao gestor → removido das proibidas
 - **Pendências / TODO:** smoke com app/número de teste da Meta
-- **Próximos passos:** publicar painel; validar /ia/meta (plataforma) e cadastro de canal (gestor)
+- **Próximos passos:** abrir `/ia/meta` como plataforma e cadastrar canal meta como gestor
 
 ## [2026-11-11 19:49] — Simular: opções lote e FTP no clipe
 - **Autor:** Auto
