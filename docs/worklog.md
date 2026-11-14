@@ -8,10 +8,10 @@
  - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
 - **Resumo das mudanças:** Contador no topo em todas as telas; poll 15 s/60 s; 1ª carga sem som; lembrete 2 min×5; prefs em Segurança e no painel.
 - **Decisões e justificativas:** Reusa `listarConversas(aguardando)`; som distinto do pedido (dois toques); sem mudança no gateway.
-- **Comandos executados:** `bun test` atendimento-alerta → 8 OK
+- **Comandos executados:** `bun test` atendimento-alerta → 8 OK; commit `88a7ac6` + publicar → OK; home 200; imagem `painel:88a7ac6…`
 - **Erros e resoluções:** —
 - **Pendências / TODO:** smoke com transferência real no Simular
-- **Próximos passos:** publicar painel e validar selo/som com aba oculta
+- **Próximos passos:** transferir no Simular e conferir selo/som/toast com aba oculta
 
 ## [2026-11-14 00:44] — META1-a: WhatsApp oficial (Meta) no painel
 - **Autor:** Auto
