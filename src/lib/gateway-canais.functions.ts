@@ -21,21 +21,28 @@ export const listarCanais = createServerFn({ method: "POST" })
     });
   });
 
+const credenciaisUazapi = z.object({
+  base_url: z.string().url().max(500),
+  token: z.string().min(1).max(500),
+});
+const credenciaisMeta = z.object({
+  phone_number_id: z.string().regex(/^[0-9]{5,30}$/),
+  waba_id: z.string().regex(/^[0-9]{5,30}$/),
+  token: z.string().regex(/^[A-Za-z0-9_\-.|]{20,1000}$/),
+});
+
 export const criarCanal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
         empresa,
-        // Só api e uazapi recebem mensagens nesta etapa.
-        tipo: z.enum(["api", "uazapi"]),
+        tipo: z.enum(["api", "uazapi", "meta"]),
         nome: z.string().trim().min(1).max(200),
         agente_id: idRecurso,
         publico: z.enum(["clientes", "interno"]),
         ativo: z.boolean(),
-        credenciais: z
-          .object({ base_url: z.string().url().max(500), token: z.string().min(1).max(500) })
-          .nullish(),
+        credenciais: z.union([credenciaisUazapi, credenciaisMeta]).nullish(),
       })
       .parse(d),
   )
@@ -44,11 +51,30 @@ export const criarCanal = createServerFn({ method: "POST" })
     return g.executar(context, async (sessao) => {
       const t = await sessao.tenant(data.empresa);
       const { empresa: _empresa, credenciais, ...corpo } = data;
-      // A resposta traz webhook_url com o segredo: vai só para quem criou, uma vez.
-      const { dados } = await t.chamar<CanalGateway & { webhook_url: string }>("POST", ["canais"], {
-        corpo: credenciais ? { ...corpo, credenciais } : corpo,
-      });
-      return dados;
+      try {
+        // A resposta traz webhook_url (uazapi/api) ou meta {numero,…}. Segredos não voltam.
+        const { dados } = await t.chamar<CanalGateway & { webhook_url?: string }>(
+          "POST",
+          ["canais"],
+          {
+            corpo: credenciais ? { ...corpo, credenciais } : corpo,
+          },
+        );
+        return dados;
+      } catch (e) {
+        const { GatewayErro, mensagemParaUsuario } = await import("./gateway/erros");
+        const { mensagemErroMeta } = await import("./meta");
+        if (e instanceof GatewayErro) {
+          throw new Error(
+            mensagemErroMeta({
+              mensagem: e.message,
+              status: e.status,
+              detalhes: e.detalhes,
+            }) || mensagemParaUsuario(e),
+          );
+        }
+        throw e;
+      }
     });
   });
 

@@ -119,6 +119,12 @@ export type CanalGateway = {
   status_conexao?: string | null;
   ultimo_evento_em?: string | null;
   webhook_uazapi?: WebhookUazapi;
+  /** META1-a: só na criação/atualização com credenciais aceitas pela Meta. */
+  meta?: {
+    numero: string | null;
+    nome_verificado: string | null;
+    qualidade: string | null;
+  };
 };
 
 export type ChaveGateway = {
@@ -142,6 +148,9 @@ export type MensagemGateway = {
   tipo?: string | null;
   /** Nome do arquivo, quando a mensagem traz um. */
   arquivo?: string | null;
+  /** META1-a: situação na Meta (enviada, entregue, lida, falhou). */
+  status_provedor?: string | null;
+  status_provedor_em?: string | null;
 };
 
 export type ResultadoSimulacao = {

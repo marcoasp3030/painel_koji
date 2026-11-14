@@ -1,3 +1,10 @@
+## META1-a: WhatsApp oficial (Meta) no painel (14/11/2026)
+
+- Integrações → **WhatsApp oficial (Meta)** (`/ia/meta`), só plataforma: GET/PUT `meta/credenciais` com `GATEWAY_PLATFORM_KEY`; webhook_url + Copiar; Gerar token 32 chars; erros formato / credenciais_recusadas / meta_indisponivel / papel_sem_credencial.
+- Canais: tipo `meta` (gestor+); credenciais phone_number_id / waba_id / token; Conferir agora; sem webhook/QR por canal.
+- Conversas: `status_provedor` nas saídas; selo **oficial** no ícone WhatsApp.
+- Testes: `meta.test.ts` + módulo GEST para POST canais e GET canais/*/meta.
+
 ## Simular: lote e FTP no clipe (11/11/2026)
 
 - No Simular conversa, com documentos ligados, o clipe abre menu: **Anexar na conversa**, **Enviar em lote** (gestor+; cria lote e manda PDF/XML/ZIP em sequência) e **Pasta FTP** (em breve — SFTP após LOTE1-b).

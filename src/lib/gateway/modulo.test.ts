@@ -87,6 +87,7 @@ const ROTAS_DO_TENANT: Op[] = [
   ["GET", ["canais"]],
   ["POST", ["canais"], {}],
   ["PATCH", ["canais", "can_1"], { ativo: true }],
+  ["GET", ["canais", "can_1", "meta"]],
   ["POST", ["canais", "can_1", "rotacionar-segredo"]],
   ["DELETE", ["canais", "can_1"], { confirmacao: "Canal" }],
   ["GET", ["api-keys"]],
@@ -283,7 +284,7 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], null],
       ["POST", ["agentes", "ag_1", "testar"], { usar_provedor_real: true }],
       ["POST", ["agentes"], { modelo_id: "m", nome: "n" }],
-      ["POST", ["canais"], { tipo: "api" }],
+      // META1-a: gestor cria canal (UI restringe a tipo meta); rotacionar/excluir seguem só plataforma.
       ["POST", ["canais", "can_1", "rotacionar-segredo"]],
       ["DELETE", ["canais", "can_1"], { confirmacao: "Canal" }],
       ["GET", ["api-keys"]],
@@ -322,6 +323,8 @@ describe("papéis", () => {
       ],
       ["GET", ["canais"]],
       ["GET", ["canais", "can_1"]],
+      ["GET", ["canais", "can_1", "meta"]],
+      ["POST", ["canais"], { tipo: "meta", nome: "WA", agente_id: "ag_1", publico: "clientes", ativo: false, credenciais: { phone_number_id: "1", waba_id: "2", token: "x".repeat(20) } }],
       ["PATCH", ["canais", "can_1"], { ativo: true }],
       ["GET", ["consumo"]],
       ["GET", []],
@@ -883,6 +886,25 @@ describe("rotas do atendimento alcançam quem atende", () => {
       AcessoNegado,
     );
     expect(() => autorizar("funcionario", "GET", ["lotes"])).toThrow(AcessoNegado);
+  });
+
+  test("canal Meta: gestor cria e confere; supervisor não", () => {
+    autorizar("gestor", "POST", ["canais"], {
+      tipo: "meta",
+      nome: "WA oficial",
+      agente_id: "ag_1",
+      publico: "clientes",
+      ativo: false,
+      credenciais: { phone_number_id: "12345", waba_id: "67890", token: "t".repeat(20) },
+    });
+    autorizar("gestor", "GET", ["canais", "can_1", "meta"]);
+    expect(() => autorizar("supervisor", "POST", ["canais"], { tipo: "meta" })).toThrow(
+      AcessoNegado,
+    );
+    expect(() => autorizar("supervisor", "GET", ["canais", "can_1", "meta"])).toThrow(AcessoNegado);
+    expect(() => autorizar("funcionario", "GET", ["canais", "can_1", "meta"])).toThrow(
+      AcessoNegado,
+    );
   });
 
   test("financeiro do iFood: gestor lê e atualiza; supervisor não", () => {

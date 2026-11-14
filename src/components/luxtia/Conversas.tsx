@@ -117,6 +117,7 @@ import {
 } from "lucide-react";
 import type { CanalGateway } from "@/lib/gateway/tipos";
 import { ORIGEM_MENSAGEM } from "@/lib/gateway/vocabulario";
+import { marcaStatusProvedor } from "@/lib/meta";
 
 const TOM_ESTADO: Record<EstadoConversa, string> = {
   aguardando_atendente: "bg-gold-300/35 text-gold-700",
@@ -1072,6 +1073,14 @@ function MarcaCanal({ conversa, canal }: { conversa: Conversa; canal: CanalGatew
     <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 text-xs text-ink-500">
       <IconeCanal tipo={info.tipo} />
       <span className="truncate">{textoCanal(info.tipo, info.nome)}</span>
+      {info.tipo === "meta" ? (
+        <span
+          className="shrink-0 rounded bg-emerald-100 px-1 text-[10px] font-medium uppercase tracking-wide text-emerald-800"
+          title="WhatsApp Cloud API (Meta)"
+        >
+          oficial
+        </span>
+      ) : null}
       {info.teste ? (
         <span
           className="shrink-0 rounded border border-dashed border-ink-300 px-1 text-[10px] font-medium uppercase tracking-wide text-ink-500"
@@ -1080,6 +1089,36 @@ function MarcaCanal({ conversa, canal }: { conversa: Conversa; canal: CanalGatew
           teste
         </span>
       ) : null}
+    </span>
+  );
+}
+
+/** Ticks de entrega da Meta (status_provedor): enviada ✓, entregue ✓✓, lida ✓✓ azul, falhou ⚠. */
+function MarcaStatusProvedor({
+  status,
+  saida,
+}: {
+  status: string | null | undefined;
+  /** Bolha roxa (agente): ticks claros. */
+  saida: boolean;
+}) {
+  const m = marcaStatusProvedor(status);
+  if (!m) return null;
+  const cor =
+    m.tom === "falhou"
+      ? saida
+        ? "text-amber-200"
+        : "text-amber-700"
+      : m.tom === "lida"
+        ? saida
+          ? "text-sky-200"
+          : "text-sky-600"
+        : saida
+          ? "text-purple-200"
+          : "text-ink-500";
+  return (
+    <span className={`ml-1 inline-block align-middle ${cor}`} title={status ?? undefined} aria-label={status ?? undefined}>
+      {m.texto}
     </span>
   );
 }
@@ -1118,12 +1157,21 @@ export function IconeCanal({ tipo }: { tipo: string }) {
   const comum = { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": true as const };
   if (tipo === "uazapi" || tipo === "meta")
     return (
-      <svg {...comum}>
-        <path
-          fill="currentColor"
-          d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.8A6.5 6.5 0 1 0 8 1.5Zm3.2 8.3c-.1.4-.7.7-1 .8-.3 0-.6.1-2-.5-1.7-.7-2.8-2.4-2.9-2.5-.1-.1-.7-.9-.7-1.7s.4-1.2.6-1.4.4-.3.5-.3h.4c.1 0 .3 0 .4.3.1.4.5 1.3.5 1.4.1.1 0 .3 0 .4-.1.2-.2.3-.3.4l-.2.2c-.1.1-.2.2-.1.4.1.2.5.9 1.2 1.4.8.6 1.4.8 1.6.9.2.1.3.1.4-.1l.3-.4c.1-.2.3-.1.4-.1.2 0 1.1.5 1.3.6.2.1.3.1.4.2.1.2 0 .6-.1 1Z"
-        />
-      </svg>
+      <span className="relative inline-flex shrink-0" title={tipo === "meta" ? "WhatsApp oficial" : "WhatsApp"}>
+        <svg {...comum}>
+          <path
+            fill="currentColor"
+            d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.8A6.5 6.5 0 1 0 8 1.5Zm3.2 8.3c-.1.4-.7.7-1 .8-.3 0-.6.1-2-.5-1.7-.7-2.8-2.4-2.9-2.5-.1-.1-.7-.9-.7-1.7s.4-1.2.6-1.4.4-.3.5-.3h.4c.1 0 .3 0 .4.3.1.4.5 1.3.5 1.4.1.1 0 .3 0 .4-.1.2-.2.3-.3.4l-.2.2c-.1.1-.2.2-.1.4.1.2.5.9 1.2 1.4.8.6 1.4.8 1.6.9.2.1.3.1.4-.1l.3-.4c.1-.2.3-.1.4-.1.2 0 1.1.5 1.3.6.2.1.3.1.4.2.1.2 0 .6-.1 1Z"
+          />
+        </svg>
+        {tipo === "meta" ? (
+          <span
+            className="absolute -right-1 -top-1 size-2 rounded-full bg-emerald-500 ring-1 ring-card"
+            title="oficial"
+            aria-label="oficial"
+          />
+        ) : null}
+      </span>
     );
   if (tipo === "email")
     return (
@@ -2098,6 +2146,9 @@ function Atendimento({
                           className={`mt-0.5 text-right text-[10px] leading-3 ${saida && !humano ? "text-purple-200" : "text-ink-500"}`}
                         >
                           {ORIGEM_MENSAGEM[m.origem] ?? m.origem} · {horaDaMensagem(m.enviada_em)}
+                          {saida ? (
+                            <MarcaStatusProvedor status={m.status_provedor} saida={!humano} />
+                          ) : null}
                         </p>
                       ) : null}
                     </div>

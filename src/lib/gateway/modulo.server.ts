@@ -177,11 +177,14 @@ const REGRAS: Regra[] = [
     papeis: SUP,
     corpo: soChaves(["identificador", "canal_id", "mensagem"], "Campos do documento inválidos."),
   },
-  // Canais e consumo: só leitura.
+  // Canais: gestor cria/altera (META1-a inclui tipo meta); leitura ampla.
   { metodo: "GET", caminho: ["canais"], papeis: GEST },
   // A conversa precisa do canal para saber se o agente é de teste. Não é a tela de canais.
   { metodo: "GET", caminho: ["canais", "*"], papeis: FUNC },
+  { metodo: "POST", caminho: ["canais"], papeis: GEST },
   { metodo: "PATCH", caminho: ["canais", "*"], papeis: GEST },
+  // META1-a: conferir número do canal WhatsApp oficial.
+  { metodo: "GET", caminho: ["canais", "*", "meta"], papeis: GEST },
   { metodo: "GET", caminho: ["consumo"], papeis: GEST },
   // Unidades e horários: admin da empresa.
   { metodo: "GET", caminho: ["unidades"], papeis: FUNC },

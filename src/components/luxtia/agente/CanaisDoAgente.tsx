@@ -1,10 +1,11 @@
-/** Aba Canais do agente: canais ligados a ele; criar e ativar só para a plataforma. */
+/** Aba Canais do agente: lista; criar meta (gestor+) ou api/uazapi (plataforma). */
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { peloMenos } from "@/lib/acesso/papeis";
 import {
   Etiqueta,
   SegredoUmaVez,
@@ -17,7 +18,8 @@ import { Cartao } from "@/components/luxtia/Superficie";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { alterarCanal } from "@/lib/gateway-canais.functions";
-import type { AgenteDetalhe, CanalGateway } from "@/lib/gateway/tipos";
+import { textoConectadoMeta } from "@/lib/meta";
+import type { AgenteDetalhe, CanalGateway, WebhookUazapi } from "@/lib/gateway/tipos";
 import { PUBLICO_CANAL, TIPO_CANAL } from "@/lib/gateway/vocabulario";
 
 export function CanaisDoAgente({
@@ -36,8 +38,11 @@ export function CanaisDoAgente({
   const queryClient = useQueryClient();
   const alterar = useServerFn(alterarCanal);
   const plataforma = ctx.papel === "plataforma";
-  // URL com segredo: só em memória, até o usuário fechar o aviso.
-  const [url, setUrl] = useState<string | null>(null);
+  const podeCriar = peloMenos(ctx.papel, "gestor");
+  const [segredo, setSegredo] = useState<{
+    url: string;
+    uazapi?: WebhookUazapi;
+  } | null>(null);
   const doAgente = canais.filter((c) => c.agente_id === agente.id);
 
   const recarregar = () =>
@@ -66,11 +71,11 @@ export function CanaisDoAgente({
           <Vazio
             titulo="Nenhum canal ainda"
             texto={
-              plataforma
-                ? "Crie um canal para conectar o WhatsApp ou testar pelo Simular."
-                : "Peça à administração da plataforma para conectar o WhatsApp ou um canal de testes."
+              podeCriar
+                ? "Crie um canal WhatsApp oficial (Meta) ou peça à plataforma um canal Uazapi/API."
+                : "Peça à administração para conectar o WhatsApp ou um canal de testes."
             }
-            {...(plataforma ? { acao: botaoCriar } : {})}
+            {...(podeCriar ? { acao: botaoCriar } : {})}
           />
         ) : (
           <>
@@ -84,6 +89,9 @@ export function CanaisDoAgente({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium text-ink-900">{c.nome}</p>
                       <Etiqueta tom="roxo">{TIPO_CANAL[c.tipo] ?? c.tipo}</Etiqueta>
+                      {c.tipo === "meta" ? (
+                        <Etiqueta tom="sucesso">oficial</Etiqueta>
+                      ) : null}
                       {c.publico === "interno" ? (
                         <Etiqueta>{PUBLICO_CANAL["interno"]}</Etiqueta>
                       ) : null}
@@ -93,8 +101,11 @@ export function CanaisDoAgente({
                         ? `Última mensagem ${dataHora(c.ultimo_evento_em)}`
                         : "Nenhuma mensagem recebida ainda"}
                     </p>
+                    {c.tipo === "meta" && c.meta ? (
+                      <p className="mt-1 text-xs text-success">{textoConectadoMeta(c.meta)}</p>
+                    ) : null}
                   </div>
-                  {plataforma ? (
+                  {podeCriar ? (
                     <label className="flex items-center gap-2 text-sm text-ink-700">
                       <Switch
                         checked={c.ativo}
@@ -119,27 +130,26 @@ export function CanaisDoAgente({
               >
                 Ver todos os canais da empresa
               </Link>
-              {plataforma ? botaoCriar : null}
+              {podeCriar ? botaoCriar : null}
             </div>
           </>
         )}
       </Cartao>
 
-      {plataforma ? (
+      {podeCriar ? (
         <NovoCanal
           ctx={ctx}
           aberto={criando}
           agentes={[{ id: agente.id, nome: agente.nome }]}
           agenteFixo={agente.id}
+          soMeta={!plataforma}
           onFechar={() => onCriando(false)}
-          onCriado={(webhookUrl, uazapi) => {
-            setUrl(webhookUrl);
-            if (uazapi) {
-              toast.message(
-                uazapi.registrado
-                  ? "Webhook cadastrado na uazapi."
-                  : `Webhook na uazapi: ${uazapi.motivo ?? "não cadastrado"}`,
-              );
+          onCriado={(canal) => {
+            if (canal.tipo !== "meta" && canal.webhook_url) {
+              setSegredo({
+                url: canal.webhook_url,
+                ...(canal.webhook_uazapi ? { uazapi: canal.webhook_uazapi } : {}),
+              });
             }
             void recarregar();
           }}
@@ -148,9 +158,13 @@ export function CanaisDoAgente({
 
       <SegredoUmaVez
         titulo="URL do webhook do novo canal"
-        descricao="Cadastre esta URL no provedor do canal. Ela contém o segredo que autentica as mensagens recebidas."
-        valor={url}
-        onFechar={() => setUrl(null)}
+        descricao={
+          segredo?.uazapi?.registrado
+            ? "Webhook cadastrado na uazapi. Guarde a URL — ela contém o segredo."
+            : "Cadastre esta URL no provedor do canal. Ela contém o segredo que autentica as mensagens recebidas."
+        }
+        valor={segredo?.url ?? null}
+        onFechar={() => setSegredo(null)}
       />
     </>
   );

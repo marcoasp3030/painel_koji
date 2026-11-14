@@ -87,6 +87,14 @@ Layout de gestão republicado em 30/10/2026 como `painel:bc6c695dbb029ffcc17c5ac
 
 **Link na conversa (CARD-LINK):** gestor e plataforma ligam ou desligam `enviar_link_cardapio` no grupo Pedidos do comportamento do agente, ou pelo atalho em Aparência do cardápio (um interruptor por agente). Ligado (padrão): o agente manda o link quando o cliente pede. Desligado: apresenta as opções na conversa. O Link da loja não muda. Supervisor não vê o interruptor.
 
+## WhatsApp oficial (Meta) — META1-a
+
+Plataforma: Integrações → **WhatsApp oficial (Meta)** (`/ia/meta`) — credenciais do app (ID, chave secreta, token de verificação com **Gerar**), endereço do webhook para colar no portal da Meta, status Configurado/Não configurado. Exige `GATEWAY_PLATFORM_KEY`. Chave e token nunca voltam depois de salvos.
+
+Gestor+: Canais → **Novo canal** tipo **WhatsApp oficial (Meta)** (`phone_number_id`, `waba_id`, token). Resposta mostra “Conectado: +55 … — Nome — qualidade”. Cartão: **Conferir agora**. Sem webhook/segredo/QR por canal (isso é da uazapi).
+
+Conversas: mensagens de saída no canal meta mostram `status_provedor` (✓ / ✓✓ / ✓✓ azul / ⚠); ícone WhatsApp com selo **oficial**.
+
 ## iFood (lojas)
 
 Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. No mesmo lugar fica o bloco **Credenciais do aplicativo** (Client ID/Secret gravados no gateway só com `GATEWAY_PLATFORM_KEY` = `PANEL_PLATFORM_KEY`; o segredo nunca é mostrado de novo). Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a.

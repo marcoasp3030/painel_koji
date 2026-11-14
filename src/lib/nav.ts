@@ -16,6 +16,7 @@ export type IconeMenu =
   | "pedidos"
   | "vendas"
   | "ifood"
+  | "meta"
   | "operacao"
   | "modelos"
   | "configuracoes"
@@ -189,6 +190,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     label: "iFood",
     grupo: "Integrações",
     icone: "ifood",
+    papeis: ["plataforma"],
+  },
+  {
+    to: "/ia/meta",
+    label: "WhatsApp oficial (Meta)",
+    grupo: "Integrações",
+    icone: "meta",
     papeis: ["plataforma"],
   },
   {

@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { peloMenos } from "@/lib/acesso/papeis";
 import {
   confirmacaoExcluirCanalConfere,
   DICA_CANAL_ATIVO,
@@ -44,6 +45,14 @@ import {
   rotacionarSegredoCanal,
   textoWebhookUazapi,
 } from "@/lib/gateway-canais.functions";
+import { conferirCanalMeta } from "@/lib/gateway-meta.functions";
+import {
+  avisoSituacaoMeta,
+  formatarNumeroMeta,
+  rotuloQualidadeMeta,
+  textoConectadoMeta,
+  type ConferenciaMetaCanal,
+} from "@/lib/meta";
 import { NovoCanal } from "@/components/luxtia/NovoCanal";
 import type { CanalGateway, WebhookUazapi } from "@/lib/gateway/tipos";
 import { PUBLICO_CANAL, TIPO_CANAL } from "@/lib/gateway/vocabulario";
@@ -69,16 +78,19 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
   const rotacionar = useServerFn(rotacionarSegredoCanal);
   const apagar = useServerFn(excluirCanal);
   const plataforma = podeExibirExcluirCanal(ctx.papel);
+  const podeCriar = peloMenos(ctx.papel, "gestor");
   const [criando, setCriando] = useState(false);
   const [excluindo, setExcluindo] = useState<CanalGateway | null>(null);
   const [nomeConfirmacao, setNomeConfirmacao] = useState("");
-  // URL com segredo: só em memória, até o usuário fechar o aviso.
+  // URL com segredo: só em memória, até o usuário fechar o aviso (não vale para meta).
   const [segredo, setSegredo] = useState<{
     titulo: string;
     url: string;
     uazapi?: WebhookUazapi;
   } | null>(null);
   const [uazapiPorCanal, setUazapiPorCanal] = useState<Record<string, WebhookUazapi>>({});
+  const [metaPorCanal, setMetaPorCanal] = useState<Record<string, ConferenciaMetaCanal>>({});
+  const conferirMetaFn = useServerFn(conferirCanalMeta);
 
   const canais = useQuery({
     queryKey: ["gateway", "canais", ctx.empresa],
@@ -155,11 +167,36 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const conferirMeta = useMutation({
+    mutationFn: async (c: CanalGateway) => {
+      const r = await conferirMetaFn({ data: { empresa: ctx.empresa, canal: c.id } });
+      if (r && "ok" in r && r.ok === false) throw new Error(r.mensagem);
+      return r as ConferenciaMetaCanal;
+    },
+    onSuccess: (r) => {
+      setMetaPorCanal((m) => ({ ...m, [r.canal_id]: r }));
+      if (r.situacao === "conectado") {
+        toast.success(
+          textoConectadoMeta({
+            numero: r.numero ?? null,
+            nome_verificado: r.nome_verificado ?? null,
+            qualidade: r.qualidade ?? null,
+          }) ?? "Conectado.",
+        );
+      } else if (!r.app_configurado) {
+        toast.error("A plataforma ainda não configurou o app da Meta.");
+      } else {
+        toast.error(avisoSituacaoMeta(r.situacao) ?? "Não conectado.");
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const itens = canais.data?.itens ?? [];
 
   return (
     <>
-      {plataforma ? (
+      {podeCriar ? (
         <div className="mt-6 flex justify-end">
           <Button onClick={() => setCriando(true)}>
             <Plus className="size-4" aria-hidden /> Novo canal
@@ -176,11 +213,11 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
           <Vazio
             titulo="Nenhum canal ainda"
             texto={
-              plataforma
-                ? "Crie um canal para conectar o WhatsApp ou testar pelo Simular."
-                : "Peça à administração da plataforma para conectar o WhatsApp ou um canal de testes."
+              podeCriar
+                ? "Crie um canal WhatsApp oficial (Meta), Uazapi ou API para testes."
+                : "Peça à administração para conectar o WhatsApp ou um canal de testes."
             }
-            {...(plataforma
+            {...(podeCriar
               ? {
                   acao: (
                     <Button onClick={() => setCriando(true)}>
@@ -192,7 +229,10 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
           />
         ) : (
           <ul>
-            {itens.map((c) => (
+            {itens.map((c) => {
+              const metaInfo = metaPorCanal[c.id];
+              const avisoMeta = metaInfo ? avisoSituacaoMeta(metaInfo.situacao) : null;
+              return (
               <li
                 key={c.id}
                 className="flex flex-col gap-4 border-b border-base-200 px-5 py-4 last:border-0 lg:flex-row lg:items-center"
@@ -212,18 +252,8 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                     Responde: {nomeAgente(c.agente_id)} · <span className="font-mono">{c.id}</span>
                     {c.ultimo_evento_em ? ` · última mensagem ${dataHora(c.ultimo_evento_em)}` : ""}
                   </p>
-                  <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-ink-500">
-                    <span>
-                      Segredo do webhook{" "}
-                      {c.webhook_secret_configurado ? (
-                        <span className="text-success">
-                          configurado <CheckCircle2 className="inline size-3.5" aria-label="✓" />
-                        </span>
-                      ) : (
-                        "ausente"
-                      )}
-                    </span>
-                    {c.tipo !== "api" ? (
+                  {c.tipo === "meta" ? (
+                    <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-ink-500">
                       <span>
                         Credenciais{" "}
                         {c.credenciais_configurado ? (
@@ -234,8 +264,34 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                           "não configuradas"
                         )}
                       </span>
-                    ) : null}
-                  </p>
+                    </p>
+                  ) : (
+                    <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-ink-500">
+                      <span>
+                        Segredo do webhook{" "}
+                        {c.webhook_secret_configurado ? (
+                          <span className="text-success">
+                            configurado <CheckCircle2 className="inline size-3.5" aria-label="✓" />
+                          </span>
+                        ) : (
+                          "ausente"
+                        )}
+                      </span>
+                      {c.tipo !== "api" ? (
+                        <span>
+                          Credenciais{" "}
+                          {c.credenciais_configurado ? (
+                            <span className="text-success">
+                              configuradas{" "}
+                              <CheckCircle2 className="inline size-3.5" aria-label="✓" />
+                            </span>
+                          ) : (
+                            "não configuradas"
+                          )}
+                        </span>
+                      ) : null}
+                    </p>
+                  )}
                   {c.tipo === "uazapi"
                     ? (() => {
                         const w = uazapiPorCanal[c.id] ?? c.webhook_uazapi;
@@ -249,10 +305,40 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                         ) : null;
                       })()
                     : null}
+                  {c.tipo === "meta" && metaInfo ? (
+                    <div className="mt-1 space-y-0.5 text-xs">
+                      {metaInfo.situacao === "conectado" ? (
+                        <p className="text-success">
+                          {textoConectadoMeta({
+                            numero: metaInfo.numero ?? null,
+                            nome_verificado: metaInfo.nome_verificado ?? null,
+                            qualidade: metaInfo.qualidade ?? null,
+                          })}
+                        </p>
+                      ) : (
+                        <p className="text-destructive" role="alert">
+                          {!metaInfo.app_configurado
+                            ? "A plataforma ainda não configurou o app da Meta"
+                            : avisoMeta}
+                        </p>
+                      )}
+                      {metaInfo.situacao === "conectado" && metaInfo.numero ? (
+                        <p className="text-ink-500">
+                          {formatarNumeroMeta(metaInfo.numero)}
+                          {metaInfo.nome_verificado
+                            ? ` · ${metaInfo.nome_verificado}`
+                            : ""}
+                          {rotuloQualidadeMeta(metaInfo.qualidade)
+                            ? ` · ${rotuloQualidadeMeta(metaInfo.qualidade)}`
+                            : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
-                {plataforma ? (
-                  <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  {podeCriar ? (
                     <label className="flex items-center gap-2 text-sm text-ink-700">
                       <Switch
                         checked={c.ativo}
@@ -262,16 +348,28 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                       />
                       {c.ativo ? "Ativo" : "Inativo"}
                     </label>
-                    {c.tipo === "uazapi" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={webhook.isPending}
-                        onClick={() => webhook.mutate(c)}
-                      >
-                        Refazer webhook
-                      </Button>
-                    ) : null}
+                  ) : null}
+                  {c.tipo === "meta" && podeCriar ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={conferirMeta.isPending}
+                      onClick={() => conferirMeta.mutate(c)}
+                    >
+                      Conferir agora
+                    </Button>
+                  ) : null}
+                  {plataforma && c.tipo === "uazapi" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={webhook.isPending}
+                      onClick={() => webhook.mutate(c)}
+                    >
+                      Refazer webhook
+                    </Button>
+                  ) : null}
+                  {plataforma && c.tipo !== "meta" ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" disabled={rotacao.isPending}>
@@ -295,6 +393,8 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                  ) : null}
+                  {plataforma ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -313,26 +413,44 @@ function Canais({ ctx }: { ctx: ContextoGateway }) {
                     >
                       <Trash2 className="size-4" aria-hidden /> Excluir canal
                     </Button>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </Cartao>
 
-      {plataforma ? (
+      {podeCriar ? (
         <NovoCanal
           ctx={ctx}
           aberto={criando}
           agentes={agentes.data?.itens ?? []}
+          soMeta={!plataforma}
           onFechar={() => setCriando(false)}
-          onCriado={(url, uazapi) => {
-            setSegredo({
-              titulo: "URL do webhook do novo canal",
-              url,
-              ...(uazapi ? { uazapi } : {}),
-            });
+          onCriado={(canal) => {
+            if (canal.tipo !== "meta" && canal.webhook_url) {
+              setSegredo({
+                titulo: "URL do webhook do novo canal",
+                url: canal.webhook_url,
+                ...(canal.webhook_uazapi ? { uazapi: canal.webhook_uazapi } : {}),
+              });
+            }
+            if (canal.meta) {
+              setMetaPorCanal((m) => ({
+                ...m,
+                [canal.id]: {
+                  canal_id: canal.id,
+                  phone_number_id: null,
+                  situacao: "conectado",
+                  numero: canal.meta?.numero ?? null,
+                  nome_verificado: canal.meta?.nome_verificado ?? null,
+                  qualidade: canal.meta?.qualidade ?? null,
+                  app_configurado: true,
+                },
+              }));
+            }
             void recarregar();
           }}
         />

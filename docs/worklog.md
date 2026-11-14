@@ -1,3 +1,20 @@
+## [2026-11-14 00:44] — META1-a: WhatsApp oficial (Meta) no painel
+- **Autor:** Auto
+- **Objetivo:** Tela de credenciais Meta (plataforma), canal tipo meta + Conferir agora, status_provedor nas Conversas.
+- **Arquivos alterados:**
+ - `src/lib/meta.ts` + `meta.test.ts` — criado — rótulos, erros, ticks, token
+ - `src/lib/gateway-meta.functions.ts` — criado — GET/PUT credenciais + conferir canal
+ - `src/components/luxtia/MetaCredenciais.tsx` + `routes/.../ia/meta.tsx` — criado — tela /ia/meta
+ - `src/components/luxtia/{NovoCanal,Conversas}.tsx` + `agente/CanaisDoAgente.tsx` + `routes/.../canais.tsx` — modificado — tipo meta, Conferir, ticks, selo oficial
+ - `src/lib/gateway/{modulo.server,modulo.test,tipos,vocabulario}.ts` + `nav.ts` + `AppShell` + `routeTree.gen.ts` + `gateway-canais.functions.ts` — modificado — GEST canais/meta, menu, rotas
+ - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
+- **Resumo das mudanças:** Plataforma configura o app e copia o webhook; gestor cadastra número Meta; conversas mostram entrega da Cloud API.
+- **Decisões e justificativas:** Segredos só no PUT; UI do gestor só tipo meta; webhook único da plataforma (não por canal).
+- **Comandos executados:** `bun test` meta + modulo → 51 OK
+- **Erros e resoluções:** teste ainda listava POST canais como proibido ao gestor → removido das proibidas
+- **Pendências / TODO:** smoke com app/número de teste da Meta
+- **Próximos passos:** publicar painel; validar /ia/meta (plataforma) e cadastro de canal (gestor)
+
 ## [2026-11-11 19:49] — Simular: opções lote e FTP no clipe
 - **Autor:** Auto
 - **Objetivo:** No Simular conversa, opções de enviar em lote e pasta FTP.

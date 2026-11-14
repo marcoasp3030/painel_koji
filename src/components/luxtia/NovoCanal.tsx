@@ -1,4 +1,4 @@
-/** Diálogo de criação de canal (admin da plataforma). A URL do webhook volta por onCriado. */
+/** Diálogo de criação de canal. Meta: gestor+; api/uazapi: plataforma. */
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -23,7 +23,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { criarCanal } from "@/lib/gateway-canais.functions";
+import { textoConectadoMeta } from "@/lib/meta";
+import type { CanalGateway } from "@/lib/gateway/tipos";
 import { CAMPO_CANAL, PUBLICO_CANAL, TIPO_CANAL } from "@/lib/gateway/vocabulario";
+
+type TipoCanal = "api" | "uazapi" | "meta";
 
 export function NovoCanal({
   ctx,
@@ -32,6 +36,7 @@ export function NovoCanal({
   onFechar,
   onCriado,
   agenteFixo = null,
+  soMeta = false,
 }: {
   ctx: ContextoGateway;
   aberto: boolean;
@@ -39,30 +44,46 @@ export function NovoCanal({
   /** Cria o canal já ligado a este agente (página do agente). */
   agenteFixo?: string | null;
   onFechar: () => void;
-  onCriado: (
-    webhookUrl: string,
-    webhookUazapi?: import("@/lib/gateway/tipos").WebhookUazapi,
-  ) => void;
+  onCriado: (canal: CanalGateway & { webhook_url?: string }) => void;
+  /** Gestor: só o tipo Meta. */
+  soMeta?: boolean;
 }) {
   const criar = useServerFn(criarCanal);
-  const [tipo, setTipo] = useState<"api" | "uazapi">("api");
+  const [tipo, setTipo] = useState<TipoCanal>(soMeta ? "meta" : "api");
   const [nome, setNome] = useState("");
   const [agente, setAgente] = useState(agenteFixo ?? "");
   const [publico, setPublico] = useState<"clientes" | "interno">("clientes");
   const [ativo, setAtivo] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [token, setToken] = useState("");
+  const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [wabaId, setWabaId] = useState("");
+  const [tokenMeta, setTokenMeta] = useState("");
 
   const limpar = () => {
     setNome("");
     setBaseUrl("");
     setToken("");
+    setPhoneNumberId("");
+    setWabaId("");
+    setTokenMeta("");
     setAtivo(false);
+    setTipo(soMeta ? "meta" : "api");
   };
 
   const mutation = useMutation({
-    mutationFn: () =>
-      criar({
+    mutationFn: () => {
+      const credenciais =
+        tipo === "uazapi" && baseUrl
+          ? { base_url: baseUrl, token }
+          : tipo === "meta"
+            ? {
+                phone_number_id: phoneNumberId.trim(),
+                waba_id: wabaId.trim(),
+                token: tokenMeta,
+              }
+            : null;
+      return criar({
         data: {
           empresa: ctx.empresa,
           tipo,
@@ -70,13 +91,16 @@ export function NovoCanal({
           agente_id: agente,
           publico,
           ativo,
-          credenciais: tipo === "uazapi" && baseUrl ? { base_url: baseUrl, token } : null,
+          credenciais,
         },
-      }),
+      });
+    },
     onSuccess: (canal) => {
       limpar();
       onFechar();
-      onCriado(canal.webhook_url, canal.webhook_uazapi);
+      onCriado(canal);
+      const conectado = textoConectadoMeta(canal.meta);
+      if (conectado) toast.success(conectado);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -87,6 +111,7 @@ export function NovoCanal({
       onOpenChange={(a) => {
         if (!a) {
           setToken("");
+          setTokenMeta("");
           onFechar();
         }
       }}
@@ -95,7 +120,9 @@ export function NovoCanal({
         <DialogHeader>
           <DialogTitle>Novo canal</DialogTitle>
           <DialogDescription>
-            A URL do webhook aparece uma única vez, logo depois de criar.
+            {tipo === "meta"
+              ? "O gateway confere o número na Meta antes de gravar. Token e segredos não voltam depois."
+              : "A URL do webhook aparece uma única vez, logo depois de criar."}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -113,13 +140,22 @@ export function NovoCanal({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <RotuloCampo htmlFor="cn-tipo" campo={CAMPO_CANAL.tipo} />
-              <Select value={tipo} onValueChange={(v) => setTipo(v as "api" | "uazapi")}>
+              <Select
+                value={tipo}
+                onValueChange={(v) => setTipo(v as TipoCanal)}
+                disabled={soMeta}
+              >
                 <SelectTrigger id="cn-tipo">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="api">{TIPO_CANAL["api"]}</SelectItem>
-                  <SelectItem value="uazapi">{TIPO_CANAL["uazapi"]}</SelectItem>
+                  {soMeta ? null : (
+                    <>
+                      <SelectItem value="api">{TIPO_CANAL["api"]}</SelectItem>
+                      <SelectItem value="uazapi">{TIPO_CANAL["uazapi"]}</SelectItem>
+                    </>
+                  )}
+                  <SelectItem value="meta">{TIPO_CANAL["meta"]}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -181,9 +217,50 @@ export function NovoCanal({
                   onChange={(e) => setToken(e.target.value)}
                 />
               </div>
-              <p className="text-xs text-ink-500 sm:col-span-2">
-                As credenciais são só de escrita. A recepção Uazapi ainda depende das fixtures reais
-                (Fase 1).
+            </div>
+          ) : null}
+          {tipo === "meta" ? (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="cn-pnid">ID do número (phone_number_id)</Label>
+                <Input
+                  id="cn-pnid"
+                  value={phoneNumberId}
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Só dígitos"
+                  onChange={(e) => setPhoneNumberId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cn-waba">ID da conta (waba_id)</Label>
+                <Input
+                  id="cn-waba"
+                  value={wabaId}
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Só dígitos"
+                  onChange={(e) => setWabaId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cn-token-meta">Token</Label>
+                <Input
+                  id="cn-token-meta"
+                  type="password"
+                  value={tokenMeta}
+                  required
+                  autoComplete="new-password"
+                  onChange={(e) => setTokenMeta(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-ink-500">
+                O webhook é único da plataforma (tela WhatsApp oficial). Não há URL nem segredo por
+                canal Meta.
               </p>
             </div>
           ) : null}

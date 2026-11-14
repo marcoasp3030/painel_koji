@@ -31,6 +31,7 @@ import { Route as AuthenticatedIaConversasRouteImport } from './routes/_authenti
 import { Route as AuthenticatedIaDocumentosRouteImport } from './routes/_authenticated/ia/documentos'
 import { Route as AuthenticatedIaIfoodRouteImport } from './routes/_authenticated/ia/ifood'
 import { Route as AuthenticatedIaIfoodFinanceiroRouteImport } from './routes/_authenticated/ia/ifood-financeiro'
+import { Route as AuthenticatedIaMetaRouteImport } from './routes/_authenticated/ia/meta'
 import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authenticated/ia/modelos'
 import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
@@ -172,6 +173,11 @@ const AuthenticatedIaIfoodFinanceiroRoute =
     path: '/ia/ifood-financeiro',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaMetaRoute = AuthenticatedIaMetaRouteImport.update({
+  id: '/ia/meta',
+  path: '/ia/meta',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIaModelosRoute = AuthenticatedIaModelosRouteImport.update({
   id: '/ia/modelos',
   path: '/ia/modelos',
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/ia/documentos': typeof AuthenticatedIaDocumentosRouteWithChildren
   '/ia/ifood': typeof AuthenticatedIaIfoodRoute
   '/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
+  '/ia/meta': typeof AuthenticatedIaMetaRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/ia/documentos': typeof AuthenticatedIaDocumentosRouteWithChildren
   '/ia/ifood': typeof AuthenticatedIaIfoodRoute
   '/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
+  '/ia/meta': typeof AuthenticatedIaMetaRoute
   '/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
@@ -410,6 +418,7 @@ export interface FileRoutesById {
   '/_authenticated/ia/documentos': typeof AuthenticatedIaDocumentosRouteWithChildren
   '/_authenticated/ia/ifood': typeof AuthenticatedIaIfoodRoute
   '/_authenticated/ia/ifood-financeiro': typeof AuthenticatedIaIfoodFinanceiroRoute
+  '/_authenticated/ia/meta': typeof AuthenticatedIaMetaRoute
   '/_authenticated/ia/modelos': typeof AuthenticatedIaModelosRoute
   '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/ia/documentos'
     | '/ia/ifood'
     | '/ia/ifood-financeiro'
+    | '/ia/meta'
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/ia/documentos'
     | '/ia/ifood'
     | '/ia/ifood-financeiro'
+    | '/ia/meta'
     | '/ia/modelos'
     | '/ia/operacao'
     | '/ia/pedidos'
@@ -546,6 +557,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/documentos'
     | '/_authenticated/ia/ifood'
     | '/_authenticated/ia/ifood-financeiro'
+    | '/_authenticated/ia/meta'
     | '/_authenticated/ia/modelos'
     | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
@@ -733,6 +745,13 @@ declare module '@tanstack/react-router' {
       path: '/ia/ifood-financeiro'
       fullPath: '/ia/ifood-financeiro'
       preLoaderRoute: typeof AuthenticatedIaIfoodFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/meta': {
+      id: '/_authenticated/ia/meta'
+      path: '/ia/meta'
+      fullPath: '/ia/meta'
+      preLoaderRoute: typeof AuthenticatedIaMetaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/modelos': {
@@ -961,6 +980,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaDocumentosRoute: typeof AuthenticatedIaDocumentosRouteWithChildren
   AuthenticatedIaIfoodRoute: typeof AuthenticatedIaIfoodRoute
   AuthenticatedIaIfoodFinanceiroRoute: typeof AuthenticatedIaIfoodFinanceiroRoute
+  AuthenticatedIaMetaRoute: typeof AuthenticatedIaMetaRoute
   AuthenticatedIaModelosRoute: typeof AuthenticatedIaModelosRoute
   AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
@@ -996,6 +1016,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaDocumentosRoute: AuthenticatedIaDocumentosRouteWithChildren,
   AuthenticatedIaIfoodRoute: AuthenticatedIaIfoodRoute,
   AuthenticatedIaIfoodFinanceiroRoute: AuthenticatedIaIfoodFinanceiroRoute,
+  AuthenticatedIaMetaRoute: AuthenticatedIaMetaRoute,
   AuthenticatedIaModelosRoute: AuthenticatedIaModelosRoute,
   AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
