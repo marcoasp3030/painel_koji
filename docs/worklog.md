@@ -1,3 +1,18 @@
+## [2026-11-14 23:50] — ATD-ALERTA: cliente aguardando atendente
+- **Autor:** Auto
+- **Objetivo:** Alerta global (som + selo + toast) quando há conversa aguardando atendente.
+- **Arquivos alterados:**
+ - `src/lib/atendimento-alerta.ts` + `.test.ts` — criado — prefs, som, urgência, fila, lembrete
+ - `src/components/luxtia/{ContadorAtendimento,PreferenciasAtendimento}.tsx` — criado — selo, painel, Assumir
+ - `src/components/luxtia/{AppShell,Conversas}.tsx` + `routes/.../conversas.tsx` + `styles.css` — modificado — topo, aba Fila, `?fila=`
+ - `README.md`, `instrucoes.md`, `docs/worklog.md` — registro
+- **Resumo das mudanças:** Contador no topo em todas as telas; poll 15 s/60 s; 1ª carga sem som; lembrete 2 min×5; prefs em Segurança e no painel.
+- **Decisões e justificativas:** Reusa `listarConversas(aguardando)`; som distinto do pedido (dois toques); sem mudança no gateway.
+- **Comandos executados:** `bun test` atendimento-alerta → 8 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** smoke com transferência real no Simular
+- **Próximos passos:** publicar painel e validar selo/som com aba oculta
+
 ## [2026-11-14 00:44] — META1-a: WhatsApp oficial (Meta) no painel
 - **Autor:** Auto
 - **Objetivo:** Tela de credenciais Meta (plataforma), canal tipo meta + Conferir agora, status_provedor nas Conversas.

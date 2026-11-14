@@ -48,6 +48,7 @@ import {
 } from "@/lib/nav";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LuxbrainLogo, LuxbrainWordmark } from "./Brand";
+import { ContadorAtendimento, BlocoPreferenciasAtendimento } from "./ContadorAtendimento";
 import { ContadorPedidos } from "./ContadorPedidos";
 
 const ICONES: Record<IconeMenu, LucideIcon> = {
@@ -388,13 +389,16 @@ export function AppShell({
                 {atual?.label ?? "Painel"}
               </p>
             </div>
-            <button
-              type="button"
-              className="rounded-lg border border-base-200 bg-card px-3 py-1.5 text-sm text-purple-800"
-              onClick={() => setSegurancaAberta(true)}
-            >
-              Segurança
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <ContadorAtendimento papel={acesso.data?.papel} />
+              <button
+                type="button"
+                className="rounded-lg border border-base-200 bg-card px-3 py-1.5 text-sm text-purple-800"
+                onClick={() => setSegurancaAberta(true)}
+              >
+                Segurança
+              </button>
+            </div>
           </header>
           {seguranca.data?.obrigatorio && seguranca.data.fatores === 0 ? (
             <FaixaSeguranca
@@ -442,7 +446,7 @@ export function AppShell({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="titulo-segunda-etapa"
-                className="my-auto w-full max-w-lg rounded-xl bg-card shadow-lg"
+                className="my-auto w-full max-w-lg space-y-3 rounded-xl bg-card p-1 shadow-lg"
               >
                 <AtivarSegundaEtapa
                   automatico
@@ -452,6 +456,12 @@ export function AppShell({
                   }}
                   onFechar={() => setSegurancaAberta(false)}
                 />
+                <div className="border-t border-base-200 px-4 pb-4 pt-1">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">
+                    Configurações pessoais
+                  </p>
+                  <BlocoPreferenciasAtendimento />
+                </div>
               </div>
             </div>
           ) : null}

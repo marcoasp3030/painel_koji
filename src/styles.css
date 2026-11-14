@@ -265,3 +265,14 @@
   width: 3rem;
   background-color: var(--gold-500);
 }
+
+/* ATD-ALERTA: selo vermelho pisca devagar acima de 5 min na fila. */
+@keyframes pisca-lenta {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/ia/conversas")({
       ? { telefone: s["telefone"] }
       : {}),
     ...(typeof s["canal"] === "string" && s["canal"].length <= 40 ? { canal: s["canal"] } : {}),
+    ...(s["fila"] === true || s["fila"] === "true" || s["fila"] === 1 ? { fila: true as const } : {}),
   }),
   head: () => ({ meta: [{ title: "Conversas | Luxbrain" }] }),
   component: PaginaConversas,
@@ -32,6 +33,7 @@ function PaginaConversas() {
         <Conversas
           key={ctx.empresa ?? "vinculada"}
           ctx={ctx}
+          abrirFila={Boolean(busca.fila)}
           abertura={
             busca.conversa
               ? {

@@ -1,3 +1,11 @@
+## ATD-ALERTA: cliente aguardando atendente (14/11/2026)
+
+- Selo global no topo (`ContadorAtendimento`): contagem da fila `GET conversas?aguardando=true`, poll 15 s / 60 s oculta.
+- Nova na fila: som (dois toques), toast persistente, título da aba, Notification API; 1ª carga sem som/toast.
+- Lembrete a cada 2 min (máx. 5); preferências em localStorage (som ligado por padrão, notificação, repetir).
+- Painel suspenso: Abrir / Assumir / Ver todas; Configurações pessoais em Segurança.
+- Aba Fila nas Conversas: selo com cor por tempo (≤2 min dourado, 2–5 laranja, >5 vermelho).
+
 ## META1-a: WhatsApp oficial (Meta) no painel (14/11/2026)
 
 - Integrações → **WhatsApp oficial (Meta)** (`/ia/meta`), só plataforma: GET/PUT `meta/credenciais` com `GATEWAY_PLATFORM_KEY`; webhook_url + Copiar; Gerar token 32 chars; erros formato / credenciais_recusadas / meta_indisponivel / papel_sem_credencial.

@@ -54,6 +54,10 @@ import {
   linkCardapioDaConversa,
 } from "@/lib/gateway-conversas.functions";
 import {
+  classesSeloAlerta,
+  urgenciaAlerta,
+} from "@/lib/atendimento-alerta";
+import {
   canalDaConversa,
   desdeDoCursor,
   esperaCurta,
@@ -266,6 +270,7 @@ function esbocoConversa(abertura: {
 export function Conversas({
   ctx,
   abertura,
+  abrirFila = false,
 }: {
   ctx: ContextoGateway;
   /** Com conversa: abre o detalhe. Só telefone: preenche a busca da fila (ex.: Visão de vendas). */
@@ -275,6 +280,8 @@ export function Conversas({
     telefone?: string;
     canal?: string;
   } | null;
+  /** ATD-ALERTA: abre direto na aba Aguardando atendente. */
+  abrirFila?: boolean;
 }) {
   const buscar = useServerFn(listarConversas),
     eventos = useServerFn(acompanharConversas),
@@ -286,7 +293,9 @@ export function Conversas({
     [canal, setCanal] = useState("");
   const [minhas, setMinhas] = useState(false);
   const [etiqueta, setEtiqueta] = useState("");
-  const [estado, setEstado] = useState<"" | EstadoConversa>(""),
+  const [estado, setEstado] = useState<"" | EstadoConversa>(() =>
+    abrirFila ? "aguardando_atendente" : "",
+  ),
     [ordem, setOrdem] = useState<"recentes" | "id">("recentes"),
     [busca, setBusca] = useState(() =>
       !abertura?.conversa && abertura?.telefone ? abertura.telefone.replace(/\D/g, "") : "",
@@ -299,6 +308,19 @@ export function Conversas({
   useEffect(() => {
     const id = setInterval(() => setAgora(Date.now()), 30000);
     return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (!abrirFila) return;
+    setMinhas(false);
+    setEstado("aguardando_atendente");
+  }, [abrirFila]);
+  useEffect(() => {
+    function irParaFila() {
+      setMinhas(false);
+      setEstado("aguardando_atendente");
+    }
+    window.addEventListener("luxbrain:conversas-fila", irParaFila);
+    return () => window.removeEventListener("luxbrain:conversas-fila", irParaFila);
   }, []);
   const [filtroBusca, setFiltroBusca] = useState(() =>
     !abertura?.conversa && abertura?.telefone ? abertura.telefone.replace(/\D/g, "") : "",
@@ -739,6 +761,8 @@ export function Conversas({
             const ativa = aba.valor === "minhas" ? minhas : !minhas && estado === aba.valor;
             const emEspera = aba.valor === "aguardando_atendente" ? filaEspera.length : 0;
             const comigoTotal = aba.valor === "minhas" ? (comigo.data?.itens.length ?? 0) : 0;
+            const urgenciaFila =
+              emEspera && maisAntiga ? urgenciaAlerta(maisAntiga, agora) : null;
             return (
               <button
                 key={aba.valor}
@@ -762,8 +786,10 @@ export function Conversas({
                     {comigo.data?.proximo_cursor ? `${comigoTotal}+` : comigoTotal}
                   </span>
                 ) : null}
-                {emEspera ? (
-                  <span className="rounded-full bg-gold-500 px-1.5 text-[10px] font-semibold tabular-nums text-purple-900">
+                {emEspera && urgenciaFila ? (
+                  <span
+                    className={`rounded-full px-1.5 text-[10px] font-semibold tabular-nums ${classesSeloAlerta(urgenciaFila)}`}
+                  >
                     {emEspera}
                   </span>
                 ) : null}
