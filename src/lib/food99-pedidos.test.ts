@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { filtrarMenu, TENANT_NAV, ADMIN_NAV } from "./nav";
-import { mostrarMenuPedidosFood99 } from "./food99";
+import { empresaTemLojaFood99 } from "./food99";
 import { autorizar, AcessoNegado } from "./gateway/modulo.server";
 import {
   TEXTO_CONFIRMACAO_FOOD99,
@@ -19,7 +19,7 @@ import { corCanalVendas, rotuloCanalVendas } from "./pedidos-visao-vendas";
 const ID_64 = "5764607801871631353";
 
 describe("99FOOD1-b — pedidos e Visão", () => {
-  test("aba Pedidos 99Food no menu gestor/plataforma; some sem loja", () => {
+  test("aba Pedidos 99Food no menu gestor/plataforma; bloco/lista exigem loja", () => {
     expect(filtrarMenu(TENANT_NAV, "gestor").some((i) => i.to === "/ia/pedidos-99food")).toBe(
       true,
     );
@@ -29,8 +29,8 @@ describe("99FOOD1-b — pedidos e Visão", () => {
     expect(
       filtrarMenu(TENANT_NAV, "supervisor").some((i) => i.to === "/ia/pedidos-99food"),
     ).toBe(false);
-    expect(mostrarMenuPedidosFood99([])).toBe(false);
-    expect(mostrarMenuPedidosFood99([{ id: "nn0123456789abcdef" }])).toBe(true);
+    expect(empresaTemLojaFood99([])).toBe(false);
+    expect(empresaTemLojaFood99([{ id: "nn0123456789abcdef" }])).toBe(true);
   });
 
   test("order_id de 64 bits fica como texto intacto (nunca Number)", () => {

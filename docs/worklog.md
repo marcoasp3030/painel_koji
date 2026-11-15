@@ -1,3 +1,18 @@
+## [2026-11-15 19:00] — 99FOOD1-b: Pedidos sempre no menu + dica na Visão
+- **Autor:** Auto
+- **Objetivo:** Usuário via Loja → 99Food mas não via Pedidos nem Visão (0 lojas no banco).
+- **Arquivos alterados:**
+ - `AppShell.tsx` — removido filtro que escondia Pedidos sem loja
+ - `Food99Pedidos.tsx` — CTA para Loja → 99Food
+ - `VisaoVendas.tsx` — aviso com link quando `99food` é nulo
+ - `food99.ts` + testes — `empresaTemLojaFood99`
+- **Resumo das mudanças:** Menu Pedidos 99Food igual ao iFood; bloco/canal na Visão só após conectar unidade (gateway exige loja).
+- **Decisões e justificativas:** Credenciais ok, mas `food99_lojas` vazio — sem loja o gateway devolve `99food: null`.
+- **Comandos executados:** bun test food99* → 11 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** publicar; conectar unidade em Loja → 99Food
+- **Próximos passos:** commit + publicar-painel
+
 ## [2026-11-15 18:55] — Publicação 99FOOD1-b no painel
 - **Autor:** Auto
 - **Objetivo:** Menu/pedidos não apareciam — 99FOOD1-b só no working tree; no ar era `c4d8eb7`.

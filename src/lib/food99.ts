@@ -90,12 +90,15 @@ export function textoStatusCredenciaisFood99(c: CredenciaisFood99): string {
   return base;
 }
 
-/** Pedidos → 99Food no menu só quando a empresa tem ao menos uma loja. */
-export function mostrarMenuPedidosFood99(
+/** Há loja da 99Food (lista/detalhe e bloco na Visão). O menu Pedidos fica sempre visível. */
+export function empresaTemLojaFood99(
   itens: { id?: string }[] | null | undefined,
 ): boolean {
   return (itens?.length ?? 0) > 0;
 }
+
+/** @deprecated use empresaTemLojaFood99 */
+export const mostrarMenuPedidosFood99 = empresaTemLojaFood99;
 
 function dataCurtaFood99(iso: string | null | undefined): string | null {
   if (!iso) return null;

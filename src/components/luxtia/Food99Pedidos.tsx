@@ -1,5 +1,6 @@
 /** 99FOOD1-b: lista e detalhe de pedidos da 99Food (confirmação no app da 99). */
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +11,7 @@ import {
   listarPedidosFood99,
 } from "@/lib/gateway-food99.functions";
 import { reais } from "@/lib/gateway/pedidos";
-import { mostrarMenuPedidosFood99 } from "@/lib/food99";
+import { empresaTemLojaFood99 } from "@/lib/food99";
 import type { ListaLojasFood99 } from "@/lib/food99";
 import {
   INTERVALO_PEDIDOS_FOOD99_MS,
@@ -293,7 +294,7 @@ export function Food99Pedidos({ ctx }: { ctx: ContextoGateway }) {
     staleTime: 60_000,
   });
 
-  const temLoja = mostrarMenuPedidosFood99(lojas.data?.itens);
+  const temLoja = empresaTemLojaFood99(lojas.data?.itens);
 
   const q = useInfiniteQuery({
     queryKey: [
@@ -355,8 +356,11 @@ export function Food99Pedidos({ ctx }: { ctx: ContextoGateway }) {
       <div className="mx-auto max-w-lg p-6 text-center">
         <h2 className="text-base font-semibold text-ink-900">Nenhuma loja da 99Food</h2>
         <p className="mt-2 text-sm text-ink-500">
-          Conecte uma unidade em Loja → 99Food para ver os pedidos aqui.
+          Conecte uma unidade em Loja → 99Food para receber pedidos e aparecer na Visão de vendas.
         </p>
+        <Button asChild type="button" size="sm" className="mt-4">
+          <Link to="/ia/configuracoes/99food">Abrir 99Food</Link>
+        </Button>
       </div>
     );
   }

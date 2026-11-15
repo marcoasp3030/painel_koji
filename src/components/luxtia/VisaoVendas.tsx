@@ -802,7 +802,17 @@ export function VisaoVendas({ ctx }: { ctx: ContextoGateway }) {
               />
             ) : null}
 
-            {deveMostrarBlocoFood99(d["99food"]) ? <BlocoFood99 food99={d["99food"]} /> : null}
+            {deveMostrarBlocoFood99(d["99food"]) ? (
+              <BlocoFood99 food99={d["99food"]} />
+            ) : (
+              <p className="rounded-lg border border-dashed border-base-200 bg-card/60 px-3 py-2 text-xs text-ink-500">
+                99Food: conecte uma unidade em{" "}
+                <Link to="/ia/configuracoes/99food" className="font-medium text-ink-700 underline">
+                  Loja → 99Food
+                </Link>{" "}
+                para ver o bloco e o canal nos gráficos.
+              </p>
+            )}
 
             {d.canais && d.canais.disponiveis.length > 0 ? (
               <BlocoCanais canais={d.canais} agrupar={d.periodo.agrupar} />

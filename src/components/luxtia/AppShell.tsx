@@ -39,8 +39,6 @@ import { obterAcessoGateway } from "@/lib/gateway.functions";
 import { estadoSeguranca } from "@/lib/seguranca.functions";
 import { AtivarSegundaEtapa, FaixaSeguranca } from "./Seguranca";
 import { obterModulosEmpresa } from "@/lib/gateway-modulos.functions";
-import { listarLojasFood99 } from "@/lib/gateway-food99.functions";
-import { mostrarMenuPedidosFood99, type ListaLojasFood99 } from "@/lib/food99";
 import {
   agruparMenu,
   filtrarMenu,
@@ -172,38 +170,15 @@ export function AppShell({
     staleTime: 30_000,
     retry: false,
   });
-  const buscarLojas99 = useServerFn(listarLojasFood99);
-  // 99FOOD1-b: Pedidos 99Food só no menu se a empresa tiver loja.
-  const lojas99Menu = useQuery({
-    queryKey: ["99food", "lojas-menu", plataforma ? empresaMenu : "sessao"],
-    queryFn: async () => {
-      const r = await buscarLojas99({
-        data: { empresa: plataforma ? empresaMenu : null },
-      });
-      if (r && "ok" in r && r.ok === false) return { itens: [] } as ListaLojasFood99;
-      return r as ListaLojasFood99;
-    },
-    enabled:
-      Boolean(acesso.data?.papel) &&
-      (acesso.data?.papel === "gestor" ||
-        acesso.data?.papel === "plataforma") &&
-      (!plataforma || Boolean(empresaMenu)),
-    staleTime: 60_000,
-    retry: false,
-  });
   // Super Admin: se o gateway não devolveu o papel (clone local, aal1, etc.),
   // assume "plataforma" para o menu não ficar só com Clientes.
   const papelMenu =
     acesso.data?.papel ?? (context === "Super Admin" ? ("plataforma" as const) : undefined);
-  const itensBase = filtrarMenuPorTelas(
+  // Pedidos 99Food fica no menu como o iFood; a tela explica se ainda não há loja.
+  const itens = filtrarMenuPorTelas(
     acesso.isPending && papelMenu == null ? nav : filtrarMenu(nav, papelMenu),
     modulos.data?.telas ?? (modulos.isFetched ? [] : null),
   );
-  const itens = itensBase.filter((item) => {
-    if (item.to !== "/ia/pedidos-99food") return true;
-    if (!lojas99Menu.isFetched) return true;
-    return mostrarMenuPedidosFood99(lojas99Menu.data?.itens);
-  });
   const grupos = agruparMenu(itens);
   const atual = itens.find((item) => itemAtivo(pathname, item.to));
 
