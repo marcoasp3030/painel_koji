@@ -412,6 +412,7 @@ function DadosUnidade({
     uf: u?.uf ?? "",
     pedido_minimo: u?.pedido_minimo != null ? String(u.pedido_minimo) : "",
     area_entrega: u?.area_entrega ?? "",
+    link_cardapio: u?.link_cardapio ?? "",
   };
   const [v, setV] = useState(inicial);
   const [ativo, setAtivo] = useState(u?.ativo ?? true);
@@ -467,6 +468,8 @@ function DadosUnidade({
               }
               if (!u || v.area_entrega !== inicial.area_entrega)
                 dados["area_entrega"] = v.area_entrega.trim() || null;
+              if (!u || v.link_cardapio !== inicial.link_cardapio)
+                dados["link_cardapio"] = v.link_cardapio.trim() || null;
               if (!u || aceitaRetirada !== (u.aceita_retirada ?? null))
                 dados["aceita_retirada"] = aceitaRetirada;
               // delivery_ativo: só plataforma; servidor também descarta se outro papel enviar.
@@ -621,6 +624,27 @@ function DadosUnidade({
                   onChange={(e) => setV({ ...v, area_entrega: e.target.value })}
                 />
                 <Erro g={g} campo="area_entrega" />
+              </div>
+              <div>
+                <Label htmlFor="un-link-cardapio">Link próprio do cardápio</Label>
+                <Input
+                  id="un-link-cardapio"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  spellCheck={false}
+                  placeholder="https://"
+                  maxLength={500}
+                  value={v.link_cardapio}
+                  disabled={g.busy}
+                  aria-invalid={g.erro?.campo === "link_cardapio"}
+                  aria-describedby="un-link-cardapio-ajuda"
+                  onChange={(e) => setV({ ...v, link_cardapio: e.target.value })}
+                />
+                <p id="un-link-cardapio-ajuda" className="mt-1 text-xs text-ink-500">
+                  Opcional. Vale quando o agente usa &quot;Link próprio&quot;. Vazio remove o link.
+                </p>
+                <Erro g={g} campo="link_cardapio" />
               </div>
             </fieldset>
           ) : null}

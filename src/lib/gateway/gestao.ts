@@ -39,6 +39,8 @@ export type Unidade = {
   delivery_ativo?: boolean | null;
   aceita_retirada?: boolean | null;
   formas_pagamento?: string | null;
+  /** CARD-LINK2: link próprio do cardápio desta unidade (https://). */
+  link_cardapio?: string | null;
   horarios?: Grade;
   situacao: Situacao;
   pausa_motivo?: string | null;
@@ -304,6 +306,17 @@ const dadosUnidade = z
     delivery_ativo: z.boolean().nullable().optional(),
     aceita_retirada: z.boolean().nullable().optional(),
     formas_pagamento: z.string().trim().max(500).nullable().optional(),
+    /** CARD-LINK2: vazio/null limpa; senão https:// até 500. */
+    link_cardapio: z
+      .string()
+      .trim()
+      .max(500)
+      .nullable()
+      .optional()
+      .refine(
+        (v) => v == null || v === "" || (v.startsWith("https://") && !/\s/.test(v)),
+        "Informe um link público começando com https://",
+      ),
   })
   .strict();
 const formaPagamento = z

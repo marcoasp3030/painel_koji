@@ -19,9 +19,15 @@ import {
   type Parte,
   type Trecho,
 } from "@/lib/gateway/atendimento";
+import {
+  CAMPO_ENVIAR_LINK_CARDAPIO,
+  ROTULO_MODO_LINK_CARDAPIO,
+  type ModoEnviarLinkCardapio,
+} from "@/lib/card-link";
 import { CampoHora } from "@/components/luxtia/DataHora";
 import { gradeJanela, lerJanela } from "@/lib/gateway/followup";
 import type { Json } from "@/lib/gateway/tipos";
+import { ExternalLink } from "lucide-react";
 
 export type Situacao = {
   valor: Json;
@@ -198,6 +204,30 @@ function Entrada({
       );
     case "escolha": {
       const opcoes = def.opcoes ?? [];
+      // CARD-LINK2: 3 opções (on/proprio/off) com rótulos próprios — não usa o interruptor on/off.
+      if (campo === CAMPO_ENVIAR_LINK_CARDAPIO && opcoes.includes("proprio")) {
+        return (
+          <div id={id} role="radiogroup" className="flex flex-wrap gap-1.5">
+            {opcoes.map((o) => (
+              <button
+                key={o}
+                type="button"
+                role="radio"
+                aria-checked={valor === o}
+                disabled={desabilitado}
+                onClick={() => mudar(o)}
+                className={`min-h-9 rounded-md border px-3 text-sm transition disabled:cursor-not-allowed ${
+                  valor === o
+                    ? "border-purple-700 bg-purple-50 font-medium text-purple-800"
+                    : "border-base-200 bg-card text-ink-700 hover:border-purple-300"
+                }`}
+              >
+                {ROTULO_MODO_LINK_CARDAPIO[o as ModoEnviarLinkCardapio] ?? rotuloOpcao(o)}
+              </button>
+            ))}
+          </div>
+        );
+      }
       if (opcoes.length === 2 && opcoes.includes("on") && opcoes.includes("off"))
         return (
           <div className="flex items-center gap-2 text-sm">
@@ -232,6 +262,16 @@ function Entrada({
         </div>
       );
     }
+    case "url":
+      return (
+        <CampoUrl
+          id={id}
+          def={def}
+          valor={typeof valor === "string" ? valor : ""}
+          desabilitado={desabilitado}
+          mudar={mudar}
+        />
+      );
     case "texto":
     case "telefone":
       return (
@@ -306,6 +346,53 @@ function Entrada({
         </p>
       );
   }
+}
+
+/** CARD-LINK2: tipo url do esquema — https:// com botão Abrir. */
+function CampoUrl({
+  id,
+  def,
+  valor,
+  desabilitado,
+  mudar,
+}: {
+  id: string;
+  def: CampoEsquema;
+  valor: string;
+  desabilitado: boolean;
+  mudar: (v: Json) => void;
+}) {
+  const max = def.max ?? 500;
+  const aberto =
+    valor.trim().startsWith("https://") && !/\s/.test(valor.trim()) ? valor.trim() : null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input
+        id={id}
+        type="url"
+        inputMode="url"
+        autoComplete="url"
+        spellCheck={false}
+        placeholder="https://"
+        maxLength={max}
+        className="min-w-0 flex-1"
+        value={valor}
+        disabled={desabilitado}
+        onChange={(e) => mudar(e.target.value === "" ? null : e.target.value)}
+      />
+      {aberto ? (
+        <Button type="button" size="sm" variant="outline" asChild>
+          <a href={aberto} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="size-3.5" aria-hidden /> Abrir
+          </a>
+        </Button>
+      ) : (
+        <Button type="button" size="sm" variant="outline" disabled>
+          <ExternalLink className="size-3.5" aria-hidden /> Abrir
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function CampoTexto({

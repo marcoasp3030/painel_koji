@@ -161,7 +161,8 @@ export const ROTULO_CAMPO: Record<string, string> = {
   pause_minutes: "Pausa do bot ao assumir (min)",
   encerrar_vazia_min: "Encerrar conversa parada (min)",
   carrinho_expira_h: "Carrinho expira em (h)",
-  enviar_link_cardapio: "Enviar o link do cardápio digital na conversa",
+  enviar_link_cardapio: "Link do cardápio na conversa",
+  link_cardapio_proprio: "Link do cardápio",
   reacoes: "Reações",
   reacoes_emojis: "Emojis de reação",
   reacoes_max_dia: "Reações por conversa por dia",
@@ -210,7 +211,9 @@ export const AJUDA_CAMPO: Record<string, string> = {
   botoes_interativos:
     "Até 3 opções viram botões; de 4 a 10, lista. Desligado: opções numeradas em texto.",
   enviar_link_cardapio:
-    "Ligado: o agente manda o link do cardápio quando o cliente pede. Desligado: o agente apresenta as opções na própria conversa. O Link da loja continua funcionando.",
+    "Cada unidade pode ter o próprio link (em Unidades). Sem nenhum link, o agente usa o cardápio do sistema.",
+  link_cardapio_proprio:
+    "Link público https:// (até 500 caracteres). O da unidade, se houver, vale sobre este.",
   aviso_demora: "Vazio: sem aviso.",
   follow_up_ativo: "Ligado, o gateway anota o que enviaria. Ainda não manda mensagem ao cliente.",
   follow_up_escopo:
@@ -241,6 +244,7 @@ export const ROTULO_OPCAO: Record<string, string> = {
   leve: "Leve",
   on: "Ligado",
   off: "Desligado",
+  proprio: "Link próprio",
   presenca: "Presença",
   presenca_e_texto_contextual: "Presença e texto contextual",
   atender: "Atender",

@@ -670,3 +670,36 @@ test("UNI-VENDA: desmarcar retirada envia false; gestor não altera entrega", as
     expect(item).toHaveProperty("aceita_retirada", true);
   }
 });
+
+test("CARD-LINK2: link_cardapio da unidade salva https e limpa com null", async () => {
+  const salva = await montar("gestor", [], { pedidos: true });
+  const rSalva = await executarGestao(salva.sessao, {
+    acao: "editar",
+    id: "uni",
+    empresa: "bykoji",
+    dados: { link_cardapio: "https://cardapio.exemplo.test/guedala" },
+  });
+  expect(rSalva.ok).toBe(true);
+  expect(chamadaUnidade(salva)?.body).toEqual({
+    link_cardapio: "https://cardapio.exemplo.test/guedala",
+  });
+
+  const limpa = await montar("gestor", [], { pedidos: true });
+  const rLimpa = await executarGestao(limpa.sessao, {
+    acao: "editar",
+    id: "uni",
+    empresa: "bykoji",
+    dados: { link_cardapio: "" },
+  });
+  expect(rLimpa.ok).toBe(true);
+  expect(chamadaUnidade(limpa)?.body).toEqual({ link_cardapio: null });
+
+  const ruim = await montar("gestor", [], { pedidos: true });
+  const rRuim = await executarGestao(ruim.sessao, {
+    acao: "editar",
+    id: "uni",
+    empresa: "bykoji",
+    dados: { link_cardapio: "http://inseguro.test/x" },
+  });
+  expect(rRuim.ok).toBe(false);
+});

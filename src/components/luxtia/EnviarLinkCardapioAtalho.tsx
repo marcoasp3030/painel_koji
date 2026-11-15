@@ -1,20 +1,36 @@
-/** CARD-LINK: atalho na Aparência do cardápio — um interruptor por agente. */
+/** CARD-LINK2: atalho na Aparência — 3 modos + link próprio por agente. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { alterarAgente, listarAgentes, obterAgente } from "@/lib/gateway-agentes.functions";
 import {
   AJUDA_ENVIAR_LINK_CARDAPIO,
+  AJUDA_LINK_CARDAPIO_PROPRIO,
+  ERRO_LINK_CARDAPIO,
+  MODOS_ENVIAR_LINK_CARDAPIO,
   ROTULO_ENVIAR_LINK_CARDAPIO,
-  enviarLinkLigado,
+  ROTULO_LINK_CARDAPIO_PROPRIO,
+  ROTULO_MODO_LINK_CARDAPIO,
+  linkCardapioValido,
+  mensagemErroLinkCardapio,
+  modoEnviarLinkCardapio,
+  normalizarLinkCardapio,
   podeVerEnviarLinkCardapio,
-  valorEnviarLink,
+  type ModoEnviarLinkCardapio,
 } from "@/lib/card-link";
 import type { AgenteDetalhe, AgenteGateway, Pagina } from "@/lib/gateway/tipos";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { ContextoGateway } from "./Gateway";
+import { useState } from "react";
 
-type ItemLink = { id: string; nome: string; ligado: boolean };
+type ItemLink = {
+  id: string;
+  nome: string;
+  modo: ModoEnviarLinkCardapio;
+  link: string;
+};
 
 export function EnviarLinkCardapioAtalho({ ctx }: { ctx: ContextoGateway }) {
   if (!podeVerEnviarLinkCardapio(ctx.papel)) return null;
@@ -24,6 +40,7 @@ export function EnviarLinkCardapioAtalho({ ctx }: { ctx: ContextoGateway }) {
   const obter = useServerFn(obterAgente);
   const alterar = useServerFn(alterarAgente);
   const chave = ["card-link", ctx.empresa ?? "vinculada"];
+  const [rascunhos, setRascunhos] = useState<Record<string, string>>({});
 
   const q = useQuery({
     queryKey: chave,
@@ -34,9 +51,15 @@ export function EnviarLinkCardapioAtalho({ ctx }: { ctx: ContextoGateway }) {
           const det = (await obter({
             data: { empresa: ctx.empresa, agente: a.id },
           })) as AgenteDetalhe;
-          const bruto = det.configuracao_efetiva?.["enviar_link_cardapio"];
-          const valor = typeof bruto === "string" ? bruto : null;
-          return { id: a.id, nome: a.nome, ligado: enviarLinkLigado(valor) };
+          const cfg = det.configuracao_efetiva ?? {};
+          const brutoModo = cfg["enviar_link_cardapio"];
+          const brutoLink = cfg["link_cardapio_proprio"];
+          return {
+            id: a.id,
+            nome: a.nome,
+            modo: modoEnviarLinkCardapio(typeof brutoModo === "string" ? brutoModo : null),
+            link: typeof brutoLink === "string" ? brutoLink : "",
+          };
         }),
       );
       return itens;
@@ -44,26 +67,60 @@ export function EnviarLinkCardapioAtalho({ ctx }: { ctx: ContextoGateway }) {
   });
 
   const mut = useMutation({
-    mutationFn: async ({ id, ligado }: { id: string; ligado: boolean }) => {
+    mutationFn: async (args: {
+      id: string;
+      modo?: ModoEnviarLinkCardapio;
+      link?: string | null;
+    }) => {
+      const dados: Record<string, unknown> = {};
+      if (args.modo !== undefined) dados.enviar_link_cardapio = args.modo;
+      if (args.link !== undefined) dados.link_cardapio_proprio = args.link;
       await alterar({
-        data: {
-          empresa: ctx.empresa,
-          agente: id,
-          dados: { enviar_link_cardapio: valorEnviarLink(ligado) },
-        },
+        data: { empresa: ctx.empresa, agente: args.id, dados },
       });
-      return { id, ligado };
+      return args;
     },
-    onSuccess: ({ id, ligado }) => {
+    onSuccess: (args) => {
       cache.setQueryData<ItemLink[]>(chave, (atual) =>
-        (atual ?? []).map((i) => (i.id === id ? { ...i, ligado } : i)),
+        (atual ?? []).map((i) => {
+          if (i.id !== args.id) return i;
+          return {
+            ...i,
+            ...(args.modo !== undefined ? { modo: args.modo } : {}),
+            ...(args.link !== undefined ? { link: args.link ?? "" } : {}),
+          };
+        }),
       );
-      toast.success(ligado ? "Link do cardápio ligado na conversa." : "Link do cardápio desligado.");
+      if (args.modo !== undefined) {
+        toast.success(`Link do cardápio: ${ROTULO_MODO_LINK_CARDAPIO[args.modo]}.`);
+      } else {
+        toast.success(args.link ? "Link próprio salvo." : "Link próprio removido.");
+      }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message || ERRO_LINK_CARDAPIO),
   });
 
   const itens = q.data ?? [];
+
+  function linkDo(a: ItemLink) {
+    return rascunhos[a.id] ?? a.link;
+  }
+
+  function salvarLink(a: ItemLink) {
+    const bruto = linkDo(a);
+    const erro = mensagemErroLinkCardapio(bruto);
+    if (erro) {
+      toast.error(erro);
+      return;
+    }
+    const normalizado = normalizarLinkCardapio(bruto);
+    mut.mutate({ id: a.id, link: normalizado });
+    setRascunhos((r) => {
+      const n = { ...r };
+      delete n[a.id];
+      return n;
+    });
+  }
 
   return (
     <section aria-label={ROTULO_ENVIAR_LINK_CARDAPIO}>
@@ -81,25 +138,87 @@ export function EnviarLinkCardapioAtalho({ ctx }: { ctx: ContextoGateway }) {
         ) : itens.length === 0 ? (
           <p className="text-sm text-ink-500">Nenhum agente nesta empresa.</p>
         ) : (
-          <ul className="divide-y divide-base-200 rounded-md border border-base-200">
-            {itens.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink-900">
-                    {itens.length > 1 ? a.nome : ROTULO_ENVIAR_LINK_CARDAPIO}
-                  </p>
+          <ul className="space-y-3">
+            {itens.map((a) => {
+              const link = linkDo(a);
+              const aberto =
+                linkCardapioValido(link) && link.trim().startsWith("https://")
+                  ? link.trim()
+                  : null;
+              return (
+                <li
+                  key={a.id}
+                  className="space-y-2 rounded-md border border-base-200 px-3 py-2.5"
+                >
                   {itens.length > 1 ? (
-                    <p className="truncate text-xs text-ink-500">{ROTULO_ENVIAR_LINK_CARDAPIO}</p>
+                    <p className="truncate text-sm font-medium text-ink-900">{a.nome}</p>
                   ) : null}
-                </div>
-                <Switch
-                  checked={a.ligado}
-                  disabled={mut.isPending}
-                  aria-label={`${ROTULO_ENVIAR_LINK_CARDAPIO}: ${a.nome}`}
-                  onCheckedChange={(v) => mut.mutate({ id: a.id, ligado: v })}
-                />
-              </li>
-            ))}
+                  <div
+                    role="radiogroup"
+                    aria-label={ROTULO_ENVIAR_LINK_CARDAPIO}
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {MODOS_ENVIAR_LINK_CARDAPIO.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={a.modo === m}
+                        disabled={mut.isPending}
+                        onClick={() => mut.mutate({ id: a.id, modo: m })}
+                        className={`min-h-9 rounded-md border px-3 text-sm transition disabled:cursor-not-allowed ${
+                          a.modo === m
+                            ? "border-purple-700 bg-purple-50 font-medium text-purple-800"
+                            : "border-base-200 bg-card text-ink-700 hover:border-purple-300"
+                        }`}
+                      >
+                        {ROTULO_MODO_LINK_CARDAPIO[m]}
+                      </button>
+                    ))}
+                  </div>
+                  {a.modo === "proprio" ? (
+                    <div className="space-y-1.5 border-t border-base-200 pt-2">
+                      <label className="block text-xs font-medium text-ink-700">
+                        {ROTULO_LINK_CARDAPIO_PROPRIO}
+                      </label>
+                      <p className="text-xs text-ink-500">{AJUDA_LINK_CARDAPIO_PROPRIO}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="url"
+                          inputMode="url"
+                          autoComplete="url"
+                          spellCheck={false}
+                          placeholder="https://"
+                          maxLength={500}
+                          className="min-w-0 flex-1"
+                          value={link}
+                          disabled={mut.isPending}
+                          onChange={(e) =>
+                            setRascunhos((r) => ({ ...r, [a.id]: e.target.value }))
+                          }
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={mut.isPending || link === a.link}
+                          onClick={() => salvarLink(a)}
+                        >
+                          Salvar
+                        </Button>
+                        {aberto ? (
+                          <Button type="button" size="sm" variant="outline" asChild>
+                            <a href={aberto} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="size-3.5" aria-hidden /> Abrir
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

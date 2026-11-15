@@ -49,8 +49,9 @@ export const CAMPOS_AGENTE_EMPRESA = [
   "status",
   // Lista ou null (= padrão do modelo). Fora dos permitidos o gateway recusa.
   "modulos_ligados",
-  // CARD-LINK: atalho na tela do cardápio (também entra pelo rascunho de atendimento).
+  // CARD-LINK / CARD-LINK2: atalho na tela do cardápio (também entra pelo rascunho).
   "enviar_link_cardapio",
+  "link_cardapio_proprio",
 ] as const;
 
 function validarPatchAgenteEmpresa(corpo: unknown) {
@@ -71,8 +72,16 @@ function validarPatchAgenteEmpresa(corpo: unknown) {
     throw new AcessoNegado("Como admin da empresa você só pode deixar o agente ativo ou pausado.");
   }
   const link = dados["enviar_link_cardapio"];
-  if (link !== undefined && link !== "on" && link !== "off") {
-    throw new AcessoNegado('Enviar link do cardápio: use "on" ou "off".');
+  if (link !== undefined && link !== "on" && link !== "off" && link !== "proprio") {
+    throw new AcessoNegado('Link do cardápio: use "on", "off" ou "proprio".');
+  }
+  const urlProprio = dados["link_cardapio_proprio"];
+  if (
+    urlProprio !== undefined &&
+    urlProprio !== null &&
+    !(typeof urlProprio === "string" && urlProprio.length <= 500)
+  ) {
+    throw new AcessoNegado("Informe um link público começando com https://");
   }
   const ligados = dados["modulos_ligados"];
   if (

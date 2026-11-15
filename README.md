@@ -85,7 +85,7 @@ Admin e plataforma (CAT3-a, contrato `gateway/docs/ESPEC_CAT3.md` seção 13):
 
 Layout de gestão republicado em 30/10/2026 como `painel:bc6c695dbb029ffcc17c5acf75466bf8d20bb251`. A volta imediata é `painel:volta-20261030T165734Z`. O atendente consulta o cardápio e pode esgotar ou repor. Criar, preço, arquivar, lote e ligações ficam com admin e plataforma. O `PATCH` continua só com o que mudou e o `atualizado_em` lido. Preço vazio avisa que o item sai do atendimento. Conflito 409 oferece recarregar ou reaplicar. A disponibilidade tem prévia ao vivo e o histórico do item (quem, quando em Brasília, antes e depois) segue só para admin e plataforma. Prints com dados fictícios: `docs/prints-cat3-enc1/` (`tests/visual/cat3/capturar.cjs`).
 
-**Link na conversa (CARD-LINK):** gestor e plataforma ligam ou desligam `enviar_link_cardapio` no grupo Pedidos do comportamento do agente, ou pelo atalho em Aparência do cardápio (um interruptor por agente). Ligado (padrão): o agente manda o link quando o cliente pede. Desligado: apresenta as opções na conversa. O Link da loja não muda. Supervisor não vê o interruptor.
+**Link na conversa (CARD-LINK2):** gestor e plataforma escolhem em Comportamento (ou Aparência): **Cardápio do sistema**, **Link próprio** (`https://` geral + opcional por unidade em Unidades) ou **Não enviar link**. Sem nenhum link próprio, o agente usa o cardápio do sistema. Supervisor não vê.
 
 ## WhatsApp oficial (Meta) — META1-a
 

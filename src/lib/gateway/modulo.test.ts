@@ -346,6 +346,12 @@ describe("papéis", () => {
       ["PATCH", ["agentes", "ag_1"], { modulos_ligados: null }],
       ["PATCH", ["agentes", "ag_1"], { enviar_link_cardapio: "off" }],
       ["PATCH", ["agentes", "ag_1"], { enviar_link_cardapio: "on" }],
+      ["PATCH", ["agentes", "ag_1"], { enviar_link_cardapio: "proprio" }],
+      [
+        "PATCH",
+        ["agentes", "ag_1"],
+        { link_cardapio_proprio: "https://cardapio.exemplo.test/x" },
+      ],
       ["POST", ["canais", "can_1", "webhook"]],
       ["GET", ["pedidos"]],
       ["GET", ["pedidos", "contagem"]],

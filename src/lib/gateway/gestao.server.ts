@@ -180,8 +180,22 @@ export async function executarGestao(
         "aceita_retirada",
         "delivery_ativo",
         "formas_pagamento",
+        "link_cardapio",
       ])
         delete limpo[k];
+      corpo = limpo;
+    }
+    // CARD-LINK2: string vazia do formulário → null (limpa o link da unidade).
+    if (
+      corpo &&
+      typeof corpo === "object" &&
+      !Array.isArray(corpo) &&
+      (d.acao === "criar" || d.acao === "editar") &&
+      "link_cardapio" in (corpo as Record<string, unknown>)
+    ) {
+      const limpo = { ...(corpo as Record<string, unknown>) };
+      const lc = limpo["link_cardapio"];
+      if (typeof lc === "string" && lc.trim() === "") limpo["link_cardapio"] = null;
       corpo = limpo;
     }
     // UNI-VENDA: delivery_ativo é SO_ADMIN no gateway; no painel só a plataforma grava.
@@ -223,6 +237,7 @@ export async function executarGestao(
               "aceita_retirada",
               "delivery_ativo",
               "formas_pagamento",
+              "link_cardapio",
             ]
           : []),
       ])

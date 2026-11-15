@@ -1,3 +1,20 @@
+## [2026-11-15 20:05] — CARD-LINK2: link próprio do cardápio
+- **Autor:** Auto
+- **Objetivo:** 3 opções (sistema / próprio / não enviar) + link por unidade (ESPEC §6).
+- **Arquivos alterados:**
+ - `src/lib/card-link.ts` + `.test.ts` — modos, validação https, normalizar null
+ - `CampoAtendimento.tsx` — tipo `url` + radiogroup CARD-LINK2
+ - `ComportamentoAgente.tsx` / `EnviarLinkCardapioAtalho.tsx` — UI 3 opções + Abrir
+ - `gestao.ts` / `.server.ts` / `GestaoUnidades.tsx` — `link_cardapio` da unidade
+ - `atendimento.ts`, `modulos.ts`, `modulo.server.ts` — rótulos e PATCH `proprio`
+ - `instrucoes.md`, `README.md`, `docs/worklog.md`
+- **Resumo das mudanças:** Comportamento e atalho com 3 modos; campo URL só em `proprio`; unidade com link opcional (módulo pedidos); link inválido recusado.
+- **Decisões e justificativas:** Rótulos on/off globais intactos; CARD-LINK2 usa rótulos próprios. Esquema do gateway já traz `proprio` e tipo `url`.
+- **Comandos executados:** bun test card-link + gestao + modulo + modulos → 84 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** smoke em Comportamento + Unidades após publicação
+
 ## [2026-11-15 19:00] — 99FOOD1-b: Pedidos sempre no menu + dica na Visão
 - **Autor:** Auto
 - **Objetivo:** Usuário via Loja → 99Food mas não via Pedidos nem Visão (0 lojas no banco).

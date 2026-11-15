@@ -82,6 +82,13 @@
 - Sem vínculo de cliente (acesso de plataforma). Login na API OK. Senha não fica neste arquivo.
 - Correção: tentativas antes da conta existir geraram bloqueio em `entrada_tentativas` (“Muitas tentativas…”). Bloqueio limpo; login em https://painel.luxbrain.com.br/ → `/admin` (Super Admin) OK.
 
+## CARD-LINK2: link próprio do cardápio (15/11/2026)
+
+- `enviar_link_cardapio`: 3 opções — Cardápio do sistema (`on`) · Link próprio (`proprio`) · Não enviar (`off`).
+- Com `proprio`: campo `link_cardapio_proprio` (https://, Abrir); dica sobre links por unidade.
+- Unidades → Editar (módulo pedidos): `link_cardapio` opcional; vazio limpa (null).
+- Atendimento/ficha + atalho em Aparência; supervisor não vê.
+
 ## CARD-LINK: enviar link do cardápio na conversa (09/11/2026)
 
 - Comportamento `enviar_link_cardapio` (on/off, padrão on) no grupo Pedidos da tela de comportamentos; só gestor e acima veem.

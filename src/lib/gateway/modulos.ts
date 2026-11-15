@@ -62,6 +62,7 @@ export const CAMPOS_PEDIDOS = [
   "carrinho_expira_h",
   "acoes_recentes_min",
   "enviar_link_cardapio",
+  "link_cardapio_proprio",
 ] as const;
 
 export function campoDePedidos(campo: string) {
