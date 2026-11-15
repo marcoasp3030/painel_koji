@@ -1,4 +1,4 @@
-## [2026-11-14 24:05] — ATD-ALERTA: etiqueta “Aguardando humano”
+## [2026-11-15 00:03] — ATD-ALERTA: etiqueta “Aguardando humano”
 - **Autor:** Auto
 - **Objetivo:** Deixar explícito que o cliente espera humano (selo, lista, detalhe, aba).
 - **Arquivos alterados:**
