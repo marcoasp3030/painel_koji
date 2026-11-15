@@ -10,8 +10,8 @@
 - **Decisões e justificativas:** Credenciais ok, mas `food99_lojas` vazio — sem loja o gateway devolve `99food: null`.
 - **Comandos executados:** bun test food99* → 11 OK
 - **Erros e resoluções:** —
-- **Pendências / TODO:** publicar; conectar unidade em Loja → 99Food
-- **Próximos passos:** commit + publicar-painel
+- **Pendências / TODO:** conectar unidade em Loja → 99Food (hoje `food99_lojas` = 0)
+- **Próximos passos:** após conectar e Conferir, Pedidos lista e Visão ganham o bloco/canal
 
 ## [2026-11-15 18:55] — Publicação 99FOOD1-b no painel
 - **Autor:** Auto
