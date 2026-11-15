@@ -1,3 +1,9 @@
+## 99FOOD1-a: 99Food no painel (15/11/2026)
+
+- Integrações → **99Food** (`/ia/99food`), só plataforma: GET/PUT `99food/credenciais` com `GATEWAY_PLATFORM_KEY`; Callback Address + Copiar; Secret nunca volta.
+- Empresa (gestor+): Loja → **99Food** (`/ia/configuracoes/99food`): lista por unidade; Conectar (aviso → nova aba) → Conferir; Desconectar com confirmação; 502 `nao_desvinculou` → “Remover só no gateway”.
+- Testes: `food99.test.ts` (menu, status, erros, autorizar).
+
 ## UNI-VENDA: entrega e retirada (14/11/2026)
 
 - Em Unidades → editar: bloco **Pedidos e entrega** com “Faz entrega (delivery)” e “Aceita retirada no local”.

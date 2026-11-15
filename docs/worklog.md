@@ -1,3 +1,20 @@
+## [2026-11-15 15:11] — 99FOOD1-a: 99Food no painel
+- **Autor:** Auto
+- **Objetivo:** Tela plataforma de credenciais + lojas por unidade (gestor), conforme ESPEC_99FOOD1 §10.
+- **Arquivos alterados:**
+ - `src/lib/food99.ts` + `.test.ts` — tipos, rótulos, erros, menu
+ - `src/lib/gateway-food99.functions.ts` — GET/PUT credenciais; lojas conectar/conferir/desconectar
+ - `src/components/luxtia/{Food99Credenciais,Food99LojasEmpresa}.tsx` — UI
+ - `src/routes/_authenticated/ia/{99food,configuracoes.99food}.tsx` + `routeTree.gen.ts`
+ - `src/lib/nav.ts`, `AppShell.tsx`, `gateway/modulo.server.ts` — menu e autorizar
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — registro
+- **Resumo das mudanças:** Integrações → 99Food (plataforma, Callback Address); Loja → 99Food (conectar com aviso, conferir, desconectar com confirmação e fallback so_no_gateway).
+- **Decisões e justificativas:** Espelha Meta/iFood; Secret nunca reexibido; gestor conecta a própria unidade.
+- **Comandos executados:** `bun test` food99 + meta → 13 OK; `tsr generate` → rotas no routeTree
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** smoke com app de teste da 99Food após publicação
+
 ## [2026-11-14 23:17] — Publicação UNI-VENDA no painel
 - **Autor:** Auto
 - **Objetivo:** Commit e publicar UNI-VENDA (estava só em working tree; no ar era `25727ba`).

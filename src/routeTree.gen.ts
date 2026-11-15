@@ -23,6 +23,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminTenantIdRouteImport } from './routes/_authenticated/admin/$tenantId'
 import { Route as AuthenticatedAdminConfiguracoesRouteImport } from './routes/_authenticated/admin/configuracoes'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin/usuarios'
+import { Route as AuthenticatedIa99foodRouteImport } from './routes/_authenticated/ia/99food'
 import { Route as AuthenticatedIaCanaisRouteImport } from './routes/_authenticated/ia/canais'
 import { Route as AuthenticatedIaCardapioRouteImport } from './routes/_authenticated/ia/cardapio'
 import { Route as AuthenticatedIaChavesRouteImport } from './routes/_authenticated/ia/chaves'
@@ -42,6 +43,7 @@ import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authen
 import { Route as AuthenticatedIaWebhooksSaidaRouteImport } from './routes/_authenticated/ia/webhooks-saida'
 import { Route as AuthenticatedIaAgentesIndexRouteImport } from './routes/_authenticated/ia/agentes.index'
 import { Route as AuthenticatedIaAgentesAgenteIdRouteImport } from './routes/_authenticated/ia/agentes.$agenteId'
+import { Route as AuthenticatedIaConfiguracoes99foodRouteImport } from './routes/_authenticated/ia/configuracoes.99food'
 import { Route as AuthenticatedIaConfiguracoesAparenciaRouteImport } from './routes/_authenticated/ia/configuracoes.aparencia'
 import { Route as AuthenticatedIaConfiguracoesAvisosRouteImport } from './routes/_authenticated/ia/configuracoes.avisos'
 import { Route as AuthenticatedIaConfiguracoesComportamentoRouteImport } from './routes/_authenticated/ia/configuracoes.comportamento'
@@ -129,6 +131,11 @@ const AuthenticatedAdminUsuariosRoute =
     path: '/usuarios',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedIa99foodRoute = AuthenticatedIa99foodRouteImport.update({
+  id: '/ia/99food',
+  path: '/ia/99food',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIaCanaisRoute = AuthenticatedIaCanaisRouteImport.update({
   id: '/ia/canais',
   path: '/ia/canais',
@@ -233,6 +240,12 @@ const AuthenticatedIaAgentesAgenteIdRoute =
     path: '/ia/agentes/$agenteId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaConfiguracoes99foodRoute =
+  AuthenticatedIaConfiguracoes99foodRouteImport.update({
+    id: '/ia/configuracoes/99food',
+    path: '/ia/configuracoes/99food',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaConfiguracoesAparenciaRoute =
   AuthenticatedIaConfiguracoesAparenciaRouteImport.update({
     id: '/ia/configuracoes/aparencia',
@@ -318,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
+  '/ia/99food': typeof AuthenticatedIa99foodRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
@@ -337,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/ia/configuracoes/99food': typeof AuthenticatedIaConfiguracoes99foodRoute
   '/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
@@ -363,6 +378,7 @@ export interface FileRoutesByTo {
   '/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
+  '/ia/99food': typeof AuthenticatedIa99foodRoute
   '/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/ia/chaves': typeof AuthenticatedIaChavesRoute
@@ -382,6 +398,7 @@ export interface FileRoutesByTo {
   '/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/ia/configuracoes/99food': typeof AuthenticatedIaConfiguracoes99foodRoute
   '/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
@@ -410,6 +427,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/$tenantId': typeof AuthenticatedAdminTenantIdRoute
   '/_authenticated/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
+  '/_authenticated/ia/99food': typeof AuthenticatedIa99foodRoute
   '/_authenticated/ia/canais': typeof AuthenticatedIaCanaisRoute
   '/_authenticated/ia/cardapio': typeof AuthenticatedIaCardapioRoute
   '/_authenticated/ia/chaves': typeof AuthenticatedIaChavesRoute
@@ -429,6 +447,7 @@ export interface FileRoutesById {
   '/_authenticated/ia/webhooks-saida': typeof AuthenticatedIaWebhooksSaidaRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/ia/agentes/$agenteId': typeof AuthenticatedIaAgentesAgenteIdRoute
+  '/_authenticated/ia/configuracoes/99food': typeof AuthenticatedIaConfiguracoes99foodRoute
   '/_authenticated/ia/configuracoes/aparencia': typeof AuthenticatedIaConfiguracoesAparenciaRoute
   '/_authenticated/ia/configuracoes/avisos': typeof AuthenticatedIaConfiguracoesAvisosRoute
   '/_authenticated/ia/configuracoes/comportamento': typeof AuthenticatedIaConfiguracoesComportamentoRoute
@@ -458,6 +477,7 @@ export interface FileRouteTypes {
     | '/admin/$tenantId'
     | '/admin/configuracoes'
     | '/admin/usuarios'
+    | '/ia/99food'
     | '/ia/canais'
     | '/ia/cardapio'
     | '/ia/chaves'
@@ -477,6 +497,7 @@ export interface FileRouteTypes {
     | '/ia/webhooks-saida'
     | '/admin/'
     | '/ia/agentes/$agenteId'
+    | '/ia/configuracoes/99food'
     | '/ia/configuracoes/aparencia'
     | '/ia/configuracoes/avisos'
     | '/ia/configuracoes/comportamento'
@@ -503,6 +524,7 @@ export interface FileRouteTypes {
     | '/admin/$tenantId'
     | '/admin/configuracoes'
     | '/admin/usuarios'
+    | '/ia/99food'
     | '/ia/canais'
     | '/ia/cardapio'
     | '/ia/chaves'
@@ -522,6 +544,7 @@ export interface FileRouteTypes {
     | '/ia/webhooks-saida'
     | '/admin'
     | '/ia/agentes/$agenteId'
+    | '/ia/configuracoes/99food'
     | '/ia/configuracoes/aparencia'
     | '/ia/configuracoes/avisos'
     | '/ia/configuracoes/comportamento'
@@ -549,6 +572,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/$tenantId'
     | '/_authenticated/admin/configuracoes'
     | '/_authenticated/admin/usuarios'
+    | '/_authenticated/ia/99food'
     | '/_authenticated/ia/canais'
     | '/_authenticated/ia/cardapio'
     | '/_authenticated/ia/chaves'
@@ -568,6 +592,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/webhooks-saida'
     | '/_authenticated/admin/'
     | '/_authenticated/ia/agentes/$agenteId'
+    | '/_authenticated/ia/configuracoes/99food'
     | '/_authenticated/ia/configuracoes/aparencia'
     | '/_authenticated/ia/configuracoes/avisos'
     | '/_authenticated/ia/configuracoes/comportamento'
@@ -690,6 +715,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/usuarios'
       preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/ia/99food': {
+      id: '/_authenticated/ia/99food'
+      path: '/ia/99food'
+      fullPath: '/ia/99food'
+      preLoaderRoute: typeof AuthenticatedIa99foodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/canais': {
       id: '/_authenticated/ia/canais'
@@ -822,6 +854,13 @@ declare module '@tanstack/react-router' {
       path: '/ia/agentes/$agenteId'
       fullPath: '/ia/agentes/$agenteId'
       preLoaderRoute: typeof AuthenticatedIaAgentesAgenteIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ia/configuracoes/99food': {
+      id: '/_authenticated/ia/configuracoes/99food'
+      path: '/ia/configuracoes/99food'
+      fullPath: '/ia/configuracoes/99food'
+      preLoaderRoute: typeof AuthenticatedIaConfiguracoes99foodRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ia/configuracoes/aparencia': {
@@ -972,6 +1011,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIfoodDebugRoute: typeof AuthenticatedIfoodDebugRoute
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedIa99foodRoute: typeof AuthenticatedIa99foodRoute
   AuthenticatedIaCanaisRoute: typeof AuthenticatedIaCanaisRoute
   AuthenticatedIaCardapioRoute: typeof AuthenticatedIaCardapioRoute
   AuthenticatedIaChavesRoute: typeof AuthenticatedIaChavesRoute
@@ -990,6 +1030,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
   AuthenticatedIaWebhooksSaidaRoute: typeof AuthenticatedIaWebhooksSaidaRoute
   AuthenticatedIaAgentesAgenteIdRoute: typeof AuthenticatedIaAgentesAgenteIdRoute
+  AuthenticatedIaConfiguracoes99foodRoute: typeof AuthenticatedIaConfiguracoes99foodRoute
   AuthenticatedIaConfiguracoesAparenciaRoute: typeof AuthenticatedIaConfiguracoesAparenciaRoute
   AuthenticatedIaConfiguracoesAvisosRoute: typeof AuthenticatedIaConfiguracoesAvisosRoute
   AuthenticatedIaConfiguracoesComportamentoRoute: typeof AuthenticatedIaConfiguracoesComportamentoRoute
@@ -1008,6 +1049,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIfoodDebugRoute: AuthenticatedIfoodDebugRoute,
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedIa99foodRoute: AuthenticatedIa99foodRoute,
   AuthenticatedIaCanaisRoute: AuthenticatedIaCanaisRoute,
   AuthenticatedIaCardapioRoute: AuthenticatedIaCardapioRoute,
   AuthenticatedIaChavesRoute: AuthenticatedIaChavesRoute,
@@ -1026,6 +1068,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,
   AuthenticatedIaWebhooksSaidaRoute: AuthenticatedIaWebhooksSaidaRoute,
   AuthenticatedIaAgentesAgenteIdRoute: AuthenticatedIaAgentesAgenteIdRoute,
+  AuthenticatedIaConfiguracoes99foodRoute:
+    AuthenticatedIaConfiguracoes99foodRoute,
   AuthenticatedIaConfiguracoesAparenciaRoute:
     AuthenticatedIaConfiguracoesAparenciaRoute,
   AuthenticatedIaConfiguracoesAvisosRoute:

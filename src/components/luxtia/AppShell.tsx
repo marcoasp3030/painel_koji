@@ -66,6 +66,7 @@ const ICONES: Record<IconeMenu, LucideIcon> = {
   vendas: BarChart3,
   ifood: ShoppingBag,
   meta: MessageCircle,
+  food99: ShoppingBag,
   operacao: Gauge,
   modelos: Layers,
   configuracoes: Settings,

@@ -622,6 +622,21 @@ const REGRAS: Regra[] = [
   // IFOOD1-a: gestor vê e confere; ligar/desligar fica só com a plataforma (bypass em autorizar).
   { metodo: "GET", caminho: ["ifood", "lojas"], papeis: GEST },
   { metodo: "POST", caminho: ["ifood", "lojas", "*", "conferir"], papeis: GEST },
+  // 99FOOD1-a: gestor conecta/confere/desconecta loja da própria empresa.
+  { metodo: "GET", caminho: ["99food", "lojas"], papeis: GEST },
+  {
+    metodo: "POST",
+    caminho: ["99food", "lojas"],
+    papeis: GEST,
+    corpo: soChaves(["unidade"], "Informe a unidade."),
+  },
+  { metodo: "POST", caminho: ["99food", "lojas", "*", "conferir"], papeis: GEST, corpo: semCorpo },
+  {
+    metodo: "DELETE",
+    caminho: ["99food", "lojas", "*"],
+    papeis: GEST,
+    corpo: soChaves(["confirmacao", "so_no_gateway"], "Campos de desconexão inválidos."),
+  },
   // IFOOD1-b1: pedidos só leitura + atualizar detalhe pendente (gestor+).
   { metodo: "GET", caminho: ["ifood", "pedidos"], papeis: GEST },
   { metodo: "POST", caminho: ["ifood", "pedidos", "atualizar"], papeis: GEST, corpo: semCorpo },

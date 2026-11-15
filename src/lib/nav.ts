@@ -17,6 +17,7 @@ export type IconeMenu =
   | "vendas"
   | "ifood"
   | "meta"
+  | "food99"
   | "operacao"
   | "modelos"
   | "configuracoes"
@@ -200,6 +201,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     papeis: ["plataforma"],
   },
   {
+    to: "/ia/99food",
+    label: "99Food",
+    grupo: "Integrações",
+    icone: "food99",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/empresas",
     label: "Empresas",
     grupo: "Gestão",
@@ -289,6 +297,13 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "iFood",
     grupo: "Loja",
     icone: "ifood",
+    papeis: ["gestor"],
+  },
+  {
+    to: "/ia/configuracoes/99food",
+    label: "99Food",
+    grupo: "Loja",
+    icone: "food99",
     papeis: ["gestor"],
   },
   {
