@@ -1,3 +1,14 @@
+## [2026-11-15 15:14] — Publicação 99FOOD1-a no painel
+- **Autor:** Auto
+- **Objetivo:** Publicar 99Food (menu não aparecia: estava só no working tree; no ar era `85824b5`).
+- **Arquivos alterados:** commit `c4d8eb7`; imagem `painel:c4d8eb769789725225fb563e27ce6beba3cd5339`
+- **Resumo das mudanças:** Build + recreate; push `main`; home 200.
+- **Decisões e justificativas:** Usuário não via o menu — faltava publicar.
+- **Comandos executados:** `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; push → OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** atualizar a página (Ctrl+F5); plataforma → Integrações → 99Food; gestor → Loja → 99Food
+
 ## [2026-11-15 15:11] — 99FOOD1-a: 99Food no painel
 - **Autor:** Auto
 - **Objetivo:** Tela plataforma de credenciais + lojas por unidade (gestor), conforme ESPEC_99FOOD1 §10.
