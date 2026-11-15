@@ -1,3 +1,14 @@
+## [2026-11-15 18:55] — Publicação 99FOOD1-b no painel
+- **Autor:** Auto
+- **Objetivo:** Menu/pedidos não apareciam — 99FOOD1-b só no working tree; no ar era `c4d8eb7`.
+- **Arquivos alterados:** commit `6dea568`; imagem `painel:6dea568a367f5f9b4e2536b5b9d16ed1b23a45bd`
+- **Resumo das mudanças:** Build + recreate; home 200.
+- **Decisões e justificativas:** Mesmo caso do 99FOOD1-a — faltava publicar.
+- **Comandos executados:** commit → OK; `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** Ctrl+F5; Pedidos 99Food só aparece se a empresa tiver loja conectada
+- **Próximos passos:** conectar loja em Loja → 99Food se a aba Pedidos ainda não aparecer
+
 ## [2026-11-15 18:50] — 99FOOD1-b: pedidos e Visão de vendas
 - **Autor:** Auto
 - **Objetivo:** Ambiente nas credenciais; aba Pedidos 99Food; bloco e canal na Visão (ESPEC §11).
@@ -14,8 +25,8 @@
 - **Decisões e justificativas:** Espelha iFood; paginação via `mais`+`antes=criado_em`; cor `#FF6600` distinta do iFood; confirmação só no app da 99.
 - **Comandos executados:** `docker … bun test` food99 + food99-pedidos + visão → 19 OK
 - **Erros e resoluções:** —
-- **Pendências / TODO:** publicar painel quando o Marco pedir
-- **Próximos passos:** commit + `docker/publicar-painel.sh` se for para produção
+- **Pendências / TODO:** —
+- **Próximos passos:** —
 
 ## [2026-11-15 15:14] — Publicação 99FOOD1-a no painel
 - **Autor:** Auto
