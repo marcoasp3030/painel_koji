@@ -1,6 +1,49 @@
-/** PED-BI: helpers da tela Visão de vendas (filtros, variação, calor, abas). */
+/** PED-BI / 99FOOD1-b: helpers da tela Visão de vendas (filtros, variação, calor, abas, canais). */
 import { FUSO_PAINEL } from "@/lib/gateway/gestao";
 import type { BlocoIfoodIndicadores } from "@/lib/ifood-pedidos";
+import type { BlocoFood99Indicadores } from "@/lib/food99-pedidos";
+
+/** Cores próprias na legenda dos gráficos de canais (99Food ≠ iFood ≠ WhatsApp). */
+export const COR_CANAL_VENDAS: Record<string, string> = {
+  delivery: "#15803d",
+  retirada: "#0369a1",
+  ifood: "#ea1d2c",
+  "99food": "#FF6600",
+};
+
+export const ROTULO_CANAL_VENDAS: Record<string, string> = {
+  delivery: "Delivery",
+  retirada: "Retirada",
+  ifood: "iFood",
+  "99food": "99Food",
+};
+
+export type CanalVendas = "delivery" | "retirada" | "ifood" | "99food" | string;
+
+export type MetricasPorCanal = {
+  pedidos: number;
+  faturamento: number;
+  ticket_medio?: number;
+  participacao_pct?: number;
+  quantidade?: number;
+};
+
+export type BlocoCanaisIndicadores = {
+  disponiveis: CanalVendas[];
+  total: { pedidos: number; faturamento: number; ticket_medio: number };
+  resumo: ({ canal: CanalVendas } & MetricasPorCanal)[];
+  evolucao: {
+    inicio: string;
+    pedidos: number;
+    faturamento: number;
+    por_canal: Record<string, { pedidos: number; faturamento: number }>;
+  }[];
+  dias_semana: unknown[];
+  horas: unknown[];
+  horarios: unknown[];
+  pagamentos: unknown[];
+  produtos: { itens: unknown[]; total: number };
+};
 
 export const MAX_DIAS_PERIODO = 366;
 export const ORIGEM_SO_REAL = "real";
@@ -137,7 +180,37 @@ export type IndicadoresPedidos = {
   }[];
   /** IFOOD1-b1: null se a empresa não tiver loja do iFood. */
   ifood: BlocoIfoodIndicadores | null;
+  /** 99FOOD1-b: null se a empresa não tiver loja da 99Food. */
+  "99food": BlocoFood99Indicadores | null;
+  /** PED-BI2: canais juntos; `99food` em disponiveis só com loja. */
+  canais?: BlocoCanaisIndicadores;
 };
+
+export function corCanalVendas(canal: string): string {
+  return COR_CANAL_VENDAS[canal] ?? "#64748b";
+}
+
+export function rotuloCanalVendas(canal: string): string {
+  return ROTULO_CANAL_VENDAS[canal] ?? canal;
+}
+
+/** Monta série do gráfico de evolução por canal (uma chave por canal disponível). */
+export function serieEvolucaoCanais(
+  evolucao: BlocoCanaisIndicadores["evolucao"],
+  disponiveis: readonly string[],
+  agrupar: "dia" | "semana" | "mes",
+): Record<string, string | number>[] {
+  return evolucao.map((p) => {
+    const linha: Record<string, string | number> = {
+      rotulo: rotuloDiaCurto(p.inicio, agrupar),
+      inicio: p.inicio,
+    };
+    for (const c of disponiveis) {
+      linha[c] = p.por_canal?.[c]?.faturamento ?? 0;
+    }
+    return linha;
+  });
+}
 
 /** Dia civil AAAA-MM-DD no fuso (padrão Brasília). */
 export function diaCivilNoFuso(agora = Date.now(), fuso = FUSO_PAINEL): string {

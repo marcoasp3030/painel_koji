@@ -1,4 +1,4 @@
-/** 99FOOD1-a: credenciais (plataforma) e lojas por unidade (gestor+). */
+/** 99FOOD1-a/b: credenciais (plataforma), lojas e pedidos (gestor+). */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -10,6 +10,12 @@ import {
   type LojaFood99,
   type ResultadoConectarFood99,
 } from "./food99";
+import {
+  filtrosListaFood99,
+  type ListaPedidosFood99,
+  type PedidoFood99Detalhe,
+  type ResultadoAtualizarFood99,
+} from "./food99-pedidos";
 
 export type ErroFood99Painel = { ok: false; mensagem: string; motivo?: string };
 
@@ -55,7 +61,7 @@ export const lerCredenciaisFood99 = createServerFn({ method: "POST" })
   });
 
 /**
- * Plataforma: grava App ID + Secret (App ID conferido na 99Food antes).
+ * Plataforma: grava App ID + Secret + ambiente (App ID conferido na 99Food antes).
  * Exige GATEWAY_PLATFORM_KEY no servidor.
  */
 export const gravarCredenciaisFood99 = createServerFn({ method: "POST" })
@@ -72,6 +78,7 @@ export const gravarCredenciaisFood99 = createServerFn({ method: "POST" })
           .min(8)
           .max(200)
           .regex(/^[\x21-\x7e]+$/),
+        ambiente: z.enum(["teste", "producao"]),
       })
       .parse(d),
   )
@@ -87,6 +94,7 @@ export const gravarCredenciaisFood99 = createServerFn({ method: "POST" })
             corpo: {
               app_id: data.app_id.trim(),
               app_secret: data.app_secret,
+              ambiente: data.ambiente,
             },
           },
         );
@@ -196,3 +204,94 @@ export const desconectarLojaFood99 = createServerFn({ method: "POST" })
       });
     },
   );
+
+const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/** order_id da 99: só dígitos, até 30 — nunca Number() (64 bits). */
+const orderIdFood99 = z.string().regex(/^[0-9]{1,30}$/);
+
+/** 99FOOD1-b: lista de pedidos (gestor+). */
+export const listarPedidosFood99 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        empresa,
+        de: dia.optional(),
+        ate: dia.optional(),
+        status: z.string().min(1).max(40).optional(),
+        unidade: z
+          .string()
+          .trim()
+          .regex(/^[a-z0-9][a-z0-9_]{0,39}$/)
+          .optional(),
+        teste: z.boolean().nullable().optional(),
+        limite: z.number().int().min(1).max(200).optional(),
+        antes: z.string().min(1).max(40).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ListaPedidosFood99 | ErroFood99Painel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<ListaPedidosFood99>("GET", ["99food", "pedidos"], {
+          query: filtrosListaFood99({
+            de: data.de,
+            ate: data.ate,
+            status: data.status,
+            unidade: data.unidade,
+            teste: data.teste,
+            limite: data.limite,
+            antes: data.antes,
+          }),
+        });
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/** 99FOOD1-b: detalhe de um pedido (order_id como texto). */
+export const lerPedidoFood99 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ empresa, order_id: orderIdFood99 }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<PedidoFood99Detalhe | ErroFood99Painel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<PedidoFood99Detalhe>("GET", [
+          "99food",
+          "pedidos",
+          data.order_id,
+        ]);
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });
+
+/** 99FOOD1-b: busca de novo o detalhe dos pedidos pendentes. */
+export const atualizarPedidosFood99 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ empresa }).parse(d))
+  .handler(async ({ data, context }): Promise<ResultadoAtualizarFood99 | ErroFood99Painel> => {
+    const g = await import("./gateway/painel.server");
+    return g.executar(context, async (sessao) => {
+      const t = await sessao.tenant(data.empresa);
+      try {
+        const { dados } = await t.chamar<ResultadoAtualizarFood99>(
+          "POST",
+          ["99food", "pedidos", "atualizar"],
+        );
+        return dados;
+      } catch (e) {
+        return await erroDe(e);
+      }
+    });
+  });

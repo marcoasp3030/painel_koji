@@ -1,11 +1,16 @@
 /**
- * 99FOOD1-a: credenciais do app (plataforma) e lojas por unidade (gestor+).
+ * 99FOOD1-a/b: credenciais do app (plataforma), lojas por unidade e pedidos (gestor+).
  * Rótulos e conferências do painel; a chamada HTTP fica no servidor.
  */
+
+/** Teste = app de teste da 99; produção = lojas reais. */
+export type AmbienteFood99 = "teste" | "producao";
 
 export type CredenciaisFood99 = {
   configurado: boolean;
   app_id_final: string | null;
+  /** Presente quando configurado; nulo se ainda não há credencial. */
+  ambiente: AmbienteFood99 | null;
   webhook_url: string;
   atualizado_por: string | null;
   atualizado_em: string | null;
@@ -64,16 +69,32 @@ export function rotuloSituacaoFood99(s: SituacaoFood99 | string) {
   return s.replace(/_/g, " ");
 }
 
+export function rotuloAmbienteFood99(a: AmbienteFood99 | null | undefined): string | null {
+  if (a === "producao") return "Produção";
+  if (a === "teste") return "Teste";
+  return null;
+}
+
 /** Status do bloco Credenciais: nunca inclui o Secret. */
 export function textoStatusCredenciaisFood99(c: CredenciaisFood99): string {
   if (!c.configurado) return "Não configurado";
   const final = (c.app_id_final || "").trim() || "????";
-  const base = `Configurado (App ID …${final})`;
+  const amb = rotuloAmbienteFood99(c.ambiente);
+  const base = amb
+    ? `Configurado (App ID …${final}) — Ambiente: ${amb}`
+    : `Configurado (App ID …${final})`;
   const quem = (c.atualizado_por || "").trim();
   const quando = dataCurtaFood99(c.atualizado_em);
   if (quem && quando) return `${base}, alterado por ${quem} em ${quando}`;
   if (quem) return `${base}, alterado por ${quem}`;
   return base;
+}
+
+/** Pedidos → 99Food no menu só quando a empresa tem ao menos uma loja. */
+export function mostrarMenuPedidosFood99(
+  itens: { id?: string }[] | null | undefined,
+): boolean {
+  return (itens?.length ?? 0) > 0;
 }
 
 function dataCurtaFood99(iso: string | null | undefined): string | null {

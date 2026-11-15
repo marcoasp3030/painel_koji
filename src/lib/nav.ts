@@ -72,6 +72,13 @@ const AGENTES_PLATAFORMA: ItemMenu[] = [
     papeis: ["plataforma"],
   },
   {
+    to: "/ia/pedidos-99food",
+    label: "Pedidos 99Food",
+    grupo: "Atendimento",
+    icone: "food99",
+    papeis: ["plataforma"],
+  },
+  {
     to: "/ia/operacao",
     label: "Operação",
     grupo: "Atendimento",
@@ -252,6 +259,13 @@ const AGENTES_EMPRESA: ItemMenu[] = [
     label: "Pedidos iFood",
     grupo: "Atendimento",
     icone: "ifood",
+    papeis: ["gestor"],
+  },
+  {
+    to: "/ia/pedidos-99food",
+    label: "Pedidos 99Food",
+    grupo: "Atendimento",
+    icone: "food99",
     papeis: ["gestor"],
   },
   {

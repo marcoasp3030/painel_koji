@@ -1,3 +1,22 @@
+## [2026-11-15 18:50] — 99FOOD1-b: pedidos e Visão de vendas
+- **Autor:** Auto
+- **Objetivo:** Ambiente nas credenciais; aba Pedidos 99Food; bloco e canal na Visão (ESPEC §11).
+- **Arquivos alterados:**
+ - `src/lib/food99.ts` + `.test.ts` — ambiente no status; `mostrarMenuPedidosFood99`
+ - `src/lib/food99-pedidos.ts` + `.test.ts` — lista/detalhe, rótulos, order_id texto, bloco Visão
+ - `src/lib/gateway-food99.functions.ts` — PUT com ambiente; GET/POST pedidos
+ - `src/components/luxtia/{Food99Credenciais,Food99Pedidos}.tsx` — UI ambiente + pedidos
+ - `src/components/luxtia/{VisaoVendas,AppShell}.tsx` — bloco 99Food, gráficos canais, menu condicional
+ - `src/lib/pedidos-visao-vendas.ts` — tipos `99food`/`canais`, cores de canal
+ - `src/routes/.../pedidos-99food.tsx` + `routeTree.gen.ts` + `nav.ts` + `modulo.server.ts`
+ - `instrucoes.md`, `README.md`, `docs/worklog.md` — registro
+- **Resumo das mudanças:** Credenciais com Teste/Produção; Pedidos 99Food (gestor+, só com loja); detalhe com linha do tempo e Atualizar; Visão com bloco e canal 99Food (some se nulo); order_id nunca Number().
+- **Decisões e justificativas:** Espelha iFood; paginação via `mais`+`antes=criado_em`; cor `#FF6600` distinta do iFood; confirmação só no app da 99.
+- **Comandos executados:** `docker … bun test` food99 + food99-pedidos + visão → 19 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** publicar painel quando o Marco pedir
+- **Próximos passos:** commit + `docker/publicar-painel.sh` se for para produção
+
 ## [2026-11-15 15:14] — Publicação 99FOOD1-a no painel
 - **Autor:** Auto
 - **Objetivo:** Publicar 99Food (menu não aparecia: estava só no working tree; no ar era `85824b5`).

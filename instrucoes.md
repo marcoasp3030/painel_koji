@@ -1,3 +1,10 @@
+## 99FOOD1-b: pedidos e Visão de vendas (15/11/2026)
+
+- Credenciais: campo **Ambiente** (Teste / Produção) no PUT (`ambiente`: `teste`|`producao`); GET mostra ambiente atual.
+- Pedidos → **99Food** (`/ia/pedidos-99food`, gestor+): menu só se `GET …/99food/lojas` tiver itens; lista/detalhe/atualizar; order_id texto (64 bits); aviso fixo de confirmação no app; selo Teste; rótulos de status/entrega/pagamento.
+- Visão de vendas: bloco `99food` (some se nulo) e canal `99food` nos gráficos de canais (cor `#FF6600`).
+- Testes: `food99-pedidos.test.ts` + credenciais com ambiente.
+
 ## 99FOOD1-a: 99Food no painel (15/11/2026)
 
 - Integrações → **99Food** (`/ia/99food`), só plataforma: GET/PUT `99food/credenciais` com `GATEWAY_PLATFORM_KEY`; Callback Address + Copiar; Secret nunca volta.

@@ -29,11 +29,12 @@ describe("99food (99FOOD1-a)", () => {
     expect(podeGerirLojasFood99("supervisor")).toBe(false);
   });
 
-  test("status das credenciais: Configurado/Não configurado sem Secret", () => {
+  test("status das credenciais: Configurado/Não configurado sem Secret; mostra Ambiente", () => {
     expect(
       textoStatusCredenciaisFood99({
         configurado: false,
         app_id_final: null,
+        ambiente: null,
         webhook_url: "https://x/webhooks/99food",
         atualizado_por: null,
         atualizado_em: null,
@@ -43,11 +44,12 @@ describe("99food (99FOOD1-a)", () => {
       textoStatusCredenciaisFood99({
         configurado: true,
         app_id_final: "7890",
+        ambiente: "teste",
         webhook_url: "https://x/webhooks/99food",
         atualizado_por: "admin@luxbrain.local",
         atualizado_em: "2026-11-15T12:00:00-03:00",
       }),
-    ).toMatch(/^Configurado \(App ID …7890\)/);
+    ).toMatch(/Ambiente: Teste/);
     expect(TEXTO_AJUDA_FOOD99).toMatch(/Callback Address/);
   });
 

@@ -15,6 +15,8 @@ import {
   AreaChart,
   CartesianGrid,
   Cell,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   XAxis,
@@ -26,6 +28,7 @@ import { reais } from "@/lib/gateway/pedidos";
 import {
   ATALHOS_PERIODO,
   DIAS_SEMANA,
+  corCanalVendas,
   diaCivilNoFuso,
   deveMostrarAbaUnidades,
   erroPeriodo,
@@ -34,12 +37,15 @@ import {
   minutosOuTraco,
   ordenarProdutos,
   periodoDoAtalho,
+  rotuloCanalVendas,
   rotuloDiaCurto,
   sentidoVariacao,
+  serieEvolucaoCanais,
   telefoneParaBuscaConversa,
   temVendaNoPeriodo,
   textoVariacao,
   type AtalhoPeriodo,
+  type BlocoCanaisIndicadores,
   type IndicadoresPedidos,
   type ProdutoVendido,
 } from "@/lib/pedidos-visao-vendas";
@@ -47,6 +53,10 @@ import {
   deveMostrarBlocoIfood,
   type BlocoIfoodIndicadores,
 } from "@/lib/ifood-pedidos";
+import {
+  deveMostrarBlocoFood99,
+  type BlocoFood99Indicadores,
+} from "@/lib/food99-pedidos";
 import { telefoneExibicao } from "@/lib/gateway/conversas";
 import { useGestao } from "./gestao-base";
 import type { ContextoGateway } from "./Gateway";
@@ -176,6 +186,136 @@ function BlocoWhatsAppXiFood({
   );
 }
 
+/** 99FOOD1-b: bloco igual ao do iFood (some quando a resposta vem nula). */
+function BlocoFood99({ food99 }: { food99: BlocoFood99Indicadores }) {
+  return (
+    <section className="rounded-lg border border-base-200 bg-card p-3">
+      <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold text-ink-700">
+        <span
+          className="inline-block size-2.5 rounded-full"
+          style={{ backgroundColor: corCanalVendas("99food") }}
+          aria-hidden
+        />
+        99Food
+      </h3>
+      <p className="mb-3 text-xs text-ink-500">
+        Pedidos confirmados em diante. Pedidos de teste só entram com &quot;Incluir teste/piloto&quot;.
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        <CartaoMetrica
+          rotulo="Faturamento"
+          valor={reais(food99.resumo.faturamento)}
+          variacao={food99.variacao_pct.faturamento}
+          detalhe={
+            food99.resumo.cancelados
+              ? `${food99.resumo.cancelados} cancelados`
+              : `${food99.resumo.aguardando} aguardando`
+          }
+        />
+        <CartaoMetrica
+          rotulo="Pedidos"
+          valor={food99.resumo.pedidos}
+          variacao={food99.variacao_pct.pedidos}
+          detalhe={`${food99.resumo.recebidos} recebidos`}
+        />
+        <CartaoMetrica
+          rotulo="Ticket"
+          valor={reais(food99.resumo.ticket_medio)}
+          variacao={food99.variacao_pct.ticket_medio}
+        />
+      </div>
+      {food99.produtos.length ? (
+        <ul className="mt-2 space-y-0.5 border-t border-base-200 pt-2 text-xs text-ink-700">
+          {food99.produtos.slice(0, 5).map((p) => (
+            <li key={p.nome} className="flex justify-between gap-2">
+              <span className="truncate">
+                {p.quantidade}× {p.nome}
+              </span>
+              <span className="shrink-0 tabular-nums">{reais(p.faturamento)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+/** PED-BI2 / 99FOOD1-b: evolução e participação por canal (legenda com cor da 99Food). */
+function BlocoCanais({
+  canais,
+  agrupar,
+}: {
+  canais: BlocoCanaisIndicadores;
+  agrupar: "dia" | "semana" | "mes";
+}) {
+  const disponiveis = canais.disponiveis;
+  const serie = useMemo(
+    () => serieEvolucaoCanais(canais.evolucao, disponiveis, agrupar),
+    [canais.evolucao, disponiveis, agrupar],
+  );
+  const cfg = useMemo(() => {
+    const c: ChartConfig = {};
+    for (const canal of disponiveis) {
+      c[canal] = { label: rotuloCanalVendas(canal), color: corCanalVendas(canal) };
+    }
+    return c;
+  }, [disponiveis]);
+  const fatias = canais.resumo.map((r) => ({
+    chave: r.canal,
+    rotulo: rotuloCanalVendas(r.canal),
+    valor: r.faturamento,
+    cor: corCanalVendas(r.canal),
+  }));
+
+  if (disponiveis.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-base-200 bg-card p-3">
+      <h3 className="mb-1 text-xs font-semibold text-ink-700">Por canal</h3>
+      <p className="mb-3 text-xs text-ink-500">
+        Delivery, retirada, iFood e 99Food no mesmo período (quando a empresa tem a loja).
+      </p>
+      <ul className="mb-3 flex flex-wrap gap-3 text-xs text-ink-700">
+        {disponiveis.map((c) => (
+          <li key={c} className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block size-2.5 rounded-full"
+              style={{ backgroundColor: corCanalVendas(c) }}
+              aria-hidden
+            />
+            {rotuloCanalVendas(c)}
+          </li>
+        ))}
+      </ul>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <ChartContainer config={cfg} className="aspect-[16/9] w-full">
+          <LineChart data={serie} margin={{ left: 4, right: 4, top: 8, bottom: 0 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis dataKey="rotulo" tickLine={false} axisLine={false} minTickGap={24} />
+            <YAxis hide />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            {disponiveis.map((c) => (
+              <Line
+                key={c}
+                type="monotone"
+                dataKey={c}
+                stroke={`var(--color-${c})`}
+                strokeWidth={2}
+                dot={false}
+              />
+            ))}
+          </LineChart>
+        </ChartContainer>
+        <Pizza
+          titulo="Faturamento por canal"
+          fatias={fatias.map((f) => ({ chave: f.chave, rotulo: f.rotulo, valor: f.valor }))}
+          cores={fatias.map((f) => f.cor)}
+        />
+      </div>
+    </section>
+  );
+}
+
 function SeloCurva({ curva }: { curva: "A" | "B" | "C" }) {
   const tom =
     curva === "A"
@@ -230,13 +370,17 @@ function MapaCalor({ dados }: { dados: IndicadoresPedidos["horarios"] }) {
 function Pizza({
   titulo,
   fatias,
+  cores,
 }: {
   titulo: string;
   fatias: { chave: string; rotulo: string; valor: number }[];
+  /** Cores fixas por fatia (ex.: legenda de canais com 99Food). */
+  cores?: string[];
 }) {
+  const corDe = (i: number) => cores?.[i] ?? CORES_PIZZA[i % CORES_PIZZA.length]!;
   const total = fatias.reduce((s, f) => s + f.valor, 0);
   const cfg = Object.fromEntries(
-    fatias.map((f, i) => [f.chave, { label: f.rotulo, color: CORES_PIZZA[i % CORES_PIZZA.length]! }]),
+    fatias.map((f, i) => [f.chave, { label: f.rotulo, color: corDe(i) }]),
   ) satisfies ChartConfig;
   return (
     <section className="rounded-lg border border-base-200 bg-card p-3">
@@ -249,7 +393,7 @@ function Pizza({
             <ChartTooltip content={<ChartTooltipContent nameKey="rotulo" hideLabel />} />
             <Pie data={fatias} dataKey="valor" nameKey="rotulo" innerRadius={48} outerRadius={80}>
               {fatias.map((f, i) => (
-                <Cell key={f.chave} fill={CORES_PIZZA[i % CORES_PIZZA.length]} />
+                <Cell key={f.chave} fill={corDe(i)} />
               ))}
             </Pie>
           </PieChart>
@@ -261,7 +405,7 @@ function Pizza({
             <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
               <span
                 className="size-2 shrink-0 rounded-sm"
-                style={{ background: CORES_PIZZA[i % CORES_PIZZA.length] }}
+                style={{ background: corDe(i) }}
                 aria-hidden
               />
               {f.rotulo}
@@ -656,6 +800,12 @@ export function VisaoVendas({ ctx }: { ctx: ContextoGateway }) {
                 ifood={d.ifood}
                 variacaoWa={d.variacao_pct}
               />
+            ) : null}
+
+            {deveMostrarBlocoFood99(d["99food"]) ? <BlocoFood99 food99={d["99food"]} /> : null}
+
+            {d.canais && d.canais.disponiveis.length > 0 ? (
+              <BlocoCanais canais={d.canais} agrupar={d.periodo.agrupar} />
             ) : null}
 
             <div className="grid gap-3 lg:grid-cols-2">

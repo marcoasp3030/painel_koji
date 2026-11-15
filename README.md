@@ -99,9 +99,11 @@ Conversas: mensagens de saída no canal meta mostram `status_provedor` (✓ / �
 
 Plataforma liga lojas do iFood às empresas em Integrações → **iFood** (`/ia/ifood`): lista as lojas que autorizaram o aplicativo, liga à empresa (unidade opcional) e desliga com confirmação pelo nome. No mesmo lugar fica o bloco **Credenciais do aplicativo** (Client ID/Secret gravados no gateway só com `GATEWAY_PLATFORM_KEY` = `PANEL_PLATFORM_KEY`; o segredo nunca é mostrado de novo). Gestor vê as lojas da empresa em Loja → **iFood** (`/ia/configuracoes/ifood`), com situação e **Conferir conexão**. Sem loja, o texto explica o Portal do Parceiro. Supervisor e funcionário não veem o menu. Gateway IFOOD1-a.
 
-## 99Food — 99FOOD1-a
+## 99Food — 99FOOD1-a / 99FOOD1-b
 
-Plataforma: Integrações → **99Food** (`/ia/99food`) — App ID + Secret (nunca reexibido), status Configurado/Não configurado, **Callback Address** com Copiar. Exige `GATEWAY_PLATFORM_KEY`. Gestor+: Loja → **99Food** (`/ia/configuracoes/99food`) — por unidade: Conectar (aviso → abre autorização), Conferir, Desconectar (confirma nome da loja ou código da unidade; se a 99 não desvincular, “Remover só no gateway”). Gateway ESPEC_99FOOD1 §10.
+Plataforma: Integrações → **99Food** (`/ia/99food`) — App ID + Secret (nunca reexibido), **Ambiente** (Teste / Produção), status com ambiente atual, **Callback Address** com Copiar. Exige `GATEWAY_PLATFORM_KEY`.
+
+Gestor+: Loja → **99Food** (`/ia/configuracoes/99food`) — por unidade: Conectar / Conferir / Desconectar. **Pedidos 99Food** (`/ia/pedidos-99food`) — só no menu se a empresa tiver loja; lista/detalhe (order_id como texto), aviso de confirmação no app, botão Atualizar. Visão de vendas: bloco **99Food** (some se nulo) e canal `99food` nos gráficos (cor própria `#FF6600`). Gateway ESPEC_99FOOD1 §10–11.
 
 ## Pedidos iFood
 

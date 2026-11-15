@@ -8,6 +8,7 @@ import { gravarCredenciaisFood99, lerCredenciaisFood99 } from "@/lib/gateway-foo
 import {
   TEXTO_AJUDA_FOOD99,
   textoStatusCredenciaisFood99,
+  type AmbienteFood99,
   type CredenciaisFood99,
 } from "@/lib/food99";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export function Food99Credenciais() {
   const [aberto, setAberto] = useState(false);
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
+  const [ambiente, setAmbiente] = useState<AmbienteFood99>("teste");
 
   const q = useQuery({
     queryKey: ["99food", "credenciais"],
@@ -41,6 +43,7 @@ export function Food99Credenciais() {
   function limparCampos() {
     setAppId("");
     setAppSecret("");
+    setAmbiente(q.data?.ambiente === "producao" ? "producao" : "teste");
   }
 
   function fechar() {
@@ -58,7 +61,7 @@ export function Food99Credenciais() {
   const mut = useMutation({
     mutationFn: async () => {
       const r = await gravar({
-        data: { app_id: appId.trim(), app_secret: appSecret },
+        data: { app_id: appId.trim(), app_secret: appSecret, ambiente },
       });
       if (r && "ok" in r && r.ok === false) throw new Error(r.mensagem);
       return r as CredenciaisFood99;
@@ -94,7 +97,15 @@ export function Food99Credenciais() {
           O Secret nunca é mostrado de novo depois de salvo. A chave de plataforma do servidor do
           painel (`GATEWAY_PLATFORM_KEY`) precisa estar preenchida.
         </p>
-        <Button type="button" size="sm" className="mt-3" onClick={() => setAberto(true)}>
+        <Button
+          type="button"
+          size="sm"
+          className="mt-3"
+          onClick={() => {
+            setAmbiente(q.data?.ambiente === "producao" ? "producao" : "teste");
+            setAberto(true);
+          }}
+        >
           {q.data?.configurado ? "Trocar credenciais" : "Configurar"}
         </Button>
       </section>
@@ -161,6 +172,31 @@ export function Food99Credenciais() {
                 placeholder="Secret do app"
               />
             </label>
+            <fieldset className="block text-sm">
+              <legend className="mb-1 text-xs font-medium text-ink-500">Ambiente</legend>
+              <div className="flex flex-wrap gap-3">
+                {(
+                  [
+                    ["teste", "Teste"],
+                    ["producao", "Produção"],
+                  ] as const
+                ).map(([id, rotulo]) => (
+                  <label key={id} className="inline-flex items-center gap-1.5 text-sm text-ink-800">
+                    <input
+                      type="radio"
+                      name="ambiente-99food"
+                      value={id}
+                      checked={ambiente === id}
+                      onChange={() => setAmbiente(id)}
+                    />
+                    {rotulo}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-ink-500">
+                Pedidos do app de teste só entram na Visão de vendas com &quot;Incluir teste/piloto&quot;.
+              </p>
+            </fieldset>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" disabled={mut.isPending} onClick={fechar}>

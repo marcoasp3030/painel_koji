@@ -37,6 +37,7 @@ import { Route as AuthenticatedIaModelosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedIaOperacaoRouteImport } from './routes/_authenticated/ia/operacao'
 import { Route as AuthenticatedIaPedidosRouteImport } from './routes/_authenticated/ia/pedidos'
 import { Route as AuthenticatedIaPedidosIfoodRouteImport } from './routes/_authenticated/ia/pedidos-ifood'
+import { Route as AuthenticatedIaPedidos99foodRouteImport } from './routes/_authenticated/ia/pedidos-99food'
 import { Route as AuthenticatedIaSimularRouteImport } from './routes/_authenticated/ia/simular'
 import { Route as AuthenticatedIaUnidadesRouteImport } from './routes/_authenticated/ia/unidades'
 import { Route as AuthenticatedIaVisaoVendasRouteImport } from './routes/_authenticated/ia/visao-vendas'
@@ -206,6 +207,12 @@ const AuthenticatedIaPedidosIfoodRoute =
     path: '/ia/pedidos-ifood',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedIaPedidos99foodRoute =
+  AuthenticatedIaPedidos99foodRouteImport.update({
+    id: '/ia/pedidos-99food',
+    path: '/ia/pedidos-99food',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedIaSimularRoute = AuthenticatedIaSimularRouteImport.update({
   id: '/ia/simular',
   path: '/ia/simular',
@@ -345,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
+  '/ia/pedidos-99food': typeof AuthenticatedIaPedidos99foodRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
@@ -392,6 +400,7 @@ export interface FileRoutesByTo {
   '/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
+  '/ia/pedidos-99food': typeof AuthenticatedIaPedidos99foodRoute
   '/ia/simular': typeof AuthenticatedIaSimularRoute
   '/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
@@ -441,6 +450,7 @@ export interface FileRoutesById {
   '/_authenticated/ia/operacao': typeof AuthenticatedIaOperacaoRoute
   '/_authenticated/ia/pedidos': typeof AuthenticatedIaPedidosRoute
   '/_authenticated/ia/pedidos-ifood': typeof AuthenticatedIaPedidosIfoodRoute
+  '/_authenticated/ia/pedidos-99food': typeof AuthenticatedIaPedidos99foodRoute
   '/_authenticated/ia/simular': typeof AuthenticatedIaSimularRoute
   '/_authenticated/ia/unidades': typeof AuthenticatedIaUnidadesRoute
   '/_authenticated/ia/visao-vendas': typeof AuthenticatedIaVisaoVendasRoute
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/pedidos-ifood'
+    | '/ia/pedidos-99food'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/visao-vendas'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/ia/operacao'
     | '/ia/pedidos'
     | '/ia/pedidos-ifood'
+    | '/ia/pedidos-99food'
     | '/ia/simular'
     | '/ia/unidades'
     | '/ia/visao-vendas'
@@ -586,6 +598,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia/operacao'
     | '/_authenticated/ia/pedidos'
     | '/_authenticated/ia/pedidos-ifood'
+    | '/_authenticated/ia/pedidos-99food'
     | '/_authenticated/ia/simular'
     | '/_authenticated/ia/unidades'
     | '/_authenticated/ia/visao-vendas'
@@ -814,6 +827,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIaPedidosIfoodRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ia/pedidos-99food': {
+      id: '/_authenticated/ia/pedidos-99food'
+      path: '/ia/pedidos-99food'
+      fullPath: '/ia/pedidos-99food'
+      preLoaderRoute: typeof AuthenticatedIaPedidos99foodRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ia/simular': {
       id: '/_authenticated/ia/simular'
       path: '/ia/simular'
@@ -1025,6 +1045,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaOperacaoRoute: typeof AuthenticatedIaOperacaoRoute
   AuthenticatedIaPedidosRoute: typeof AuthenticatedIaPedidosRoute
   AuthenticatedIaPedidosIfoodRoute: typeof AuthenticatedIaPedidosIfoodRoute
+  AuthenticatedIaPedidos99foodRoute: typeof AuthenticatedIaPedidos99foodRoute
   AuthenticatedIaSimularRoute: typeof AuthenticatedIaSimularRoute
   AuthenticatedIaUnidadesRoute: typeof AuthenticatedIaUnidadesRoute
   AuthenticatedIaVisaoVendasRoute: typeof AuthenticatedIaVisaoVendasRoute
@@ -1063,6 +1084,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaOperacaoRoute: AuthenticatedIaOperacaoRoute,
   AuthenticatedIaPedidosRoute: AuthenticatedIaPedidosRoute,
   AuthenticatedIaPedidosIfoodRoute: AuthenticatedIaPedidosIfoodRoute,
+  AuthenticatedIaPedidos99foodRoute: AuthenticatedIaPedidos99foodRoute,
   AuthenticatedIaSimularRoute: AuthenticatedIaSimularRoute,
   AuthenticatedIaUnidadesRoute: AuthenticatedIaUnidadesRoute,
   AuthenticatedIaVisaoVendasRoute: AuthenticatedIaVisaoVendasRoute,

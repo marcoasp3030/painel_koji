@@ -641,6 +641,10 @@ const REGRAS: Regra[] = [
   { metodo: "GET", caminho: ["ifood", "pedidos"], papeis: GEST },
   { metodo: "POST", caminho: ["ifood", "pedidos", "atualizar"], papeis: GEST, corpo: semCorpo },
   { metodo: "GET", caminho: ["ifood", "pedidos", "*"], papeis: GEST },
+  // 99FOOD1-b: pedidos só leitura + atualizar detalhe pendente (gestor+).
+  { metodo: "GET", caminho: ["99food", "pedidos"], papeis: GEST },
+  { metodo: "POST", caminho: ["99food", "pedidos", "atualizar"], papeis: GEST, corpo: semCorpo },
+  { metodo: "GET", caminho: ["99food", "pedidos", "*"], papeis: GEST },
   // IFOOD1-b2: financeiro só leitura + coletar agora (gestor+).
   { metodo: "GET", caminho: ["ifood", "financeiro"], papeis: GEST },
   { metodo: "POST", caminho: ["ifood", "financeiro", "atualizar"], papeis: GEST, corpo: semCorpo },
