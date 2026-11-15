@@ -1,3 +1,17 @@
+## [2026-11-14 23:17] — Publicação UNI-VENDA no painel
+- **Autor:** Auto
+- **Objetivo:** Commit e publicar UNI-VENDA (estava só em working tree; no ar era `25727ba`).
+- **Arquivos alterados:**
+ - commit `85824b5` — UNI-VENDA (8 arquivos)
+ - imagem `painel:85824b5091e2bab2ebaef93fd5f5aa1b22c862df` (`sha256:d542346d…`)
+ - `docs/worklog.md` — este registro
+- **Resumo das mudanças:** Build + tag; container recriado; push `main` `25727ba..85824b5`.
+- **Decisões e justificativas:** Publicação pedida explicitamente; volta `painel:volta-20261115T021636Z`.
+- **Comandos executados:** commit → OK; `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK; home 200; `git push` → OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** conferir interruptores na UI (bykoji Unidades → editar)
+- **Próximos passos:** smoke na tela Unidades com módulo de pedidos
+
 ## [2026-11-14 21:57] — UNI-VENDA: entrega e retirada na unidade
 - **Autor:** Auto
 - **Objetivo:** Painel grava `delivery_ativo` e `aceita_retirada` (false ao desmarcar); selo e aviso “Só salão”.
@@ -11,8 +25,8 @@
 - **Decisões e justificativas:** Gateway já recusa `unidade_sem_pedidos`; painel só faltava gravar false e expor delivery. SO_ADMIN: UI e servidor limitam entrega à plataforma.
 - **Comandos executados:** `bun test` gestao.test.ts → 23 OK
 - **Erros e resoluções:** —
-- **Pendências / TODO:** publicar painel
-- **Próximos passos:** `publicar-painel.sh` e conferir na UI com bykoji
+- **Pendências / TODO:** —
+- **Próximos passos:** —
 
 ## [2026-11-15 00:03] — ATD-ALERTA: etiqueta “Aguardando humano”
 - **Autor:** Auto
