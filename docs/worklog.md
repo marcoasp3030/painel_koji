@@ -1,3 +1,14 @@
+## [2026-11-15 20:12] — Publicação CARD-LINK2 no painel
+- **Autor:** Auto
+- **Objetivo:** Aplicar CARD-LINK2 (pedido explícito “aplique”).
+- **Arquivos alterados:** commit `87ecd1b`; imagem `painel:87ecd1b2295f4c244a62d92b20ff4d343403420b`
+- **Resumo das mudanças:** Build + recreate; home 200.
+- **Decisões e justificativas:** Publicação pedida pelo usuário.
+- **Comandos executados:** `publicar-painel.sh` → OK; `up -d --no-deps --no-build painel` → OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** Ctrl+F5
+- **Próximos passos:** conferir Comportamento (3 opções) e Unidades → Link próprio
+
 ## [2026-11-15 20:05] — CARD-LINK2: link próprio do cardápio
 - **Autor:** Auto
 - **Objetivo:** 3 opções (sistema / próprio / não enviar) + link por unidade (ESPEC §6).
