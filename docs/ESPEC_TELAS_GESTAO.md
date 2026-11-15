@@ -108,7 +108,7 @@ Mostrar `agenda.dias` com `data`, `dia`, `origem` grade/exceção, `fechado`, `f
 
 **Rotas previstas na ESPEC, ainda dependentes do contrato fechado:** `GET/PATCH /unidades/{id}`; `GET/POST/PUT /unidades/{id}/taxas`, `PATCH/DELETE /unidades/{id}/taxas/{tid}`; `GET/PUT /unidades/{id}/pagamentos`.
 
-- Delivery (`delivery_ativo`) e retirada (`aceita_retirada`): sim/não/**não informado**. Não converter nulo em não.
+- Delivery (`delivery_ativo`) e retirada (`aceita_retirada`): sim/não/**não informado**. Não converter nulo em não na leitura (interruptor ligado + dica). Desmarcar envia `false`. `delivery_ativo` só plataforma (SO_ADMIN). Dois desligados → aviso e selo “Só salão”.
 - Taxa: não informada, fixa, bairro ou CEP. Tabela de bairros, apelidos, taxa, ativo e “Não atendido”; tabela de faixas inclusivas de CEP e taxa. Seleção do modo preserva dados salvos em outros modos, até contrato definir remoção explícita.
 - Mínimo, frete grátis a partir de X, tempo de entrega/retirada, área/regras informativas. Vazio = não informado; R$ 0 é permitido para taxa, não para preço de item.
 - Pagamentos ordenados: Pix, cartão na entrega, dinheiro com troco; rótulo, ativo e instruções. `formas_pagamento` legado permanece observação, não substitui tabela. Sem cobrança de pagamento pelo painel.

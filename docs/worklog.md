@@ -1,3 +1,19 @@
+## [2026-11-14 21:57] — UNI-VENDA: entrega e retirada na unidade
+- **Autor:** Auto
+- **Objetivo:** Painel grava `delivery_ativo` e `aceita_retirada` (false ao desmarcar); selo e aviso “Só salão”.
+- **Arquivos alterados:**
+ - `src/lib/gateway/gestao.ts` — `delivery_ativo`, `canalLigado` / `rotuloCanalVenda` / `ehSoSalao`
+ - `src/lib/gateway/gestao.server.ts` — projeta `delivery_ativo`; só plataforma envia o campo
+ - `src/components/luxtia/GestaoUnidades.tsx` — bloco Pedidos e entrega, selos na lista
+ - `src/lib/gateway/gestao.test.ts` — testes UNI-VENDA
+ - `docs/ESPEC_TELAS_GESTAO.md`, `docs/worklog.md`, `instrucoes.md`, `README.md` — registro
+- **Resumo das mudanças:** Interruptor “Faz entrega” (plataforma); retirada desmarca → false; nulo = ligado com dica; aviso Só salão; lista com selo Entrega / Retirada / Entrega e retirada / Só salão.
+- **Decisões e justificativas:** Gateway já recusa `unidade_sem_pedidos`; painel só faltava gravar false e expor delivery. SO_ADMIN: UI e servidor limitam entrega à plataforma.
+- **Comandos executados:** `bun test` gestao.test.ts → 23 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** publicar painel
+- **Próximos passos:** `publicar-painel.sh` e conferir na UI com bykoji
+
 ## [2026-11-15 00:03] — ATD-ALERTA: etiqueta “Aguardando humano”
 - **Autor:** Auto
 - **Objetivo:** Deixar explícito que o cliente espera humano (selo, lista, detalhe, aba).

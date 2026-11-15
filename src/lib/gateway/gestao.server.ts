@@ -178,9 +178,22 @@ export async function executarGestao(
         "pedido_minimo",
         "area_entrega",
         "aceita_retirada",
+        "delivery_ativo",
         "formas_pagamento",
       ])
         delete limpo[k];
+      corpo = limpo;
+    }
+    // UNI-VENDA: delivery_ativo é SO_ADMIN no gateway; no painel só a plataforma grava.
+    if (
+      t.papel !== "plataforma" &&
+      corpo &&
+      typeof corpo === "object" &&
+      !Array.isArray(corpo) &&
+      (d.acao === "criar" || d.acao === "editar")
+    ) {
+      const limpo = { ...(corpo as Record<string, unknown>) };
+      delete limpo["delivery_ativo"];
       corpo = limpo;
     }
     const { dados } = await t.chamar(metodo, partes, { corpo, query });
@@ -203,7 +216,14 @@ export async function executarGestao(
         "pausa_motivo",
         ...(t.papel !== "funcionario" ? ["horarios", "whatsapp_pedidos"] : []),
         ...(comPedidos && t.papel !== "funcionario"
-          ? ["taxa_entrega", "pedido_minimo", "area_entrega", "aceita_retirada", "formas_pagamento"]
+          ? [
+              "taxa_entrega",
+              "pedido_minimo",
+              "area_entrega",
+              "aceita_retirada",
+              "delivery_ativo",
+              "formas_pagamento",
+            ]
           : []),
       ])
         r[k] = (u as unknown as Record<string, unknown>)[k];

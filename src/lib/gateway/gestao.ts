@@ -35,6 +35,8 @@ export type Unidade = {
   taxa_entrega?: number | null;
   pedido_minimo?: number | null;
   area_entrega?: string | null;
+  /** Nulo = não informado (vale como ligado). false = desligado. SO_ADMIN no gateway. */
+  delivery_ativo?: boolean | null;
   aceita_retirada?: boolean | null;
   formas_pagamento?: string | null;
   horarios?: Grade;
@@ -117,6 +119,37 @@ export function resumoSituacao(s: Situacao) {
   if (s.motivo === "inativa") return "Inativa";
   if (s.motivo === "excecao") return "Exceção";
   return "Fechada";
+}
+
+/**
+ * UNI-VENDA: nulo/ausente vale como ligado (igual ao gateway).
+ * Interruptor marcado quando não é false.
+ */
+export function canalLigado(v: boolean | null | undefined) {
+  return v !== false;
+}
+
+export type RotuloCanalVenda = "Entrega" | "Retirada" | "Entrega e retirada" | "Só salão";
+
+/** Selo da lista: entrega/retirada com nulo = ligado. */
+export function rotuloCanalVenda(
+  delivery: boolean | null | undefined,
+  retirada: boolean | null | undefined,
+): RotuloCanalVenda {
+  const entrega = canalLigado(delivery);
+  const retira = canalLigado(retirada);
+  if (entrega && retira) return "Entrega e retirada";
+  if (entrega) return "Entrega";
+  if (retira) return "Retirada";
+  return "Só salão";
+}
+
+/** Os dois canais desligados (false): some do cardápio e não recebe pedido. */
+export function ehSoSalao(
+  delivery: boolean | null | undefined,
+  retirada: boolean | null | undefined,
+) {
+  return !canalLigado(delivery) && !canalLigado(retirada);
 }
 
 /** "2026-11-03T18:00:00-03:00" vira "03/11 18:00"; com `soHora`, "18:00". Sem data legível, nulo. */
@@ -267,6 +300,8 @@ const dadosUnidade = z
     frete_gratis_acima: dinheiro,
     pedido_minimo: dinheiro,
     area_entrega: z.string().trim().max(2000).nullable().optional(),
+    /** Nulo só na leitura; gravação envia true|false (desmarcar = false). */
+    delivery_ativo: z.boolean().nullable().optional(),
     aceita_retirada: z.boolean().nullable().optional(),
     formas_pagamento: z.string().trim().max(500).nullable().optional(),
   })

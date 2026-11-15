@@ -1,3 +1,11 @@
+## UNI-VENDA: entrega e retirada (14/11/2026)
+
+- Em Unidades → editar: bloco **Pedidos e entrega** com “Faz entrega (delivery)” e “Aceita retirada no local”.
+- Desmarcar envia `false` (antes a retirada mandava `null`). Nulo na leitura = interruptor ligado + dica “não informado — vale como ligado”.
+- `delivery_ativo` só a **plataforma** altera (gestor vê travado: “Só o administrador altera”).
+- Com os dois desligados: aviso “Só salão…”. Lista: selo Entrega / Retirada / Entrega e retirada / Só salão.
+- Sem rota nova no gateway.
+
 ## ATD-ALERTA: cliente aguardando atendente (14/11/2026)
 
 - Selo global no topo (`ContadorAtendimento`): contagem da fila `GET conversas?aguardando=true`, poll 15 s / 60 s oculta.

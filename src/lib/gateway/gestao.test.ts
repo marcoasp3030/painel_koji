@@ -19,6 +19,9 @@ import {
   gradeCopiada,
   pendentesDe,
   cidadeUf,
+  canalLigado,
+  ehSoSalao,
+  rotuloCanalVenda,
   UFS,
   type Situacao,
 } from "./gestao";
@@ -35,7 +38,11 @@ function chamadaUnidade(c: {
 }) {
   return c.chamadas.find((x) => !x.url.includes("/modulos"));
 }
-async function montar(papel = "gestor", respostas: Response[] = []) {
+async function montar(
+  papel = "gestor",
+  respostas: Response[] = [],
+  opts: { pedidos?: boolean } = {},
+) {
   const chamadas: {
     url: string;
     method: string | undefined;
@@ -70,7 +77,11 @@ async function montar(papel = "gestor", respostas: Response[] = []) {
           body: init.body ? JSON.parse(String(init.body)) : null,
         });
         if (String(url).includes("/modulos")) {
-          return Response.json({ itens: [], em_uso: [], telas: [] });
+          return Response.json({
+            itens: [],
+            em_uso: opts.pedidos ? ["pedidos"] : [],
+            telas: [],
+          });
         }
         return (
           respostas.shift() ??
@@ -81,6 +92,8 @@ async function montar(papel = "gestor", respostas: Response[] = []) {
             situacao: s,
             taxa_entrega: 10,
             whatsapp_pedidos: "5511999999999",
+            delivery_ativo: null,
+            aceita_retirada: null,
           })
         );
       }) as typeof fetch,
@@ -590,4 +603,70 @@ test("rotuloDia troca o dia recente por palavras", () => {
   expect(rotuloDia("02/11/2026", "America/Sao_Paulo", agora)).toBe("Hoje");
   expect(rotuloDia("01/11/2026", "America/Sao_Paulo", agora)).toBe("Ontem");
   expect(rotuloDia("31/10/2026", "America/Sao_Paulo", agora)).toBe("31/10/2026");
+});
+
+test("UNI-VENDA: nulo aparece como ligado; Só salão com os dois desligados", () => {
+  expect(canalLigado(null)).toBe(true);
+  expect(canalLigado(undefined)).toBe(true);
+  expect(canalLigado(true)).toBe(true);
+  expect(canalLigado(false)).toBe(false);
+  expect(rotuloCanalVenda(null, null)).toBe("Entrega e retirada");
+  expect(rotuloCanalVenda(true, false)).toBe("Entrega");
+  expect(rotuloCanalVenda(false, true)).toBe("Retirada");
+  expect(rotuloCanalVenda(false, false)).toBe("Só salão");
+  expect(ehSoSalao(false, false)).toBe(true);
+  expect(ehSoSalao(null, false)).toBe(false);
+  expect(ehSoSalao(false, null)).toBe(false);
+});
+
+test("UNI-VENDA: desmarcar retirada envia false; gestor não altera entrega", async () => {
+  const gestor = await montar("gestor", [], { pedidos: true });
+  const rGestor = await executarGestao(gestor.sessao, {
+    acao: "editar",
+    id: "uni",
+    empresa: "bykoji",
+    dados: { aceita_retirada: false, delivery_ativo: false },
+  });
+  expect(rGestor.ok).toBe(true);
+  const corpoGestor = chamadaUnidade(gestor)?.body as Record<string, unknown>;
+  expect(corpoGestor).toEqual({ aceita_retirada: false });
+  expect(corpoGestor).not.toHaveProperty("delivery_ativo");
+
+  const plat = await montar("plataforma", [], { pedidos: true });
+  const rPlat = await executarGestao(plat.sessao, {
+    acao: "editar",
+    id: "uni",
+    empresa: "bykoji",
+    dados: { delivery_ativo: false, aceita_retirada: false },
+  });
+  expect(rPlat.ok).toBe(true);
+  expect(chamadaUnidade(plat)?.body).toEqual({
+    delivery_ativo: false,
+    aceita_retirada: false,
+  });
+
+  const leitura = await montar(
+    "gestor",
+    [
+      Response.json({
+        itens: [
+          {
+            id: "uni",
+            nome: "Teste",
+            situacao: s,
+            delivery_ativo: null,
+            aceita_retirada: true,
+          },
+        ],
+      }),
+    ],
+    { pedidos: true },
+  );
+  const lista = await executarGestao(leitura.sessao, { acao: "listar", empresa: "bykoji" });
+  expect(lista.ok).toBe(true);
+  if (lista.ok) {
+    const item = (lista.dados as { itens: Record<string, unknown>[] }).itens[0]!;
+    expect(item).toHaveProperty("delivery_ativo", null);
+    expect(item).toHaveProperty("aceita_retirada", true);
+  }
 });

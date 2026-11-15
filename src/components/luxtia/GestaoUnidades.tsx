@@ -18,7 +18,10 @@ import {
   instanteLocal,
   gradeCopiada,
   alertasUnidade,
+  canalLigado,
   cidadeUf,
+  ehSoSalao,
+  rotuloCanalVenda,
   UFS,
   problemaGrade,
   type SecaoUnidade,
@@ -121,6 +124,13 @@ export function GestaoUnidades({
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const [editar, setEditar] = useState<Unidade | "nova" | null>(null);
   const [pausar, setPausar] = useState<Unidade | null>(null);
+  const buscarModulos = useServerFn(obterModulosEmpresa);
+  const modulos = useQuery({
+    queryKey: ["gateway", "modulos", ctx.empresa],
+    queryFn: () => buscarModulos({ data: { empresa: ctx.empresa } }),
+    staleTime: 30_000,
+  });
+  const comPedidos = pedidosEmUso(modulos.data);
   const q = useQuery({
     queryKey: ["gestao", ctx.empresa, "unidades"],
     queryFn: () => g.ler<{ itens: Unidade[] }>({ acao: "listar" }),
@@ -296,6 +306,17 @@ export function GestaoUnidades({
                   <span className="block truncate text-xs leading-4 text-ink-500">
                     {linhaSituacao(u.situacao)}
                   </span>
+                  {comPedidos ? (
+                    <span className="mt-0.5 block">
+                      <Etiqueta
+                        tom={
+                          ehSoSalao(u.delivery_ativo, u.aceita_retirada) ? "alerta" : "neutro"
+                        }
+                      >
+                        {rotuloCanalVenda(u.delivery_ativo, u.aceita_retirada)}
+                      </Etiqueta>
+                    </span>
+                  ) : null}
                 </button>
                 {admin && (
                   <Button
@@ -372,6 +393,7 @@ function DadosUnidade({
   fechar: () => void;
 }) {
   const g = useGestao(ctx);
+  const plataforma = ctx.papel === "plataforma";
   const buscarModulos = useServerFn(obterModulosEmpresa);
   const modulos = useQuery({
     queryKey: ["gateway", "modulos", ctx.empresa],
@@ -393,10 +415,12 @@ function DadosUnidade({
   };
   const [v, setV] = useState(inicial);
   const [ativo, setAtivo] = useState(u?.ativo ?? true);
+  const [deliveryAtivo, setDeliveryAtivo] = useState<boolean | null>(u?.delivery_ativo ?? null);
   const [aceitaRetirada, setAceitaRetirada] = useState<boolean | null>(u?.aceita_retirada ?? null);
   const sujo =
     JSON.stringify(v) !== JSON.stringify(inicial) ||
     ativo !== (u?.ativo ?? true) ||
+    deliveryAtivo !== (u?.delivery_ativo ?? null) ||
     aceitaRetirada !== (u?.aceita_retirada ?? null);
   const sair = () => {
     if (!sujo || window.confirm("Descartar alterações não salvas?")) fechar();
@@ -445,6 +469,9 @@ function DadosUnidade({
                 dados["area_entrega"] = v.area_entrega.trim() || null;
               if (!u || aceitaRetirada !== (u.aceita_retirada ?? null))
                 dados["aceita_retirada"] = aceitaRetirada;
+              // delivery_ativo: só plataforma; servidor também descarta se outro papel enviar.
+              if (plataforma && deliveryAtivo !== (u?.delivery_ativo ?? null))
+                dados["delivery_ativo"] = deliveryAtivo;
             }
             if (
               u &&
@@ -516,11 +543,62 @@ function DadosUnidade({
           <Erro g={g} campo="uf" />
           {comPedidos ? (
             <fieldset className="space-y-3 rounded-md border border-base-200 p-3">
-              <legend className="px-1 text-sm font-medium text-ink-700">Entrega</legend>
+              <legend className="px-1 text-sm font-medium text-ink-700">Pedidos e entrega</legend>
               <p className="text-xs text-ink-500">
                 Visível porque a empresa tem o módulo de pedidos em uso. A taxa fica na seção
-                Entrega e as formas de pagamento, na seção Pagamentos.
+                Entrega e as formas de pagamento, na seção Pagamentos. Nulo no cadastro vale como
+                ligado.
               </p>
+              <div className="space-y-2">
+                <label className="flex min-h-11 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={canalLigado(deliveryAtivo)}
+                    disabled={g.busy || !plataforma}
+                    aria-describedby={
+                      !plataforma
+                        ? "un-delivery-admin"
+                        : deliveryAtivo === null
+                          ? "un-delivery-nulo"
+                          : undefined
+                    }
+                    onChange={(e) => setDeliveryAtivo(e.target.checked)}
+                  />
+                  Faz entrega (delivery)
+                </label>
+                {!plataforma ? (
+                  <p id="un-delivery-admin" className="text-xs text-ink-500">
+                    Só o administrador altera
+                  </p>
+                ) : null}
+                {deliveryAtivo === null ? (
+                  <p id="un-delivery-nulo" className="text-xs text-ink-500">
+                    não informado — vale como ligado
+                  </p>
+                ) : null}
+                <Erro g={g} campo="delivery_ativo" />
+                <label className="flex min-h-11 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={canalLigado(aceitaRetirada)}
+                    disabled={g.busy}
+                    aria-describedby={aceitaRetirada === null ? "un-retirada-nulo" : undefined}
+                    onChange={(e) => setAceitaRetirada(e.target.checked)}
+                  />
+                  Aceita retirada no local
+                </label>
+                {aceitaRetirada === null ? (
+                  <p id="un-retirada-nulo" className="text-xs text-ink-500">
+                    não informado — vale como ligado
+                  </p>
+                ) : null}
+                <Erro g={g} campo="aceita_retirada" />
+                {ehSoSalao(deliveryAtivo, aceitaRetirada) ? (
+                  <p role="status" className="text-sm text-amber-800">
+                    Só salão: esta unidade não aparece no cardápio digital e não recebe pedidos.
+                  </p>
+                ) : null}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="un-minimo">Pedido mínimo (R$)</Label>
@@ -544,16 +622,6 @@ function DadosUnidade({
                 />
                 <Erro g={g} campo="area_entrega" />
               </div>
-              <label className="flex min-h-11 items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={aceitaRetirada === true}
-                  disabled={g.busy}
-                  onChange={(e) => setAceitaRetirada(e.target.checked ? true : null)}
-                />
-                Aceita retirada no local
-              </label>
-              <Erro g={g} campo="aceita_retirada" />
             </fieldset>
           ) : null}
           <p className="text-sm text-ink-500">
