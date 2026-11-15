@@ -1,3 +1,17 @@
+## [2026-11-14 24:05] — ATD-ALERTA: etiqueta “Aguardando humano”
+- **Autor:** Auto
+- **Objetivo:** Deixar explícito que o cliente espera humano (selo, lista, detalhe, aba).
+- **Arquivos alterados:**
+ - `src/components/luxtia/{ContadorAtendimento,Conversas}.tsx` — modificado — texto “Aguardando humano”
+ - `src/lib/{atendimento-alerta,gateway/conversas}.ts` + teste — modificado — título e rótulo de estado
+ - `docs/worklog.md` — registro
+- **Resumo das mudanças:** Selo do topo com rótulo; etiqueta na lista e faixa no detalhe; aba renomeada.
+- **Decisões e justificativas:** “Humano” é mais claro que só o número ou “Fila”.
+- **Comandos executados:** `bun test` atendimento-alerta → 8 OK
+- **Erros e resoluções:** —
+- **Pendências / TODO:** —
+- **Próximos passos:** publicar
+
 ## [2026-11-14 23:50] — ATD-ALERTA: cliente aguardando atendente
 - **Autor:** Auto
 - **Objetivo:** Alerta global (som + selo + toast) quando há conversa aguardando atendente.

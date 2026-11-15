@@ -237,7 +237,7 @@ export function deveLembrar(opts: {
 
 export function tituloAbaAguardando(n: number) {
   if (n <= 0) return null;
-  return `(${n}) Cliente aguardando`;
+  return `(${n}) Aguardando humano`;
 }
 
 export function podeVerAlertaAtendimento(papel: string | null | undefined) {

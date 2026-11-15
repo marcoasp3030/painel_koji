@@ -83,7 +83,7 @@ describe("atendimento-alerta (ATD-ALERTA)", () => {
   test("motivo e título da aba", () => {
     expect(rotuloMotivoAtendimento("pediu_humano")).toMatch(/atendente/);
     expect(tituloAbaAguardando(0)).toBeNull();
-    expect(tituloAbaAguardando(3)).toBe("(3) Cliente aguardando");
+    expect(tituloAbaAguardando(3)).toBe("(3) Aguardando humano");
   });
 
   test("papel: atendente/supervisor/gestor/plataforma veem; sem papel não", () => {

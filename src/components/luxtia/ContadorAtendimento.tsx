@@ -140,7 +140,7 @@ export function ContadorAtendimento({ papel }: { papel: PapelGateway | null | un
       const ok = tocarChamadaAtendimento();
       if (!ok) setAudioBloqueado(true);
     }
-    const idToast = toast.message(`Cliente aguardando atendente — ${nome} — ${motivo}`, {
+    const idToast = toast.message(`Aguardando humano — ${nome} — ${motivo}`, {
       duration: Infinity,
       action: {
         label: "Abrir",
@@ -150,7 +150,7 @@ export function ContadorAtendimento({ papel }: { papel: PapelGateway | null | un
     toastsAbertos.current.set(c.conversation_id, idToast);
     if (abaOculta && notif && typeof Notification !== "undefined" && Notification.permission === "granted") {
       try {
-        new Notification("Cliente aguardando atendente", {
+        new Notification("Aguardando humano", {
           body: `${nome} — ${motivo}`,
           tag: `atendimento-${c.conversation_id}`,
         });
@@ -227,7 +227,8 @@ export function ContadorAtendimento({ papel }: { papel: PapelGateway | null | un
     if (abaOculta && total > 0) {
       if (!tituloBase.current) tituloBase.current = document.title;
       const t = tituloAbaAguardando(total);
-      if (t) document.title = `${t} — ${tituloBase.current.replace(/^\(\d+\) Cliente aguardando\s*—?\s*/, "")}`;
+      if (t)
+        document.title = `${t} — ${tituloBase.current.replace(/^\(\d+\) (?:Cliente aguardando|Aguardando humano)\s*—?\s*/, "")}`;
       return;
     }
     if (tituloBase.current) {
@@ -300,14 +301,17 @@ export function ContadorAtendimento({ papel }: { papel: PapelGateway | null | un
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold tabular-nums shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${classesSeloAlerta(urgencia)}`}
-          aria-label={`${total} cliente${total === 1 ? "" : "s"} aguardando atendente`}
-          title="Clientes aguardando atendente"
+          className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${classesSeloAlerta(urgencia)}`}
+          aria-label={`${total} cliente${total === 1 ? "" : "s"} aguardando humano`}
+          title="Clientes aguardando humano"
         >
           <Headset className="size-3.5 shrink-0" aria-hidden />
-          {total}
+          <span className="truncate">
+            Aguardando humano
+            <span className="ml-1 tabular-nums">· {total}</span>
+          </span>
           {audioBloqueado && som ? (
-            <span className="rounded bg-black/20 px-1 text-[10px] font-medium normal-case">
+            <span className="shrink-0 rounded bg-black/20 px-1 text-[10px] font-medium normal-case">
               Ativar som
             </span>
           ) : null}
@@ -315,9 +319,9 @@ export function ContadorAtendimento({ papel }: { papel: PapelGateway | null | un
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[22rem] p-0 sm:w-[24rem]">
         <div className="border-b border-base-200 px-3 py-2">
-          <p className="text-sm font-semibold text-ink-900">Aguardando atendente</p>
+          <p className="text-sm font-semibold text-ink-900">Aguardando humano</p>
           <p className="text-xs text-ink-500">
-            Mais antiga primeiro · atualiza a cada {abaOculta ? "60" : "15"} s
+            Cliente pediu ou foi transferido para a equipe · mais antiga primeiro
           </p>
         </div>
         {audioBloqueado && som ? (

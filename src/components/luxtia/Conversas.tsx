@@ -147,8 +147,8 @@ const ABAS: { valor: "" | "minhas" | EstadoConversa; rotulo: string; ajuda: stri
   { valor: "minhas", rotulo: "Minhas", ajuda: "Conversas com você agora" },
   {
     valor: "aguardando_atendente",
-    rotulo: "Fila",
-    ajuda: "Fila de espera: a mais antiga primeiro",
+    rotulo: "Aguardando humano",
+    ajuda: "Clientes aguardando a equipe: a mais antiga primeiro",
   },
   { valor: "atendente", rotulo: "Atendente", ajuda: "Conversas com uma pessoa da equipe" },
   { valor: "bot", rotulo: "Bot", ajuda: "Conversas com o agente" },
@@ -1034,10 +1034,11 @@ const LinhaConversa = memo(function LinhaConversa({
           </strong>
           {desde && urgencia ? (
             <span
-              className={`inline-flex shrink-0 items-center gap-1 rounded px-1 text-[11px] font-semibold tabular-nums ${TOM_URGENCIA[urgencia]}`}
+              className={`inline-flex max-w-[55%] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TOM_URGENCIA[urgencia]}`}
+              title={`Aguardando humano há ${esperaCurta(desde, agora)}`}
             >
-              <Clock className="size-3" aria-hidden />
-              {esperaCurta(desde, agora)}
+              <Clock className="size-3 shrink-0" aria-hidden />
+              <span className="truncate">Humano · {esperaCurta(desde, agora)}</span>
             </span>
           ) : (
             <time
@@ -1049,6 +1050,13 @@ const LinhaConversa = memo(function LinhaConversa({
           )}
         </span>
         <span className="flex items-center gap-1.5">
+          {estado === "aguardando_atendente" ? (
+            <span
+              className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TOM_URGENCIA[urgencia ?? "atencao"]}`}
+            >
+              Aguardando humano
+            </span>
+          ) : null}
           <UltimaMensagemResumo conversa={c} />
           {c.etiquetas?.length ? (
             <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
@@ -1953,10 +1961,18 @@ function Atendimento({
         </div>
         {estado === "aguardando_atendente" && conversa.aguardando_atendente_desde ? (
           <p
-            className={`shrink-0 truncate px-3 py-1 text-xs font-medium ${TOM_URGENCIA[urgenciaEspera(conversa.aguardando_atendente_desde, agora)]}`}
+            role="status"
+            className={`flex shrink-0 items-center gap-2 truncate px-3 py-1.5 text-xs font-semibold ${TOM_URGENCIA[urgenciaEspera(conversa.aguardando_atendente_desde, agora)]}`}
           >
-            {seloEspera(conversa.aguardando_atendente_desde, agora)}
-            {conversa.aguardando_motivo ? ` · ${MOTIVO_ATENDENTE[conversa.aguardando_motivo]}` : ""}
+            <span className="inline-flex shrink-0 items-center gap-1 rounded border border-current/20 bg-card/40 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+              Aguardando humano
+            </span>
+            <span className="min-w-0 truncate font-medium">
+              há {esperaCurta(conversa.aguardando_atendente_desde, agora)}
+              {conversa.aguardando_motivo
+                ? ` · ${MOTIVO_ATENDENTE[conversa.aguardando_motivo] ?? conversa.aguardando_motivo}`
+                : ""}
+            </span>
           </p>
         ) : null}
         {buscando ? (

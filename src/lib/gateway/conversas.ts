@@ -84,7 +84,7 @@ const ROTULO_TIPO_CANAL: Record<string, string> = {
 };
 export const ROTULO_ESTADO: Record<EstadoConversa, string> = {
   encerrada: "Encerrada",
-  aguardando_atendente: "Aguardando atendente",
+  aguardando_atendente: "Aguardando humano",
   atendente: "Atendente",
   bot: "Bot",
 };
